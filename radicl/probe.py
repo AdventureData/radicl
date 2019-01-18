@@ -720,6 +720,5 @@ class RAD_Probe():
                               self.api.fw_rev,
                               self.api.hw_rev,
                               self.api.hw_id,
-                              #self.getProbeSerial(),
                               )
         return final
