@@ -23,5 +23,5 @@ deploy:
     secure: PLEASE_REPLACE_ME
   on:
     tags: true
-    repo: adventuredata/radicl
+    repo: AdventurData/radicl
     python: 3.6
