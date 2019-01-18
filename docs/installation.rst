@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/micahjohnson/radicl
+    $ git clone git://github.com/AdventureData/radicl
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/micahjohnson/radicl/tarball/master
+    $ curl  -OL https://github.com/AdventureData/radicl/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/micahjohnson/radicl
-.. _tarball: https://github.com/micahjohnson/radicl/tarball/master
+.. _Github repo: https://github.com/AdventureData/radicl
+.. _tarball: https://github.com/AdventureData/radicl/tarball/master
