@@ -7,7 +7,7 @@ To interface with probe and run through calibration scheme
 '''
 import os
 import time
-from rad_serial import RadConnection, MessageColors, ProbeCommand
+from radicl.serial import RadConnection, MessageColors, ProbeCommand
 
 out = MessageColors()
 

@@ -5,7 +5,7 @@ import sys
 import binascii
 import serial
 import time
-from utilrad import RAD_Serial
+from radicl import serial as rs
 
 
 pca_id_list = ["UNKNOWN", "PB1", "PB2", "PB3"]
@@ -492,7 +492,7 @@ class RAD_API():
 	def MeasGetMeasTemp(self):
 		response = self.__send_receive([0x9F, 0x4F, 0x00, 0x00, 0x00])
 		return self.__EvaluateAndReturn(response, 0x4F, 0)
-		
+
 	# ******************************
 	# ***** FW UPDATE COMMANDS *****
 	# ******************************
