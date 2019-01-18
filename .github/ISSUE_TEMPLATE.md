@@ -1,4 +1,5 @@
 * radicl version:
+* Firmware version (if applicable):
 * Python version:
 * Operating System:
 

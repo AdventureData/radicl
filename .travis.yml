@@ -4,8 +4,6 @@ language: python
 python:
   - 3.6
   - 3.5
-  - 3.4
-  - 2.7
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: pip install -U tox-travis
@@ -25,5 +23,5 @@ deploy:
     secure: PLEASE_REPLACE_ME
   on:
     tags: true
-    repo: micahjohnson/radicl
+    repo: adventuredata/radicl
     python: 3.6
