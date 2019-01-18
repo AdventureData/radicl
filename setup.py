@@ -43,6 +43,7 @@ setup(
     url='https://github.com/adventuredata/radicl',
     version='0.1.0',
     zip_safe=False,
+    scripts = ['scripts/plotlyte',],
      entry_points = {
           'console_scripts': [
               'radicl = radicl.cli:main',                  
