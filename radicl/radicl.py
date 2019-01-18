@@ -1,3 +1,18 @@
+import sys
+import time
+from matplotlib import pyplot as plt
+import os
+from termcolor import colored
+import inspect
+import pandas as pd
+from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help
+import datetime
+
+from radicl import probe
+from radicl import serial
+from radicl import api
+import radicl
+
 
 class RADICL:
     def __init__(self,**kwargs):
@@ -7,7 +22,7 @@ class RADICL:
                           'settings':'Interface for modifying the behavior of the probe',
                           'update': 'Firmware update dialog for the probe.'}
 
-        self.probe = RAD_Probe.RAD_Probe()
+        self.probe = probe.RAD_Probe()
         self.running = True
 
         self.settings = dir(self.probe.api)

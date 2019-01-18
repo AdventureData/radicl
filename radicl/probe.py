@@ -5,10 +5,10 @@ import sys
 import binascii
 import serial
 import time
-from radicl import RAD_API
+from radicl.api import RAD_API
 from radicl import serial as rs
 from radicl.ui_tools import Messages
-import radicl
+from radicl import __version__
 import struct
 import datetime
 
@@ -716,7 +716,7 @@ class RAD_Probe():
         #header += "SERIAL NUMBER={5}\n"
 
         final = header.format(time_stamp,
-                              radicl.__version__,
+                              __version__,
                               self.api.fw_rev,
                               self.api.hw_rev,
                               self.api.hw_id,

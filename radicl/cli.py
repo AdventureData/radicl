@@ -8,22 +8,9 @@ and plot the desired outcomes per user request.
 Overhaul - 10/17/17
 
 '''
-import sys
-import time
-from matplotlib import pyplot as plt
 import os
-from termcolor import colored
-import inspect
-import pandas as pd
-from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help
-import datetime
-
-#from progressbar import ProgressBar, UnknownLength
-from radicl import probe
-from radicl import serial
-from radicl import api
-import radicl
-
+from radicl.radicl import RADICL
+from radicl.ui_tools import Messages
 debug = False
 
 # Get the screen outputter
@@ -72,7 +59,8 @@ def main():
 
     #Information
     out.headline("\nWELCOME TO THE LYTE PROBE CLI")
-    out.warn("\n\tWarning: This CLI is not meant to run with the mobile app.\n\tPlease make sure your RAD app is closed out.")
+    out.warn("\n\tWarning: This CLI is not meant to run with the mobile app."
+            "\n\tPlease make sure your RAD app is closed out.")
     out.msg("\nThings you can do with this tool:\n",'header')
     out.msg("\t* Plot various data from the probe."+
             "\n\t* Write various data to a file. (In development)"+
@@ -80,7 +68,7 @@ def main():
             "\n\t* Update the firmware (In development)\n")
 
     # try:
-    cli = radicl.RADICL()
+    cli = RADICL()
     cli.run()
 
 
