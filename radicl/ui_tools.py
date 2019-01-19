@@ -114,7 +114,7 @@ def print_helpme(help_str,help_dict):
     show_all = False
     no_help = 0
     no_doc = False
-    #User provides specific help request
+    # User provides specific help request
     if help_dict != None:
         if "-" in help_str:
             h = help_str.split("-")
