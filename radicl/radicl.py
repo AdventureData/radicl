@@ -13,6 +13,7 @@ from radicl import serial
 from radicl import api
 import radicl
 
+out = Messages()
 
 class RADICL:
     def __init__(self,**kwargs):
@@ -27,27 +28,27 @@ class RADICL:
 
         self.settings = dir(self.probe.api)
 
-        #Get all the functions available in api and probe
+        # Get all the functions available in api and probe
         settings_funcs = inspect.getmembers(self.probe.api, predicate=inspect.ismethod)
         data_funcs = inspect.getmembers(self.probe, predicate=inspect.ismethod)
-        #Dictionary of the options available that can be auto parsed
-        #Each option type has keys word that searched for in the api and probe classes
+        # Dictionary of the options available that can be auto parsed
+        # Each option type has keys word that searched for in the api and probe classes
         self.options_keywords = {'data':{'parseable':['read','Data']},
                         'settings':{'parseable':['Meas','Set']}
                         }
         self.options= {'data':{},
                        'settings':{}}
-        #Assign all functions with keys word to auto gather settings and data packages
+        # Assign all functions with keys word to auto gather settings and data packages
         self.options['data'] = parse_func_list(data_funcs,['read','Data'],ignore_keywords = ['correlation'])
         self.options['settings'] = parse_func_list(settings_funcs,['Meas','Set'])
 
-        #User runtime preferences
+        # User runtime preferences
         self.output_preference = None
         self.filename = None
         self.daq = None
 
 
-        #Gather help dialogs
+        # Gather help dialogs
         self.help_dialog= {}
         for s in self.options.keys():
             if s not in self.help_dialog:
@@ -67,7 +68,7 @@ class RADICL:
         filename_used = False
         data_attempts = 1
 
-        #Create the probe command with an arbitrary command to have access to help
+        # Create the probe command with an arbitrary command to have access to help
         while self.running:
             pstate = self.probe.getProbeMeasState()
 
@@ -94,11 +95,11 @@ class RADICL:
         contains the keyword task_ in it. This means currently we are looking
         for a daq, settings, upgrade task function.
         """
-        #Auto look for task_functions
+        # Auto look for task_functions
         task_at = "task_%s" % self.task
         fn = getattr(self,task_at)
 
-        #Call task_function
+        # Call task_function
         out.dbg("Using task function {0}".format(fn.__name__))
         fn()
 
@@ -151,35 +152,35 @@ class RADICL:
         """
         The state machine for request to do daq
         """
-        #Data Selection
+        # Data Selection
         if self.state ==1:
             pstate = self.probe.getProbeMeasState()
             out.msg("Checking to see if probe is ready...")
             out.dbg("Probe State = {0}".format(pstate))
 
-            #Make sure probe is ready
+            # Make sure probe is ready
             if pstate == 0 or pstate == 5:
                 self.daq = self.ask_user("What data do you want?",
                                     list(self.options['data'].keys()),
                                     helpme = self.help_dialog['data'])
                 print(self.state)
-        #Method for outputting data
+        # Method for outputting data
         elif self.state == 2:
             self.output_preference = self.ask_user("How do you want to output"
                                        " {0} data?".format(self.daq),
                                        ['plot','write','both'],
                                        default_answer = self.output_preference)
 
-        #Take Measurements
+        # Take Measurements
         elif self.state == 3:
             self.data = self.take_a_reading(self.daq)
             self.state = 4
 
-        #Data output and options
+        # Data output and options
         elif self.state == 4:
             if self.output_preference == 'write' or self.output_preference == 'both':
                 valid = False
-                # Wait for real path
+                #  Wait for real path
                 while not valid:
                     t = datetime.datetime.now()
                     fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
@@ -193,11 +194,11 @@ class RADICL:
                         filename = os.path.expanduser('./{0}.csv'.format(fname))
                     else:
                         filename = os.path.expanduser(filename)
-                    #Make it absolute
+                    # Make it absolute
                     filename = os.path.abspath(filename)
                     real_path = os.path.isdir( os.path.dirname(filename))
 
-                    #Double check a real path was given
+                    # Double check a real path was given
                     if not real_path:
                         out.warning("Path provided does not exist.")
                         valid = False
@@ -207,12 +208,12 @@ class RADICL:
                         out.msg("Saving Data to :\n{0}".format(self.filename))
 
                         if not self.data.empty:
-                            #Write the header so we knwo things about this
+                            # Write the header so we knwo things about this
                             with open(self.filename,'w') as fp:
                                 final = self.probe.getProbeHeader()
                                 fp.writelines(final)
                                 fp.close()
-                            #Write data
+                            # Write data
                             self.data.to_csv(self.filename,mode = 'a')
                             self.state = 5
 
@@ -263,7 +264,7 @@ class RADICL:
         """
         if filename[-4:] != '.csv':
             f = filename.split('.')
-            #Did the user try to add an ext
+            # Did the user try to add an ext
             if len(f) == 2:
                 filename = f[0]+'.csv'
             else:
@@ -277,19 +278,19 @@ class RADICL:
         Function is used to wait for an appropriate response from user and handle unknown answers
         """
 
-        #Ask user for a yes no question
+        # Ask user for a yes no question
         if answer_lst == None:
             answer_lst = ['y','n']
             question_boolean = True
         else:
             question_boolean = False
 
-        #Keep question to one line if small number of options
+        # Keep question to one line if small number of options
         lower_lst = [i.lower() for i in sorted(answer_lst)]
         lower_lst.append('exit')
         lower_lst.append('home')
 
-        #Help documentation
+        # Help documentation
         if helpme != None:
             lower_lst.append("help")
 
@@ -297,7 +298,7 @@ class RADICL:
             print_able=" ("
             print_able += ", ".join(lower_lst)
             print_able+=")"
-        #Create a column of choices
+        # Create a column of choices
         else:
             print_able='\n{0}'.format(colored('[OPTIONS]','magenta',attrs=['bold']))
             for s in lower_lst:
@@ -305,7 +306,7 @@ class RADICL:
 
         question_str+=print_able
 
-        #Provide prompt for default options
+        # Provide prompt for default options
         if default_answer != None:
             if default_answer not in answer_lst:
                 raise ValueError("default answer must be a member of the acceptable answers list in ask_user function")
@@ -320,13 +321,13 @@ class RADICL:
             user_answer = input('\n')
             response = user_answer.lower()
 
-            #User requests help with options
+            # User requests help with options
             if "help" in response:
                 print_helpme(response,helpme)
                 acceptable_answer=False
                 out.msg(question_str)
 
-            #Request to leave the program
+            # Request to leave the program
             elif response=='exit':
                 out.respond("Exiting the RAD CLI.")
                 self.running = False
@@ -339,11 +340,11 @@ class RADICL:
 
                 self.state = 0
 
-            #Default Picked
+            # Default Picked
             elif response == '':
                 response = default_answer
 
-            #User provided a potential acceptable answer
+            # User provided a potential acceptable answer
             elif response in lower_lst:
                 acceptable_answer=True
                 response = lower_lst[lower_lst.index(response)]

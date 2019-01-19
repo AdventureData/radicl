@@ -87,14 +87,13 @@ def parse_help(help_str):
     my arguments...
 
     """
-    no_help = False
+    no_help = True
+
     if help_str != None:
         if 'helpme' in help_str:
             z = help_str.split('helpme')
             result = z[-1]
-
-    else:
-        no_help = True
+            no_help = False
 
     if no_help:
         result = None

@@ -42,7 +42,7 @@ class RAD_Probe():
                 port.flushPort()
                 # Create the API and FMTR instances The API class is linked to
                 # the port object
-                api = RAD_API.RAD_API(port)
+                api = RAD_API(port)
 
                 #Switch the device over to API mode
                 api.sendApiPortEnable()
