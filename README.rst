@@ -17,17 +17,22 @@ radicl
 
 
 
-Command line interface to the Realtime Adventure Data Lyte probe for measuring avalanche conditions
+Command line interface to the Realtime Adventure Data's Lyte probe for measuring avalanche conditions
 
 
 * Free software: BSD license
 * Documentation: https://radicl.readthedocs.io.
+* Source code: https://github.com/AdventureData/radicl
+* Website: https://adventuredata.com/
 
 
 Features
 --------
 
-* TODO
+* Command line interface to the Lyte probe (radicl)
+* Python API for interacting with the Lyte probe
+* Commandline script for plotting profiles taken through the app (lyteplot)
+* Open data processing!
 
 Credits
 -------

@@ -1,13 +1,3 @@
-'''
-Micah Johnson
-12/14/16
-Purpose:
-To listen to the serial port for start stop commands
-and plot the desired outcomes per user request.
-
-Overhaul - 10/17/17
-
-'''
 import os
 from radicl.radicl import RADICL
 from radicl.ui_tools import Messages

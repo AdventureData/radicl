@@ -5,9 +5,9 @@ Credits
 Development Lead
 ----------------
 
-* Micah Johnson <micah@adventuredata.com>
+* Micah Johnson  `@micahjohnson150 <http://github.com/micahjohnson150>`_ 
 
 Contributors
 ------------
 
-Adrian Rothenbuhler
+* Adrian Rothenbuhler
