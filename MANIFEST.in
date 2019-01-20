@@ -1,6 +1,7 @@
 include docs/authors.rst
 include docs/contributing.rst
 include docs/history.rst
+include ./requirements_dev.txt
 include LICENSE
 include README.rst
 
