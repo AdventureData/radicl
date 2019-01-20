@@ -296,8 +296,11 @@ class RAD_API():
 	#* PUBLIC FUNCTIONS *
 	#********************
 
-	#Sends a '*' to enable the API port
 	def sendApiPortEnable(self):
+		"""
+		Sends a '*' to enable the API port which tells the probe to interact
+		via the radicl API
+		"""
 		self.port.writePort([0x21])
 
 	def Identify(self):
@@ -331,17 +334,6 @@ class RAD_API():
 			print("Invalid response to ID request")
 			return 0
 
-	def HWID(self):
-		return self.hw_id
-
-	def HWID_String(self):
-		return pca_id_list[self.hw_id]
-
-	def HWRev(self):
-		return self.hw_rev
-
-	def FWRev(self):
-		return self.fw_rev
 
 	# ***************************
 	# ***** BASIC COMMANDS ******
@@ -383,7 +375,7 @@ class RAD_API():
 
 	def getFWREV(self):
 		"""
-		 Queries the board's FW revision
+		Queries the board's FW revision
 		"""
 
 		response = self.__send_receive([0x9F, 0x03, 0x00, 0x00, 0x00])
@@ -475,6 +467,7 @@ class RAD_API():
 		message .extend(buffer_id.to_bytes(1, byteorder='little'))
 		message.extend(numPacket.to_bytes(4, byteorder='little'))
 		response = self.__send_receive(message)
+
 		# Check if only the command matches. The length may be variable
 		return self.__EvaluateAndReturn(response, 0x45, 0)
 
