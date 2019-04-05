@@ -6,7 +6,7 @@ import binascii
 import serial
 import time
 from radicl import serial as rs
-
+from radicl.ui_tools import get_logger
 
 pca_id_list = ["UNKNOWN", "PB1", "PB2", "PB3"]
 
@@ -17,6 +17,7 @@ class RAD_API():
 
 	def __init__(self, port):
 		self.port = port
+		self.log = get_logger(__name__, level='DEBUG')
 
 	def __sendCommand(self, data):
 		"""
@@ -30,7 +31,7 @@ class RAD_API():
 			self.port.writePort(data)
 
 		except Exception as e:
-			print (e)
+			self.log.error(e)
 
 		else:
 			success = 1
@@ -53,7 +54,7 @@ class RAD_API():
 				response = self.port.readPort(num_bytes_in_buffer)
 
 		except Exception as e:
-			print (e)
+			self.log.error(e)
 
 		else:
 			success = 1
@@ -246,16 +247,15 @@ class RAD_API():
 		while(num_iter):
 			try:
 				num_bytes_in_buffer = self.port.numBytesInBuffer()
-				# print("Buffer=%d" % num_bytes_in_buffer)
+
 				if (num_bytes_in_buffer > 0):
 					response = self.port.readPort(num_bytes_in_buffer)
 			except Exception as e:
-				print (e)
+				self.log.error(e)
 			else:
 				if (num_bytes_in_buffer >= 5):
 					return response
 				else:
-					# print("Bytes at port = %d" % len(response))
 					num_iter = num_iter - 1
 					time.sleep(delay_time)
 		return None
@@ -320,18 +320,18 @@ class RAD_API():
 
 		if (self.hw_id != None):
 			if (self.hw_id < len(pca_id_list)):
-				print("Attached device: %s, Rev=%s, FW=%s" % \
+				self.log.info("Attached device: %s, Rev=%s, FW=%s" % \
 				  									(pca_id_list[self.hw_id],
 													self.hw_rev,
 													format(self.fw_rev, '.02f')))
 				return 1
 
 			else:
-				print("Unknown device detected!")
+				self.log.info("Unknown device detected!")
 				return 0
 
 		else:
-			print("Invalid response to ID request")
+			self.log.error("Invalid response to ID request")
 			return 0
 
 

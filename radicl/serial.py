@@ -1,30 +1,28 @@
-#============================================================
-# This class handles all serial communication and simply acts
-# as an abstraction layer
-#============================================================
 
 import sys
 import serial
-import serial.tools.list_ports
-
+from serial.tools import list_ports
+from .ui_tools import get_logger
 
 class RAD_Serial():
 	"""
-	A class for managing the serial calls to and from the probe.
+	This class handles all serial communication and simply acts
+	as an abstraction layer
 	"""
 
 	def __init__(self):
 		self.serial_port = None
+		self.log = get_logger(__name__, level='DEBUG')
 
 	def openPort(self, com_port=None):
 
+		# No COM port has been provided. Need to detect port automatically
 		if (com_port == None):
-			# No COM port has been provided. Need to detect port automatically
-			print("No COM port provided. Scanning for COM ports...")
+			self.log.info("No COM port provided. Scanning for COM ports...")
 			match_list = list()
 
 			# Run through all available COM ports and filter out the ones that match our requirement
-			port_list = serial.tools.list_ports.comports()
+			port_list = list_ports.comports()
 			for p in port_list:
 				if ('STMicroelectronics' in p[1] or 'STM32' in p[1]):
 					match_list.append(p)
@@ -33,9 +31,9 @@ class RAD_Serial():
 			if not match_list:
 				raise IOError("No COM ports found")
 
-			#Check if more than one was found. If so, simply print a message
+			#Check if more than one was found. If so, simply self.log.info a message
 			if(len(match_list) > 1):
-				print('Multiple COM ports found - using the first')
+				self.log.info('Multiple COM ports found - using the first')
 
 			#Finally, assign the found port to the serial_port variable
 			this_p = match_list[0]
@@ -53,10 +51,10 @@ class RAD_Serial():
 				self.serial_port.setDTR(1)
 
 			except Exception as e:
-				print("Serial port open failed: %s" %e)
+				self.log.error("Serial port open failed: %s" %e)
 				self.serial_port = None
 				raise IOError("Could not open port %s" % com_port.port)
-			print("COM port found. Using %s" % self.serial_port.port)
+			self.log.info("COM port found. Using %s" % self.serial_port.port)
 
 		else:
 			try:
@@ -73,11 +71,11 @@ class RAD_Serial():
 				self.serial_port.setDTR(1)
 
 			except Exception as e:
-				print("Serial port open failed: %s" % e)
+				self.log.error("Serial port open failed: %s" % e)
 				self.serial_port = None
 				raise IOError("Could not open port %s" % com_port)
 
-			print("Using %s" % serial_port.port)
+			self.log.info("Using %s" % serial_port.port)
 
 	def closePort(self):
 		if (self.serial_port != None):

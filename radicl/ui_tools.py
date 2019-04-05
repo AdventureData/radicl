@@ -2,6 +2,7 @@ import textwrap
 from colorama import init
 from termcolor import colored
 import sys
+import coloredlogs, logging
 
 class Messages():
     init()
@@ -150,3 +151,16 @@ def print_helpme(help_str,help_dict):
     print_able='\n{0}'.format(colored(t,'magenta',attrs=['bold']))
     print_able+=out_str
     print(print_able)
+
+def get_logger(name, level='DEBUG', ext_logger=None,):
+    """
+
+    """
+    fmt = fmt='%(name)s %(levelname)s %(message)s'
+    if ext_logger == None:
+        log = logging.getLogger(name)
+    else:
+        log = ext_logger
+
+    coloredlogs.install(fmt=fmt,level=level, logger=log)
+    return log

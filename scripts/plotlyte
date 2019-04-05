@@ -168,9 +168,10 @@ def main():
 
 
 			fig = plt.figure(figsize=(6,10))
-			# #Parse the datetime
+
+			# Parse the datetime
 			for k,d in data.items():
-				plt.plot(d,d.index,label = k)
+				plt.plot(d, d.index, label = k)
 
 			plt.title(os.path.basename(f))
 			plt.legend()
