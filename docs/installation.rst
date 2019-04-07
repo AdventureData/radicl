@@ -4,6 +4,18 @@
 Installation
 ============
 
+Prerequisites
+--------------
+
+* Python 3.5+
+* TKinter
+* Lyte probe
+
+Installing TKinter on Ubuntu:
+
+.. code block:: console
+
+  sudo apt-get install python3-tk
 
 Stable release
 --------------

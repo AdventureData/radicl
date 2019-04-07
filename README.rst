@@ -36,6 +36,7 @@ Features
 
 Keep up to date
 ---------------
+
  Keep up to date with our `researchers email list`_ where we email you when there
  are new tools and updates available.
 
