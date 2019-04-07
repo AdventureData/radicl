@@ -85,6 +85,7 @@ class RADICL:
 
             elif self.state >= 1:
                 self.tasking()
+                print(self.state)
 
             else:
                 pass
@@ -120,9 +121,9 @@ class RADICL:
 
         temp = self.probe.readMeasurementTemperature()
         if (temp != None):
-            print("Temp = %i" % temp)
+            out.dbg("Temp = %i" % temp)
         else:
-            print("Error reading temp")
+            out.error("Error reading temp")
 
         data = fn()
 
@@ -138,13 +139,13 @@ class RADICL:
         """
         t = type(data)
         if t == dict:
-            data = pd.DataFrame(data,columns = data.keys())
+            data = pd.DataFrame(data, columns = data.keys())
 
         elif t == list:
             if type(data[0])==tuple:
                 data = [d[0] for d in data]
 
-            data = pd.DataFrame(data,columns = [name])
+            data = pd.DataFrame(data, columns = [name])
         return data
 
 
@@ -163,7 +164,7 @@ class RADICL:
                 self.daq = self.ask_user("What data do you want?",
                                     list(self.options['data'].keys()),
                                     helpme = self.help_dialog['data'])
-                print(self.state)
+
         # Method for outputting data
         elif self.state == 2:
             self.output_preference = self.ask_user("How do you want to output"
@@ -200,7 +201,7 @@ class RADICL:
 
                     # Double check a real path was given
                     if not real_path:
-                        out.warning("Path provided does not exist.")
+                        out.warn("Path provided does not exist.")
                         valid = False
                     else:
                         self.filename = filename
@@ -214,7 +215,7 @@ class RADICL:
                                 fp.writelines(final)
                                 fp.close()
                             # Write data
-                            self.data.to_csv(self.filename,mode = 'a')
+                            self.data.to_csv(self.filename, mode = 'a')
                             self.state = 5
 
             if self.output_preference == 'plot' or self.output_preference =='both':
@@ -228,6 +229,76 @@ class RADICL:
                 self.state = 3
             elif not pos_ans:
                 self.state = 1
+
+
+    def task_settings(self):
+        """
+        Routine for handling users requests for modifying probe settings settings
+        """
+
+        # Data Selection
+        if self.state == 1:
+            pstate = self.probe.getProbeMeasState()
+            out.msg("Checking to see if probe is ready...")
+            out.dbg("Probe State = {0}".format(pstate))
+
+            #Make sure probe is ready
+            if pstate == 0 or pstate == 5:
+                self.setting_request = self.ask_user("What settings do you want"
+                                                     " to adjust?",
+                               list(self.probe.settings.keys()),
+                                helpme = self.help_dialog['settings'])
+
+        # Get current setting
+        elif self.state == 2:
+
+            if self.setting_request == 'calibdata':
+                out.error("Calibration method are under developed at this time")
+                self.state = 1
+
+            else:
+                self.current_setting_value = \
+                        self.probe.getSetting(setting_name=self.setting_request)
+                self.state += 1
+
+        # Set settings
+        elif self.state == 3:
+
+                if self.setting_request == 'calibdata':
+                    out.error("Calibration method are under developed at this time")
+                    self.state = 1
+
+                else:
+                    msg = ("Currently {0} = {1}\nEnter value to change probe {0}\n"
+                           "".format(self.setting_request,self.current_setting_value))
+                    valid = False
+
+                    # All entries have to be numeric. Ensure this is the case.
+                    while not valid:
+                        self.new_value = input(msg)
+                        try:
+                            self.new_value = int(self.new_value)
+                            valid = True
+                        except Exception as e:
+                            print(e)
+                            out.error("Value must be numeric!")
+
+                    # Call the function to change the setting
+                    self.probe.setSetting(setting_name = self.setting_request,
+                                          value = self.new_value)
+                    time.sleep(0.2)
+
+                    # Confirm the value was changed
+                    test_value = self.probe.getSetting(
+                                            setting_name = self.setting_request)
+
+                    if test_value == self.new_value:
+                        out.respond("{0} was changed from {1} to {2}!\n"
+                                    "".format(self.setting_request,
+                                              self.current_setting_value,
+                                              self.new_value))
+                    # Go back to settings menu
+                    self.state = 1
 
 
     def increment_fnumber(self,filename):
@@ -337,7 +408,6 @@ class RADICL:
                 out.respond("Returning to the main menu.")
                 self.running = True
                 acceptable_answer=True
-
                 self.state = 0
 
             # Default Picked

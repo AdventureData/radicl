@@ -2,10 +2,13 @@ import sys
 import binascii
 import serial
 import time
+import inspect
 from radicl.api import RAD_API
 from radicl import serial as rs
 from radicl.ui_tools import get_logger
 from radicl import __version__
+from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help
+
 import struct
 import datetime
 
@@ -50,6 +53,11 @@ class RAD_Probe():
                 time.sleep(0.5)
                 ret = api.Identify()
                 time.sleep(0.5)
+
+                # Manages the settings
+                settings_funcs = inspect.getmembers(self.api, predicate=inspect.ismethod)
+                self.settings = parse_func_list(settings_funcs,['Meas','Set'])
+                self.getters = parse_func_list(settings_funcs,['Meas','Get'])
 
     #Generic read function
     def __readData(self, buffer_ID):
@@ -719,3 +727,48 @@ class RAD_Probe():
                               self.api.hw_id,
                               )
         return final
+
+    def getSetting(self,**kwargs):
+        """
+        Reads the probes setting
+        helpme - Zero phase filter order for smoothing the depth data
+
+        """
+        setting_name = kwargs['setting_name']
+        if setting_name == 'calibdata':
+            ret = self.getters[setting_name](kwargs['sensor'])
+
+        else:
+            ret = self.getters[setting_name]()
+
+        if (ret['status'] == 1):
+            data = ret['data']
+            value = int.from_bytes(data,byteorder = 'little')
+            return value
+        elif (ret['errorCode'] != None):
+            out.error("get{0} error: {1}".format(setting_name, ret['errorCode']))
+            return None
+
+        else:
+            out.error("get{0} error: COM".format(setting_name))
+            return None
+
+    def setSetting(self,**kwargs):
+        """
+        sets the probe's setting
+        """
+        setting_name = kwargs['setting_name']
+
+        if setting_name == 'calibdata':
+            ret = self.settings[setting_name](kwargs['sensor'],kwargs['hi_value'])
+
+        else:
+            ret = self.settings[setting_name](kwargs['value'])
+
+        if (ret['status'] == 1):
+            return True
+        elif (ret['errorCode'] != None):
+            out.error("get{0} error: {1}".format(setting_name, ret1['errorCode']))
+        else:
+            out.error("get{0} error: COM".format(setting_name))
+        return None
