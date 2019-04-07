@@ -1,7 +1,5 @@
-#============================================================
-# This class handles all serial communication and simply acts
-# as an abstraction layer
-#============================================================
+# coding: utf-8
+
 import time
 import binascii
 import hashlib

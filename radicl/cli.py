@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import os
 from radicl.radicl import RADICL
 from radicl.ui_tools import Messages
