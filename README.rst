@@ -37,8 +37,8 @@ Features
 Keep up to date
 ---------------
 
- Keep up to date with our `researchers email list`_ where we email you when there
- are new tools and updates available.
+Keep up to date with our `researchers email list`_ where we email you when there
+are new tools and updates available.
 
  .. _researchers email list: http://eepurl.com/geC1wD
 
