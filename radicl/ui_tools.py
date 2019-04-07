@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import textwrap
 from colorama import init
 from termcolor import colored

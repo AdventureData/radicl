@@ -1,10 +1,5 @@
 # coding: utf-8
-'''
-Micah Johnson
-01/18/17
-Purpose:
-To interface with probe and run through calibration scheme
-'''
+
 import os
 import time
 from radicl.serial import RadConnection, MessageColors, ProbeCommand
