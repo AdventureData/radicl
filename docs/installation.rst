@@ -17,6 +17,15 @@ Installing TKinter on Ubuntu:
 
   sudo apt-get install python3-tk
 
+
+If on Ubuntu you get permission denied in the
+error when first using radicl you may need to add:
+
+.. code block:: console
+
+  groups ${USER}
+  sudo gpasswd --add ${USER} dialout
+
 Stable release
 --------------
 
