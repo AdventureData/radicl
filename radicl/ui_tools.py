@@ -43,7 +43,7 @@ class Messages():
         print('\t'+final_msg)
 
 
-def parse_func_list(func_lst, identify_lst,ignore_keywords = []):
+def parse_func_list(func_lst, identify_lst, ignore_keywords = []):
     """
     Reads through a list of available methods and retrieves the methods that have
     matching words in the identify list, then it removes those key words and Returns
@@ -88,16 +88,12 @@ def parse_help(help_str):
     my arguments...
 
     """
-    no_help = True
+    result = None
 
     if help_str != None:
         if 'helpme' in help_str:
             z = help_str.split('helpme')
-            result = z[-1]
-            no_help = False
-
-    if no_help:
-        result = None
+            result = z[-1].split('-')[-1].strip()
 
     return result
 

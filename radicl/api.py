@@ -481,8 +481,9 @@ class RAD_API():
 
 	def MeasSetSamplingRate(self, sampling_rate):
 		"""
-		Sets the sampling rate
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Sets the sensor sampling rate
 		"""
 
 		message = [0x9F, 0x46, 0x01, 0x00, 0x04]
@@ -500,8 +501,9 @@ class RAD_API():
 
 	def MeasSetZPFO(self, zpfo):
 		"""
-		set the Zero Phase Filter Order used on the depth data.
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Set the Zero Phase Filter Order used on the depth data.
 		"""
 
 		message = [0x9F, 0x47, 0x01, 0x00, 0x04]
@@ -519,8 +521,7 @@ class RAD_API():
 
 	def MeasSetPPMM(self, ppmm):
 		"""
-		Sets the Points per millimeter parameter
-
+		helpme - Sets the Points per millimeter parameter
 		"""
 
 		message = [0x9F, 0x48, 0x01, 0x00, 0x01]
@@ -539,8 +540,9 @@ class RAD_API():
 
 	def MeasSetALG(self, alg):
 		"""
-		Sets the algorithm (1 - depth corrected, 2 for timeseries only)
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Sets the algorithm (1 - depth corrected, 2 for timeseries only)
 		"""
 
 		message = [0x9F, 0x49, 0x01, 0x00, 0x01]
@@ -558,8 +560,10 @@ class RAD_API():
 
 	def MeasSetAPPP(self, appp):
 		"""
-		Sets the APPP parameter
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Sets the APPP parameter which smooths the timeseries data
+
 		"""
 
 		message = [0x9F, 0x4A, 0x01, 0x00, 0x01]
@@ -577,8 +581,10 @@ class RAD_API():
 
 	def MeasSetTCM(self, tcm):
 		"""
-		Sets the TCM parameter
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Sets the Temperature correction method for the barometer data
+
 		"""
 
 		message = [0x9F, 0x4B, 0x01, 0x00, 0x01]
@@ -596,8 +602,9 @@ class RAD_API():
 
 	def MeasSetUserTemp(self, user_temp):
 		"""
-		Sets the user temperature
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Set the user specifed temperature for TCM=3
 		"""
 		message = [0x9F, 0x4C, 0x01, 0x00, 0x04]
 		message.extend(user_temp.to_bytes(4, byteorder='little'))
@@ -614,8 +621,9 @@ class RAD_API():
 
 	def MeasSetIR(self, ir):
 		"""
-		Sets the IR parameter
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Turns on the IR emitter
 		"""
 		message = [0x9F, 0x4D, 0x01, 0x00, 0x01]
 		message.extend(ir.to_bytes(1, byteorder='little'))
@@ -634,8 +642,9 @@ class RAD_API():
 
 	def MeasSetCalibData(self, num_sensor, calibration_value):
 		"""
-		Sets the calibration data for the specified sensor
 		Returns status=1 if successfull, status=0 otherwise
+
+		helpme - Sets the calibration data for the specified sensor
 		"""
 
 		message = [0x9F, 0x4E, 0x01, 0x00, 0x05]

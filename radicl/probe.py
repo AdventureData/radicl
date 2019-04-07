@@ -55,7 +55,8 @@ class RAD_Probe():
                 time.sleep(0.5)
 
                 # Manages the settings
-                settings_funcs = inspect.getmembers(self.api, predicate=inspect.ismethod)
+                settings_funcs = inspect.getmembers(self.api,
+                                                    predicate=inspect.ismethod)
                 self.settings = parse_func_list(settings_funcs,['Meas','Set'])
                 self.getters = parse_func_list(settings_funcs,['Meas','Get'])
 
@@ -110,9 +111,10 @@ class RAD_Probe():
                                       (ret3['errorCode'], jj, ii, buffer_ID))
 
                             else:
-                                self.log.error("readSegmentData error: COM (Retry %d, "
-                                "Segment=%d, buffer_ID=%d)" % \
-                                 (jj, ii, buffer_ID))
+                                self.log.error("readSegmentData error: COM "
+                                                "(Retry %d, Segment=%d, "
+                                                "buffer_ID=%d)" % \
+                                                (jj, ii, buffer_ID))
 
                         # Retry failed! Return here
                         if ((ret3['status'] != 1) or (ret3['data'] == None) ):
@@ -177,7 +179,8 @@ class RAD_Probe():
         else:
 
             if (ret['errorCode'] != None):
-                self.log.error("getProbeSystemStatus error: %d" % ret['errorCode'])
+                self.log.error("getProbeSystemStatus error: %d" % \
+                                                              ret['errorCode'])
 
             else:
                 self.log.error("getProbeSystemStatus error: COM")
@@ -526,13 +529,13 @@ class RAD_Probe():
 
     def readFilteredDepthData(self):
         """
-        Retrieves the filtered depth data according to the zero-phase low-pass filter (equivalent to Matlab's 'filtfilt').
-        The amount of filtering applied is set by
-        :func:`~radicl.RAD_API.MeasSetZPFO`
+        Retrieves the filtered depth data according to the zero-phase low-pass
+        filter (equivalent to Matlab's 'filtfilt'). The amount of filtering
+        applied is set by :func:`~radicl.RAD_API.MeasSetZPFO`
 
-        helpme - The probe's filtered depth data is the filtered depth calculated
-        from barometer data where the amount of filtering is set by the ZPFO
-        option under settings.
+        helpme - The probe's filtered depth data is the filtered depth
+        calculated from barometer data where the amount of filtering is set by
+        the ZPFO option under settings.
 
         """
 
@@ -760,7 +763,8 @@ class RAD_Probe():
         setting_name = kwargs['setting_name']
 
         if setting_name == 'calibdata':
-            ret = self.settings[setting_name](kwargs['sensor'],kwargs['hi_value'])
+            ret = self.settings[setting_name](kwargs['sensor'],
+                                              kwargs['hi_value'])
 
         else:
             ret = self.settings[setting_name](kwargs['value'])

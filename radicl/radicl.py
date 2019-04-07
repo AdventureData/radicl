@@ -36,11 +36,15 @@ class RADICL:
         self.options_keywords = {'data':{'parseable':['read','Data']},
                         'settings':{'parseable':['Meas','Set']}
                         }
-        self.options= {'data':{},
+        self.options = {'data':{},
                        'settings':{}}
         # Assign all functions with keys word to auto gather settings and data packages
-        self.options['data'] = parse_func_list(data_funcs,['read','Data'],ignore_keywords = ['correlation'])
+        self.options['data'] = parse_func_list(data_funcs,['read','Data'],
+                                             ignore_keywords = ['correlation'])
         self.options['settings'] = parse_func_list(settings_funcs,['Meas','Set'])
+        self.options['settings']["show"] = self.print_settings
+
+        self.options['getters'] = parse_func_list(settings_funcs,['Meas','Get'])
 
         # User runtime preferences
         self.output_preference = None
@@ -50,15 +54,19 @@ class RADICL:
 
         # Gather help dialogs
         self.help_dialog= {}
+
         for s in self.options.keys():
+            # We haven't added the category yet
             if s not in self.help_dialog:
                 self.help_dialog[s] = {}
+
+            # Add in all the functions
             for k,fn in self.options[s].items():
                 self.help_dialog[s][k] = parse_help(fn.__doc__)
 
     def run(self):
         """
-        Main running loop for the Command line Interface
+        Main running loop for the command line Interface
         """
 
         self.state = 0
@@ -85,7 +93,6 @@ class RADICL:
 
             elif self.state >= 1:
                 self.tasking()
-                print(self.state)
 
             else:
                 pass
@@ -154,13 +161,13 @@ class RADICL:
         The state machine for request to do daq
         """
         # Data Selection
-        if self.state ==1:
+        if self.state==1:
             pstate = self.probe.getProbeMeasState()
             out.msg("Checking to see if probe is ready...")
             out.dbg("Probe State = {0}".format(pstate))
 
             # Make sure probe is ready
-            if pstate == 0 or pstate == 5:
+            if pstate==0 or pstate==5:
                 self.daq = self.ask_user("What data do you want?",
                                     list(self.options['data'].keys()),
                                     helpme = self.help_dialog['data'])
@@ -242,11 +249,12 @@ class RADICL:
             out.msg("Checking to see if probe is ready...")
             out.dbg("Probe State = {0}".format(pstate))
 
-            #Make sure probe is ready
+            # Make sure probe is ready
             if pstate == 0 or pstate == 5:
+                print( self.help_dialog['settings'])
                 self.setting_request = self.ask_user("What settings do you want"
                                                      " to adjust?",
-                               list(self.probe.settings.keys()),
+                               list(self.options['settings'].keys()),
                                 helpme = self.help_dialog['settings'])
 
         # Get current setting
@@ -254,6 +262,10 @@ class RADICL:
 
             if self.setting_request == 'calibdata':
                 out.error("Calibration method are under developed at this time")
+                self.state = 1
+
+            elif self.setting_request == 'show':
+                self.options['settings'][self.setting_request]()
                 self.state = 1
 
             else:
@@ -300,6 +312,23 @@ class RADICL:
                     # Go back to settings menu
                     self.state = 1
 
+    def print_settings(self):
+        """
+        print all the current settings
+
+        helpme - Prints out all the settings fro the probe
+
+        """
+
+        msg = "\n===== Current Probe Settings =====\n"
+
+        for s, fn in self.options['getters'].items():
+
+            if s.lower() not in ['calibdata','numsegments']:
+                value = self.probe.getSetting(setting_name=s)
+                msg += "{} = {}\n".format(s, value)
+        out.msg(msg)
+        time.sleep(2)
 
     def increment_fnumber(self,filename):
         """
