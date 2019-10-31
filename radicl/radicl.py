@@ -28,25 +28,30 @@ class RADICL:
         self.probe = probe.RAD_Probe()
         self.running = True
 
-        self.settings = dir(self.probe.api)
+        self.settings = dir(self.probe)
 
         # Get all the functions available in api and probe
-        settings_funcs = inspect.getmembers(self.probe.api, predicate=inspect.ismethod)
-        data_funcs = inspect.getmembers(self.probe, predicate=inspect.ismethod)
+        api_funcs = inspect.getmembers(self.probe, predicate=inspect.ismethod)
+
         # Dictionary of the options available that can be auto parsed
         # Each option type has keys word that searched for in the api and probe classes
-        self.options_keywords = {'data':{'parseable':['read','Data']},
-                        'settings':{'parseable':['Meas','Set']}
+        self.options_keywords = {'data':{'parseable':['read','Data'],
+                                         'ignore':['correlation']},
+                                'settings':{'parseable':['Meas','Set'],
+                                             'ignore':[]},
+                                'getters':{'parseable':['Meas','Get'],
+                                           'ignore':[]}
                         }
-        self.options = {'data':{},
-                       'settings':{}}
-        # Assign all functions with keys word to auto gather settings and data packages
-        self.options['data'] = parse_func_list(data_funcs,['read','Data'],
-                                             ignore_keywords = ['correlation'])
-        self.options['settings'] = parse_func_list(settings_funcs,['Meas','Set'])
-        self.options['settings']["show"] = self.print_settings
 
-        self.options['getters'] = parse_func_list(settings_funcs,['Meas','Get'])
+        self.options = {}
+
+        # Assign all functions with keys word to auto gather settings and data packages
+        for op,kws in self.options_keywords.items():
+            self.options[op] = parse_func_list(api_funcs, kws['parseable'],
+                                             ignore_keywords = kws['ignore'])
+        # self.options['data'].update(parse_func_list(self.probe.getters.values(),['read','Data'],
+        #                                      ignore_keywords = ['correlation']))
+        self.options['settings']["show"] = self.print_settings
 
         # User runtime preferences
         self.output_preference = None

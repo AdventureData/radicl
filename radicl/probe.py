@@ -47,11 +47,11 @@ class RAD_Probe():
                 # the port object
                 api = RAD_API(port)
 
-                #Switch the device over to API mode
+                # Switch the device over to API mode
                 api.sendApiPortEnable()
                 self.api = api
 
-                #Delay a bit and then identify the attached device
+                # Delay a bit and then identify the attached device
                 time.sleep(0.5)
                 ret = api.Identify()
                 time.sleep(0.5)
@@ -74,7 +74,7 @@ class RAD_Probe():
         ret1 = self.api.MeasGetNumSegments(buffer_ID)
         # Returns a positive status
         if (ret1['status'] == 1):
-            num_segments = int.from_bytes(ret1['data'],byteorder='little')
+            num_segments = int.from_bytes(ret1['data'], byteorder='little')
 
             if (num_segments != 0 and num_segments != None):
                 self.log.debug("Reading %d segments" % num_segments)
@@ -364,10 +364,60 @@ class RAD_Probe():
         else:
             return None
 
+
+    def readCalibratedSensorData(self):
+        """
+        Reads the Read Calibrated sensor data.
+        helpme - Calibrated data for 4 sensors
+
+        Returns:
+            dict - containing data or None if read failed
+        """
+        ret = self.__readData(10)
+
+        # Sucessfully read data
+        if (ret['status'] == 1):
+            #***** DATA INTEGRITY CHECK *****
+            if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
+                # Data integrity error (not all segments read)
+                self.log.error("readCalibratedSensorData error: Data integrity error (not all "
+                      "segments read)")
+                return None
+            expected_bytes = ret['SegmentsRead'] * 256
+            if (expected_bytes != ret['BytesRead']):
+                # Data integrity error (not all bytes read - incomplete segment)
+                # For the raw sensor data, this is also the check to ensure we have an even amount of bytes to break into sensor pairs
+                self.log.error("readCalibratedSensorData error: Data integrity error (not all "
+                      "bytes read - incomplete segment)")
+                self.log.error("Expected=%d, Read=%d" % (expected_bytes, ret['BytesRead']))
+                return None
+
+            #***** DATA PARSING *****
+            data = ret['Data']
+            sensor1 = []
+            sensor2 = []
+            sensor3 = []
+            sensor4 = []
+            total_runs = expected_bytes // 8
+            offset = 0
+
+            for ii in range(0, total_runs):
+                sensor1.append(data[offset] + data[(offset + 1)] * 256)
+                sensor2.append(data[(offset + 2)] + data[(offset + 3)] * 256)
+                sensor3.append(data[(offset + 4)] + data[(offset + 5)] * 256)
+                sensor4.append(data[(offset + 6)] + data[(offset + 7)] * 256)
+                offset = offset + 8
+            return {'Sensor1': sensor1, 'Sensor2': sensor2, 'Sensor3': sensor3,
+                    'Sensor4': sensor4}
+
+        # Read failed!
+        else:
+            return None
+
     def readRawAccelerationData(self):
         """
-        Reads the RAW acceleration data
-        helpme - Accelerometer data from the probe
+        Reads the raw 3 axis  acceleration data
+        helpme - Raw 3 axis accelerometer data from the probe
 
         Returns:
             dict: containing accel data (x,y,z) or None if read failed
@@ -617,7 +667,7 @@ class RAD_Probe():
             #Read failed!
             return None
 
-    def readSensorDepthCombo(self):
+    def readSensorDepthComboData(self):
         """
         Reads the processed data as a sensor-depth combo
         """
@@ -636,7 +686,7 @@ class RAD_Probe():
             if ( (total_bytes % 16) != 0 ):
                 # Data integrity error (not all bytes read - incomplete data segment)
                 # The data set is not an integer multiple of 4 (Correlation number is a 32-bit int => 4 bytes)
-                self.log.error("readPressureDepthCorrelationData error: Data integrity"
+                self.log.error("readSensorDepthCombo error: Data integrity"
                       " error (incomplete data set)")
                 return None
 
@@ -665,11 +715,11 @@ class RAD_Probe():
                 sensor3.append(this_data_set[12] + (this_data_set[13] * 256))
                 sensor4.append(this_data_set[14] + (this_data_set[15] * 256))
                 offset = offset + 16
-            return {'ID': transaction_id, 'Sensor1': sensor1,
-                                          'Sensor2': sensor2,
-                                          'Sensor3': sensor3,
-                                          'Sensor4': sensor4,
-                                          'Depth': depth}
+            return {'Sensor1': sensor1,
+                    'Sensor2': sensor2,
+                    'Sensor3': sensor3,
+                    'Sensor4': sensor4,
+                    'Depth': depth}
         else:
             #Read failed!
             return None

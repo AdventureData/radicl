@@ -61,9 +61,10 @@ def parse_func_list(func_lst, identify_lst, ignore_keywords = []):
     """
     options = {}
     ignore_keywords = [w.lower() for w in ignore_keywords]
+
     for f_name,fn in func_lst:
-        #Return a list of true when a word is found
-        words_found = [True for w in identify_lst if w in f_name]
+        # Return a list of true when a word is found
+        words_found = [True for w in identify_lst if w.lower() in f_name.lower()]
         #If the number of the matches matches the number of keywords were looking for
         if len(words_found) == len(identify_lst) and 'RAD' not in f_name:
             #Remove the keywords to form the simplified method name

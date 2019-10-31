@@ -54,7 +54,7 @@ class RAD_Serial():
 			except Exception as e:
 				self.log.error("Serial port open failed: %s" %e)
 				self.serial_port = None
-				raise IOError("Could not open port %s" % com_port.port)
+				raise IOError("Could not open COM port")
 			self.log.info("COM port found. Using %s" % self.serial_port.port)
 
 		else:
