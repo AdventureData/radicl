@@ -85,12 +85,13 @@ class RADICL:
 
         # Create the probe command with an arbitrary command to have access to help
         while self.running:
+
             pstate = self.probe.getProbeMeasState()
 
             if self.state == 0:
                 #If probe is not ready.
-                if pstate != 0:
-                    pstate = self.probe.resetMeasurement()
+                if pstate not in [0,5]:
+                    self.probe.resetMeasurement()
 
                 else:
                     #Request type of operation
