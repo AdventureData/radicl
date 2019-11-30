@@ -62,7 +62,7 @@ class RAD_Probe():
                 self.settings = parse_func_list(settings_funcs,['Meas','Set'])
                 self.getters = parse_func_list(settings_funcs,['Meas','Get'])
 
-    def manage_error(self,  ret_dict):
+    def manage_error(self,  ret_dict, stack_id=1):
         """
         Handles the common scenario of looking at the returned Dictionary
         from the probe where there may be an error or simply a com error.
@@ -71,14 +71,42 @@ class RAD_Probe():
 
         Args:
             ret_dict: Dictionary of keys ['status','data','errorCode']
+            stack_id: number of functions up the stack to use for reporting
+                      function name when errors occur.
         """
-        name = inspect.stack()[1][3]
+        name = inspect.stack()[stack_id][3]
 
         if (ret_dict['errorCode'] != None):
             self.log.error("{} error:{}".format(name, ret['errorCode']))
 
         else:
             self.log.error("{} error: COM".format(name))
+
+    def manage_data_return(self,ret, dtype=int):
+        """
+        Manage a return from the probe when were expecting an integer
+
+        Args:
+            ret: Dictionary of the return with keys status, errorCode, and data
+        Returns:
+            result: None when no data was received. Integer when its not.
+        """
+        if ( (ret['status'] == 1) and (ret['data'] != None) ):
+
+            if dtype == int:
+                result = int.from_bytes(ret['data'],byteorder='little')
+
+            elif dtype == str:
+                result = ret['data'].decode('utf-8')
+
+            else:
+                raise ValueError("No types other than str and int are implemented")
+
+        else:
+            self.manage_error(ret, stack_id=2)
+            result = None
+
+        return result
 
 
     #Generic read function
@@ -173,12 +201,7 @@ class RAD_Probe():
         """
 
         ret = self.api.getSerialNumber()
-
-        if ( (ret['status'] == 1) and (ret['data'] != None) ):
-            return ret['data'].decode("utf-8")
-        else:
-            self.manage_error(ret)
-            return None
+        return self.manage_data_return(ret, dtype=str)
 
     def getProbeSystemStatus(self):
         """
@@ -188,14 +211,8 @@ class RAD_Probe():
 
         ret = self.api.getSystemStatus()
 
-        if ( (ret['status'] == 1) and (ret['data'] != None) ):
-            return int.from_bytes(ret['data'], byteorder='little')
+        return self.manage_data_return(ret, dtype=int)
 
-        else:
-            self.manage_error(ret)
-
-
-            return None
 
     def getProbeRunState(self):
         """
@@ -204,14 +221,8 @@ class RAD_Probe():
         """
 
         ret = self.api.getRunState()
+        return self.manage_data_return(ret, dtype=int)
 
-        if ((ret['status'] == 1) and (ret['data'] != None)):
-            return int.from_bytes(ret['data'], byteorder='little')
-
-        else:
-            self.manage_error(ret)
-
-            return None
 
     def getProbeMeasState(self):
         """
@@ -220,12 +231,15 @@ class RAD_Probe():
         Returns:
             integer-measurement state of the probe, or none if error arises.
         """
-        ret = self.api.getMeasState()
-        if ( (ret['status'] == 1) and (ret['data'] != None) ):
-            return int.from_bytes(ret['data'],byteorder ='little')
-        else:
-            self.manage_error(ret)
-            return None
+        data = None
+        attempts = 0
+
+        while data == None and attempts < 10:
+            ret = self.api.getMeasState()
+            data = self.manage_data_return(ret, dtype=int)
+            attempts+=1
+
+        return data
 
     def startMeasurement(self):
         """
@@ -270,10 +284,11 @@ class RAD_Probe():
         """
 
         ret = self.api.MeasReset()
+        self.log.debug("Measurement reset requested...")
 
         if (ret['status'] == 1):
-            self.log.debug("Measurement reset requested...")
             self.wait_for_state(5)
+            self.log.info("Probe measurement reset...")
 
             return 1
         else:
@@ -288,12 +303,12 @@ class RAD_Probe():
         """
 
         attempts = 0
-        pstate = None
+        pstate = self.getProbeMeasState()
         result = False
+
         self.log.debug("Waiting for state {0}, current state = {1}".format(state, pstate))
 
         while not result:
-            pstate = self.getProbeMeasState()
             result = pstate==state
 
             if attempts > retry:
@@ -304,6 +319,7 @@ class RAD_Probe():
                 attempts +=1
 
             time.sleep(0.1)
+            pstate = self.getProbeMeasState()
 
         if result:
             self.log.debug("{} queries while waiting for state {}".format(attempts, state))
@@ -742,15 +758,7 @@ class RAD_Probe():
         """
 
         ret = self.api.MeasGetZPFO()
-        if (ret['status'] == 1):
-            data = ret['data']
-            value = int.from_bytes(data,byteorder = 'little')
-            return value
-
-        else:
-            self.manage_error(ret)
-
-        return None
+        return self.manage_data_return(ret, dtype=int)
 
     def getProbeHeader(self):
         """
@@ -789,15 +797,8 @@ class RAD_Probe():
         else:
             ret = self.getters[setting_name]()
 
-        if (ret['status'] == 1):
-            data = ret['data']
-            value = int.from_bytes(data,byteorder = 'little')
-            return value
+        return self.manage_data_return(ret, dtype=int)
 
-        else:
-            self.manage_error(ret)
-
-            return None
 
     def setSetting(self,**kwargs):
         """
