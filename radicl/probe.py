@@ -10,10 +10,11 @@ from radicl import serial as rs
 from radicl.ui_tools import get_logger
 from radicl import __version__
 from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help
-
 import struct
 import datetime
 
+
+error_codes = {2049:"The probe measurement/sensor is not running"}
 
 class RAD_Probe():
     """
@@ -77,7 +78,7 @@ class RAD_Probe():
         name = inspect.stack()[stack_id][3]
 
         if (ret_dict['errorCode'] != None):
-            self.log.error("{} error:{}".format(name, ret['errorCode']))
+            self.log.error("{} error:{}".format(name, ret_dict['errorCode']))
 
         else:
             self.log.error("{} error: COM".format(name))
@@ -287,7 +288,7 @@ class RAD_Probe():
         self.log.debug("Measurement reset requested...")
 
         if (ret['status'] == 1):
-            self.wait_for_state(5)
+            self.wait_for_state(0)
             self.log.info("Probe measurement reset...")
 
             return 1
@@ -296,7 +297,7 @@ class RAD_Probe():
 
             return 0
 
-    def wait_for_state(self, state, retry = 10):
+    def wait_for_state(self, state, retry=500):
         """
         Waits for the specifed state to occur. This is particularly useful when
         a command is requested.
@@ -318,7 +319,7 @@ class RAD_Probe():
             else:
                 attempts +=1
 
-            time.sleep(0.1)
+            time.sleep(0.2)
             pstate = self.getProbeMeasState()
 
         if result:
