@@ -62,6 +62,25 @@ class RAD_Probe():
                 self.settings = parse_func_list(settings_funcs,['Meas','Set'])
                 self.getters = parse_func_list(settings_funcs,['Meas','Get'])
 
+    def manage_error(self,  ret_dict):
+        """
+        Handles the common scenario of looking at the returned Dictionary
+        from the probe where there may be an error or simply a com error.
+        This function reports the name of the function and reports the error
+        function.
+
+        Args:
+            ret_dict: Dictionary of keys ['status','data','errorCode']
+        """
+        name = inspect.stack()[1][3]
+
+        if (ret_dict['errorCode'] != None):
+            self.log.error("{} error:{}".format(name, ret['errorCode']))
+
+        else:
+            self.log.error("{} error: COM".format(name))
+
+
     #Generic read function
     def __readData(self, buffer_ID):
         """
@@ -158,13 +177,7 @@ class RAD_Probe():
         if ( (ret['status'] == 1) and (ret['data'] != None) ):
             return ret['data'].decode("utf-8")
         else:
-
-            if (ret['errorCode'] != None):
-                self.log.error("getProbeSerial error: %d" % ret['errorCode'])
-
-            else:
-                self.log.error("getProbeSerial error: COM")
-
+            self.manage_error(ret)
             return None
 
     def getProbeSystemStatus(self):
@@ -179,13 +192,8 @@ class RAD_Probe():
             return int.from_bytes(ret['data'], byteorder='little')
 
         else:
+            self.manage_error(ret)
 
-            if (ret['errorCode'] != None):
-                self.log.error("getProbeSystemStatus error: %d" % \
-                                                              ret['errorCode'])
-
-            else:
-                self.log.error("getProbeSystemStatus error: COM")
 
             return None
 
@@ -201,12 +209,7 @@ class RAD_Probe():
             return int.from_bytes(ret['data'], byteorder='little')
 
         else:
-
-            if (ret['errorCode'] != None):
-                self.log.error("getProbeRunState error: %d" % ret['errorCode'])
-
-            else:
-                self.log.error("getProbeRunState error: COM")
+            self.manage_error(ret)
 
             return None
 
@@ -221,10 +224,7 @@ class RAD_Probe():
         if ( (ret['status'] == 1) and (ret['data'] != None) ):
             return int.from_bytes(ret['data'],byteorder ='little')
         else:
-            if (ret['errorCode'] != None):
-                self.log.error("getState error: %d" % ret['errorCode'])
-            else:
-                self.log.error("getState error: COM")
+            self.manage_error(ret)
             return None
 
     def startMeasurement(self):
@@ -242,11 +242,7 @@ class RAD_Probe():
             return 1
 
         else:
-            if (ret['errorCode'] != None):
-                self.log.error("measStart error: %d" % ret['errorCode'])
-
-            else:
-                self.log.error("measStart error: COM")
+            self.manage_error(ret)
 
             return 0
 
@@ -263,10 +259,8 @@ class RAD_Probe():
 
             return 1
         else:
-            if (ret['errorCode'] != None):
-                self.log.error("measStop error: %d" % ret['errorCode'])
-            else:
-                self.log.error("measStop error: COM")
+            self.manage_error(ret)
+
             return 0
 
     def resetMeasurement(self):
@@ -278,15 +272,12 @@ class RAD_Probe():
         ret = self.api.MeasReset()
 
         if (ret['status'] == 1):
+            self.log.debug("Measurement reset requested...")
             self.wait_for_state(5)
 
             return 1
         else:
-            if (ret['errorCode'] != None):
-                self.log.error("measStop error: %d" % ret['errorCode'])
-
-            else:
-                self.log.error("measStop error: COM")
+            self.manage_error(ret)
 
             return 0
 
@@ -299,7 +290,7 @@ class RAD_Probe():
         attempts = 0
         pstate = None
         result = False
-        self.log.debug("Waiting for state {0}".format(state))
+        self.log.debug("Waiting for state {0}, current state = {1}".format(state, pstate))
 
         while not result:
             pstate = self.getProbeMeasState()
@@ -313,6 +304,10 @@ class RAD_Probe():
                 attempts +=1
 
             time.sleep(0.1)
+
+        if result:
+            self.log.debug("{} queries while waiting for state {}".format(attempts, state))
+
         return result
 
     def readRawSensorData(self):
@@ -736,10 +731,9 @@ class RAD_Probe():
             this_value = struct.unpack('i', this_byte_object)
             return this_value
 
-        elif (ret['errorCode'] != None):
-            self.log.error("getMeasTemp error: %d" % ret['errorCode'])
         else:
-            self.log.error("getMeasTemp error: COM")
+            self.manage_error(ret)
+
         return None
 
     def getZPFO(self):
@@ -753,10 +747,9 @@ class RAD_Probe():
             value = int.from_bytes(data,byteorder = 'little')
             return value
 
-        elif (ret['errorCode'] != None):
-            self.log.error("getZPFO error: %d" % ret['errorCode'])
         else:
-            self.log.error("getZPFO error: COM")
+            self.manage_error(ret)
+
         return None
 
     def getProbeHeader(self):
@@ -800,12 +793,10 @@ class RAD_Probe():
             data = ret['data']
             value = int.from_bytes(data,byteorder = 'little')
             return value
-        elif (ret['errorCode'] != None):
-            out.error("get{0} error: {1}".format(setting_name, ret['errorCode']))
-            return None
 
         else:
-            out.error("get{0} error: COM".format(setting_name))
+            self.manage_error(ret)
+
             return None
 
     def setSetting(self,**kwargs):
@@ -823,8 +814,8 @@ class RAD_Probe():
 
         if (ret['status'] == 1):
             return True
-        elif (ret['errorCode'] != None):
-            out.error("get{0} error: {1}".format(setting_name, ret1['errorCode']))
+
         else:
-            out.error("get{0} error: COM".format(setting_name))
+            self.manage_error(ret)
+
         return None
