@@ -5,6 +5,37 @@ import serial
 from serial.tools import list_ports
 from .ui_tools import get_logger
 
+
+def find_kw_port(kw):
+	"""
+	Find a com port by looking at Keyword attributes of the port
+
+	Args:
+		kw: List of kw to use (not case sensitive)
+	Return:
+		match_list: list of port names that have at least one matching keyword
+	"""
+
+	match_list = []
+
+	# Run through all available COM ports grabs ones that match our keywords
+	port_list = list_ports.comports()
+
+	for p in port_list:
+		# Make a list of true for every keyword we find in the port data
+		kw_match = [True for k in kw if k.lower() in p[1].lower()]
+		print(kw_match)
+
+		# If the match list is not empty append this port name
+		if kw_match:
+			match_list.append(p)
+
+	# Throw an exception if there are no ports
+	if not match_list:
+		raise IOError("No COM ports found")
+
+	return match_list
+
 class RAD_Serial():
 	"""
 	This class handles all serial communication and simply acts
@@ -20,61 +51,33 @@ class RAD_Serial():
 		# No COM port has been provided. Need to detect port automatically
 		if (com_port == None):
 			self.log.info("No COM port provided. Scanning for COM ports...")
-			match_list = list()
 
-			# Run through all available COM ports and filter out the ones that match our requirement
-			port_list = list_ports.comports()
-			for p in port_list:
-				if ('STMicroelectronics' in p[1] or 'STM32' in p[1]):
-					match_list.append(p)
+			match_list = find_kw_port(['STMicroelectronics', 'STM32'])
 
-			#Throw an exception if there are no ports
-			if not match_list:
-				raise IOError("No COM ports found")
-
-			#Check if more than one was found. If so, simply self.log.info a message
+			# Check if more than one was found
 			if(len(match_list) > 1):
-				self.log.info('Multiple COM ports found - using the first')
+				self.log.warn('Multiple COM ports found, using the first')
 
-			#Finally, assign the found port to the serial_port variable
+			# Finally, assign the found port to the serial_port variable
 			this_p = match_list[0]
-			try:
-				self.serial_port = serial.Serial(port=this_p[0],
-												 baudrate=115200,
-												 parity=serial.PARITY_NONE,
-                                        		 stopbits=serial.STOPBITS_ONE,
-												 bytesize=serial.EIGHTBITS,
-												 timeout=0.01,
-												 write_timeout=0,
-												 xonxoff=False,
-												 rtscts=False,
-												 dsrdtr=False)
-				self.serial_port.setDTR(1)
+			com_port = this_p[0]
 
-			except Exception as e:
-				self.log.error("Serial port open failed: %s" %e)
-				self.serial_port = None
-				raise IOError("Could not open COM port")
-			self.log.info("COM port found. Using %s" % self.serial_port.port)
+		try:
+			self.serial_port = serial.Serial(port=com_port,
+											 baudrate=115200,
+											 parity=serial.PARITY_NONE,
+                                    		 stopbits=serial.STOPBITS_ONE,
+											 bytesize=serial.EIGHTBITS,
+											 timeout=0.01,
+											 write_timeout=0,
+											 xonxoff=False,
+											 rtscts=False,
+											 dsrdtr=False)
+			self.serial_port.setDTR(1)
 
-		else:
-			try:
-				self.serial_port = serial.Serial(port=com_port,
-												 baudrate=115200,
-												 parity=serial.PARITY_NONE,
-                                        		 stopbits=serial.STOPBITS_ONE,
-												 bytesize=serial.EIGHTBITS,
-												 timeout=0.01,
-												 write_timeout=0,
-												 xonxoff=False,
-												 rtscts=False,
-												 dsrdtr=False)
-				self.serial_port.setDTR(1)
-
-			except Exception as e:
-				self.log.error("Serial port open failed: %s" % e)
-				self.serial_port = None
-				raise IOError("Could not open port %s" % com_port)
+		except Exception as e:
+			self.log.error("Serial port open failed: %s" %e)
+			raise IOError("Could not open COM port")
 
 			self.log.info("Using %s" % serial_port.port)
 

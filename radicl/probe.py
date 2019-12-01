@@ -288,19 +288,26 @@ class RAD_Probe():
         self.log.debug("Measurement reset requested...")
 
         if (ret['status'] == 1):
-            self.wait_for_state(0)
+            self.wait_for_state(0, delay=0.3)
             self.log.info("Probe measurement reset...")
 
             return 1
+
         else:
             self.manage_error(ret)
 
             return 0
 
-    def wait_for_state(self, state, retry=500):
+    def wait_for_state(self, state, retry=500, delay=0.2):
         """
         Waits for the specifed state to occur. This is particularly useful when
         a command is requested.
+
+        Args:
+            state: single integer
+            retry: Number of attempts to try while Waiting for the states
+            delay: time in seconds to wait between each attempt
+
         """
 
         attempts = 0
@@ -310,16 +317,16 @@ class RAD_Probe():
         self.log.debug("Waiting for state {0}, current state = {1}".format(state, pstate))
 
         while not result:
-            result = pstate==state
+            result = pstate == state
 
             if attempts > retry:
-                self.log.error("Retry Exceeded waiting for state {0}".format(state))
+                self.log.error("Retry Exceeded waiting for state(s) {0}".format(state))
                 result = False
                 break
             else:
                 attempts +=1
 
-            time.sleep(0.2)
+            time.sleep(delay)
             pstate = self.getProbeMeasState()
 
         if result:
