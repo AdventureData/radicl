@@ -9,6 +9,7 @@ from radicl.ui_tools import get_logger
 
 pca_id_list = ["UNKNOWN", "PB1", "PB2", "PB3"]
 
+
 class RAD_API():
 	"""
 	Class for directly interacting with the probe in a non-human friendly way
@@ -264,6 +265,11 @@ class RAD_API():
 		This function evaluates the response and prepares the API return value
 		If 'num_expected_payload_bytes' is 0, then the response guides how
 		many bytes will be returned
+
+		Args:
+			response: data in bytes from the probe received from __send_receive
+			expected_command:
+			num_expected_payload_bytes: Integer number of bytes expecting to receive
 		"""
 
 		if (response == None):
@@ -636,19 +642,39 @@ class RAD_API():
 
 		message = [0x9F, 0x4E, 0x00, 0x00, 0x01]
 		message.extend(num_sensor.to_bytes(1, byteorder='little'))
+
 		response = self.__send_receive(message)
+
+		# Expect 4 bytes back two for the low value and 2 for the high value
 		return self.__EvaluateAndReturn(response, 0x4E, 4)
 
-	def MeasSetCalibData(self, num_sensor, calibration_value):
+	def MeasSetCalibData(self, num_sensor, low_value, hi_value):
 		"""
-		Returns status=1 if successfull, status=0 otherwise
+		Sets the probes calibration values. A high and low are set where the
+		low. This is applied linearly and thus the low value should be the
+		y intercept. This will remap the raw's low value-high value to 0-4095
+
+		The probe expects this number joined in bytes so we have to create a
+		2, 2 byte integers and add them together to create a 4 byte message.
+
+		Args:
+			num_sensor: Integer indicating sensors 1,2,3, or 4.
+			low_value: 12-bit integer indicating the y intercept of a linear
+					   calibration
+			hi_value: 12-bit integer for the
+
+		Returns:
+		 	status: 1 if successful, 0 otherwise
 
 		helpme - Sets the calibration data for the specified sensor
 		"""
 
 		message = [0x9F, 0x4E, 0x01, 0x00, 0x05]
+
+		# Convert values each into a 1 and 2 bytes
 		message.extend(num_sensor.to_bytes(1, byteorder='little'))
-		message.extend(calibration_value.to_bytes(4, byteorder='little'))
+		message.extend(low_value.to_bytes(2, byteorder='little'))
+		message.extend(hi_value.to_bytes(2, byteorder='little'))
 		response = self.__send_receive(message)
 		return self.__EvaluateAndReturn(response, 0x4E, 0)
 

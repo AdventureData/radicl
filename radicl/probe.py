@@ -83,7 +83,7 @@ class RAD_Probe():
         else:
             self.log.error("{} error: COM".format(name))
 
-    def manage_data_return(self,ret, dtype=int):
+    def manage_data_return(self, ret, num_values, dtype=int):
         """
         Manage a return from the probe when were expecting an integer
 
@@ -92,16 +92,33 @@ class RAD_Probe():
         Returns:
             result: None when no data was received. Integer when its not.
         """
+        result = []
+
         if ( (ret['status'] == 1) and (ret['data'] != None) ):
 
-            if dtype == int:
-                result = int.from_bytes(ret['data'],byteorder='little')
+            data_size = len(ret['data'])
+            increment = int(data_size / num_values)
 
-            elif dtype == str:
-                result = ret['data'].decode('utf-8')
+            if data_size % num_values != 0:
+                raise IOError("Data received (length = {}) is not evenly "
+                              "divided by the expected number of values = "
+                              "{}".format(data_size, num_values))
 
-            else:
-                raise ValueError("No types other than str and int are implemented")
+            for i in range(0, data_size,increment):
+                data = ret['data'][i:i+increment]
+                if dtype == int:
+                    value = int.from_bytes(data, byteorder='little')
+
+                elif dtype == str:
+                    value = data.decode('utf-8')
+
+                else:
+                    raise ValueError("No types other than str and int are implemented")
+
+                result.append(value)
+
+            if num_values == 1:
+                result = result[0]
 
         else:
             self.manage_error(ret, stack_id=2)
@@ -110,7 +127,7 @@ class RAD_Probe():
         return result
 
 
-    #Generic read function
+    # Generic read function
     def __readData(self, buffer_ID):
         """
         Prive function to retrieve data from the probe.
@@ -376,7 +393,7 @@ class RAD_Probe():
                 sensor3.append(data[(offset + 4)] + data[(offset + 5)] * 256)
                 sensor4.append(data[(offset + 6)] + data[(offset + 7)] * 256)
                 offset = offset + 8
-            return {'Sensor1': sensor1, 'Sensor2': sensor2, 'Sensor3': sensor3,
+            return {'Sensor1': sensor1, 'Sensor2': sensor2, 'F3': sensor3,
                     'Sensor4': sensor4}
 
         # Read failed!
@@ -392,46 +409,10 @@ class RAD_Probe():
         Returns:
             dict - containing data or None if read failed
         """
-        ret = self.__readData(10)
-
-        # Sucessfully read data
-        if (ret['status'] == 1):
-            #***** DATA INTEGRITY CHECK *****
-            if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
-                # Data integrity error (not all segments read)
-                self.log.error("readCalibratedSensorData error: Data integrity error (not all "
-                      "segments read)")
-                return None
-            expected_bytes = ret['SegmentsRead'] * 256
-            if (expected_bytes != ret['BytesRead']):
-                # Data integrity error (not all bytes read - incomplete segment)
-                # For the raw sensor data, this is also the check to ensure we have an even amount of bytes to break into sensor pairs
-                self.log.error("readCalibratedSensorData error: Data integrity error (not all "
-                      "bytes read - incomplete segment)")
-                self.log.error("Expected=%d, Read=%d" % (expected_bytes, ret['BytesRead']))
-                return None
-
-            #***** DATA PARSING *****
-            data = ret['Data']
-            sensor1 = []
-            sensor2 = []
-            sensor3 = []
-            sensor4 = []
-            total_runs = expected_bytes // 8
-            offset = 0
-
-            for ii in range(0, total_runs):
-                sensor1.append(data[offset] + data[(offset + 1)] * 256)
-                sensor2.append(data[(offset + 2)] + data[(offset + 3)] * 256)
-                sensor3.append(data[(offset + 4)] + data[(offset + 5)] * 256)
-                sensor4.append(data[(offset + 6)] + data[(offset + 7)] * 256)
-                offset = offset + 8
-            return {'Sensor1': sensor1, 'Sensor2': sensor2, 'Sensor3': sensor3,
-                    'Sensor4': sensor4}
-
-        # Read failed!
-        else:
-            return None
+        calib_values = {}
+        for id in range(1,5):
+            sensor = "Sensor{}".format(id)
+            calib_values[sensor] = getSetting(sensor=sensor)
 
     def readRawAccelerationData(self):
         """
@@ -794,18 +775,25 @@ class RAD_Probe():
 
     def getSetting(self,**kwargs):
         """
-        Reads the probes setting
-        helpme - Zero phase filter order for smoothing the depth data
+        Reads the probes setting from the dictionary of functions. Calls the
+        function and manages the data.
 
+        Args:
+            setting_name: name of the function minus Meas and get
+            sensor: Sensor ID for calibration data
+
+        Returns:
+            int: from the function getting the probe setting
         """
         setting_name = kwargs['setting_name']
         if setting_name == 'calibdata':
             ret = self.getters[setting_name](kwargs['sensor'])
-
+            num_values = 2
         else:
             ret = self.getters[setting_name]()
+            num_values = 1
 
-        return self.manage_data_return(ret, dtype=int)
+        return self.manage_data_return(ret, num_values, dtype=int)
 
 
     def setSetting(self,**kwargs):
@@ -816,6 +804,7 @@ class RAD_Probe():
 
         if setting_name == 'calibdata':
             ret = self.settings[setting_name](kwargs['sensor'],
+                                              kwargs['low_value'],
                                               kwargs['hi_value'])
 
         else:
