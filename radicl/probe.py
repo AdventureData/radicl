@@ -783,7 +783,7 @@ class RAD_Probe():
             sensor: Sensor ID for calibration data
 
         Returns:
-            int: from the function getting the probe setting
+            int: from the function getting the probe setting, or list of 2 for calibration data
         """
         setting_name = kwargs['setting_name']
         if setting_name == 'calibdata':
