@@ -13,30 +13,38 @@ Usage:  1. plug in the probe.
 
 """
 
-# Import the radicl CLI class
-from radicl.radicl import RADICL
+# Import the radicl probe class
+from radicl.probe import RAD_Probe
 
 # Import the colored logging from radicl to report more human readable info
 from radicl.ui_tools import get_logger
 
 # Instantiate the interface
-cli = RADICL()
+probe = RAD_Probe()
 
 # Start this scripts logging
 log = get_logger(__name__, level='DEBUG')
-
-# grab a copy of the probe object from the CLI
-probe = cli.probe
 
 # Loop through each sensor and retrieve the calibration data
 log.info("Retrieving the calibration values for each sensor...")
 for sensor in range(1,5):
 
     # Grab setting data
-    d = probe.getSetting(setting_name='calibdata', sensor=1)
+    d = probe.getSetting(setting_name='calibdata', sensor=sensor)
 
     # Report data without decimals
     log.info("Sensor {}: LOW = {:0.0f}, HIGH = {:0.0f}\n".format(sensor,d[0],d[1]))
 
-    # Modify and set new calibration values (commented for safety.)
-    # probe.setSetting(setting_name='calibdata', sensor=sensor, low_value=0, hi_value=4095)
+    ### Modify an change calibration values (Commented out for safety) ###
+    # # Modify values
+    # d[0] +=10
+    # d[1] -= 10
+    #
+    # # Report the new values
+    # log.debug("New values for # {}: LOW = {:0.0f}, HIGH = {:0.0f}\n".format(
+    #                                                                  sensor,
+    #                                                                  d[0],
+    #                                                                  d[1]))
+    # # Set the new values
+    # probe.setSetting(setting_name='calibdata', sensor=sensor, low_value=d[0],
+    #                                                           hi_value=d[1])
