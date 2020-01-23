@@ -83,12 +83,15 @@ class RAD_Probe():
         else:
             self.log.error("{} error: COM".format(name))
 
-    def manage_data_return(self, ret, num_values, dtype=int):
+    def manage_data_return(self, ret, num_values=1, dtype=int):
         """
         Manage a return from the probe when were expecting an integer
 
         Args:
             ret: Dictionary of the return with keys status, errorCode, and data
+            num_values: Number of expect values to be returned
+            dtype: Data type expected back
+
         Returns:
             result: None when no data was received. Integer when its not.
         """
@@ -287,6 +290,7 @@ class RAD_Probe():
         self.log.debug("Stop Measurement Reqested.")
 
         if (ret['status'] == 1):
+            self.wait_for_state(3)
             self.log.info("Measurement stopped...")
 
             return 1
@@ -393,7 +397,7 @@ class RAD_Probe():
                 sensor3.append(data[(offset + 4)] + data[(offset + 5)] * 256)
                 sensor4.append(data[(offset + 6)] + data[(offset + 7)] * 256)
                 offset = offset + 8
-            return {'Sensor1': sensor1, 'Sensor2': sensor2, 'F3': sensor3,
+            return {'Sensor1': sensor1, 'Sensor2': sensor2, 'Sensor3': sensor3,
                     'Sensor4': sensor4}
 
         # Read failed!
@@ -409,10 +413,30 @@ class RAD_Probe():
         Returns:
             dict - containing data or None if read failed
         """
-        calib_values = {}
-        for id in range(1,5):
+        calib_data = {}
+        raw = self.readRawSensorData()
+
+        for id in range(1, 5):
             sensor = "Sensor{}".format(id)
-            calib_values[sensor] = getSetting(sensor=sensor)
+            d = self.getSetting(setting_name='calibdata', sensor=id)
+
+            # For the calibration for sensor 1 we invert
+            if id == 1:
+                # Set the slope to the negative difference
+                m = (d[0] - d[1]) / 4095
+                # Set the intercept to the HIGH value
+                b = d[1]
+            else:
+                # Set the slope to the positive difference
+                m = (d[1] - d[0]) / 4095
+                # Set the intercept to the LOW value
+                b = d[0]
+
+            # Calibrate the data linearly
+            calib_data[sensor] = [m*x + b for x in raw[sensor]]
+
+        return calib_data
+
 
     def readRawAccelerationData(self):
         """
@@ -793,7 +817,7 @@ class RAD_Probe():
             ret = self.getters[setting_name]()
             num_values = 1
 
-        return self.manage_data_return(ret, num_values, dtype=int)
+        return self.manage_data_return(ret, num_values=num_values, dtype=int)
 
 
     def setSetting(self,**kwargs):
