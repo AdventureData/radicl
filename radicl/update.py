@@ -438,7 +438,7 @@ class FW_Update():
 		self.log.info("*** FW UPDATE PROCESS STARTED ***")
 		# First, check if we need to reset the FSM
 		state = self.getState()
-
+		
 		if (state == None):
 			self.log.error("Error. No response")
 			return 0

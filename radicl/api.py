@@ -722,6 +722,45 @@ class RAD_API():
 
 		response = self.__send_receive([0x9F, 0x4F, 0x00, 0x00, 0x00])
 		return self.__EvaluateAndReturn(response, 0x4F, 0)
+	def MeasGetAccThreshold(self):
+		"""
+		Reads the accelerometer threshold setting (an unsigned 32-bit integer in mG)
+		Returns status=1 if successfull, status=0 otherwise		
+		"""
+		response = self.__send_receive([0x9F, 0x50, 0x00, 0x00, 0x00])
+		return self.__EvaluateAndReturn(response, 0x50, 4)
+		
+	def MeasSetAccThreshold(self, threshold):
+		"""
+		Sets the accelerometer threshold setting (accelerometer thresholding algorithm)
+		The parameter 'threshold' is an unsigned 32-bit (4-bytes) absolute value indicating the threshold in mG
+		A value of 0 turns the accelerometer thresholding algorithm off
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		message = [0x9F, 0x50, 0x01, 0x00, 0x04]
+		message.extend(threshold.to_bytes(4, byteorder='little'))
+		response = self.__send_receive(message)
+		return self.__EvaluateAndReturn(response, 0x50, 0)
+		
+	def MeasGetAccZPFO(self):
+		"""
+		Reads the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		response = self.__send_receive([0x9F, 0x51, 0x00, 0x00, 0x00])
+		return self.__EvaluateAndReturn(response, 0x51, 4)
+		
+	def MeasSetAccZPFO(self, zpfo):
+		"""
+		Sets the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
+		The parameter 'zpfo' is an unsigned 32-bit (4-bytes) value indicaing the filter order
+		A value of 0 turns the filtering off (filter is bypassed)
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		message = [0x9F, 0x51, 0x01, 0x00, 0x04]
+		message.extend(zpfo.to_bytes(4, byteorder='little'))
+		response = self.__send_receive(message)
+		return self.__EvaluateAndReturn(response, 0x51, 0)
 
 	def MeasGetAccThreshold(self):
 		"""
