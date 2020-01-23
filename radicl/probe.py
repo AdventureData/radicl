@@ -168,9 +168,7 @@ class RAD_Probe():
                             wait_time = wait_time * 2
                             ret3 = self.api.MeasReadDataSegment(buffer_ID, ii)
 
-                            if (ret3['status'] == 1):
-                                if ret3['data'] == None:
-                                    print(ret3)
+                            if (ret3['status'] == 1 and ret3['data'] != None):
                                 byte_counter = byte_counter + len(ret3['data'])
 
                                 data_chunk = ret3['data']
