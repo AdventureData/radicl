@@ -134,11 +134,11 @@ class RADICL:
 
         self.probe.wait_for_state(3)
 
-        temp = self.probe.readMeasurementTemperature()
-        if (temp != None):
-            out.dbg("Temp = %i" % temp)
-        else:
-            out.error("Error reading temp")
+        # temp = self.probe.readMeasurementTemperature()
+        # if (temp != None):
+        #     out.dbg("Temp = %i" % temp)
+        # else:
+        #     out.error("Error reading temp")
 
         data = fn()
 
