@@ -29,3 +29,10 @@ Overhaul (2017-10-17)
 * Complete API
 * Documentation
 * Complete access to the Lyte probe
+
+0.3.0 (2020-01-22)
+------------------
+
+* Improvements to the firmware updating process
+* General API fixes
+* Starting unittests 
