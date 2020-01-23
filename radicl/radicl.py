@@ -123,6 +123,7 @@ class RADICL:
     def take_a_reading(self):
         """
         Simple CLI function to take a measurement
+        triggered by the keyboard
         """
 
         input("Press any key to begin a measurement.\n")
@@ -132,6 +133,19 @@ class RADICL:
         response = self.probe.stopMeasurement()
 
         self.probe.wait_for_state(3)
+
+    def listen_for_a_reading(self):
+        """
+        Simple CLI function to take a measurement
+        """
+
+        out.msg("Press the probe button to start the measurement:")
+        self.probe.wait_for_state(1, retry=1000, delay=0.3)
+        out.respond("Measurement Started...")
+
+        out.msg("Press the probe button to end the measurement:")
+        self.probe.wait_for_state(3, retry=1000, delay=0.3)
+        out.respond("Measurement ended...")
 
 
     def grab_data(self, data_request):
