@@ -120,7 +120,10 @@ class RADICL:
         fn()
 
 
-    def take_a_reading(self,data_request):
+    def take_a_reading(self):
+        """
+        Simple CLI function to take a measurement
+        """
 
         input("Press any key to begin a measurement.\n")
         response = self.probe.startMeasurement()
@@ -128,22 +131,29 @@ class RADICL:
         input("Press any key to stop the measurement.\n")
         response = self.probe.stopMeasurement()
 
+        self.probe.wait_for_state(3)
 
+
+    def grab_data(self, data_request):
+        """
+        Using the data function this collects the data from the function and
+        makes it into a dataframe
+
+        Args:
+            data_request: string data request
+        Returns:
+            data
+        """
+
+        # Grab the data function
         fn = self.options['data'][data_request]
         out.dbg("Requesting data using function {0}".format(fn.__name__))
 
-        self.probe.wait_for_state(3)
-
-        # temp = self.probe.readMeasurementTemperature()
-        # if (temp != None):
-        #     out.dbg("Temp = %i" % temp)
-        # else:
-        #     out.error("Error reading temp")
-
+        # Call data function
         data = fn()
 
-        response = self.probe.resetMeasurement()
-        data = self.dataframe_this(data,data_request)
+        # Put it in a dataframe
+        data = self.dataframe_this(data, data_request)
 
         return data
 
@@ -161,6 +171,7 @@ class RADICL:
                 data = [d[0] for d in data]
 
             data = pd.DataFrame(data, columns = [name])
+
         return data
 
 
@@ -189,49 +200,66 @@ class RADICL:
 
         # Take Measurements
         elif self.state == 3:
-            self.data = self.take_a_reading(self.daq)
+            self.take_a_reading()
+            self.data = self.grab_data(self.daq)
+            response = self.probe.resetMeasurement()
+
             self.state = 4
 
         # Data output and options
         elif self.state == 4:
             if self.output_preference == 'write' or self.output_preference == 'both':
                 valid = False
+
                 #  Wait for real path
                 while not valid:
-                    t = datetime.datetime.now()
-                    fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
-                    fname = fstr.format(t.year,t.month,t.day,t.hour,t.minute,t.second)
+                    fname = self.get_default_filename()
                     out.msg("Enter in a filepath for the data to be saved:")
                     filename = input("\nPress enter to use default:"
                                     "\n(Default: ./{0}.csv)".format(fname))
 
-                    # Recieve a default request
+                    # Assign a default path
                     if filename == '':
-                        filename = os.path.expanduser('./{0}.csv'.format(fname))
-                    else:
-                        filename = os.path.expanduser(filename)
+                        filename = fname
+
                     # Make it absolute
                     filename = os.path.abspath(filename)
-                    real_path = os.path.isdir( os.path.dirname(filename))
+                    real_path = os.path.isdir(os.path.dirname(filename))
+
 
                     # Double check a real path was given
                     if not real_path:
                         out.warn("Path provided does not exist.")
                         valid = False
                     else:
-                        self.filename = filename
-                        valid = True
-                        out.msg("Saving Data to :\n{0}".format(self.filename))
-
-                        if not self.data.empty:
-                            # Write the header so we knwo things about this
-                            with open(self.filename,'w') as fp:
-                                final = self.probe.getProbeHeader()
-                                fp.writelines(final)
-                                fp.close()
-                            # Write data
-                            self.data.to_csv(self.filename, mode = 'a')
-                            self.state = 5
+                        self.write_probe_data(self.data, filename)
+                    # # Recieve a default request
+                    # if filename == '':
+                    #     filename = os.path.expanduser('./{0}.csv'.format(fname))
+                    # else:
+                    #     filename = os.path.expanduser(filename)
+                    # # Make it absolute
+                    # filename = os.path.abspath(filename)
+                    # real_path = os.path.isdir( os.path.dirname(filename))
+                    #
+                    # # Double check a real path was given
+                    # if not real_path:
+                    #     out.warn("Path provided does not exist.")
+                    #     valid = False
+                    # else:
+                    #     self.filename = filename
+                    #     valid = True
+                    #     out.msg("Saving Data to :\n{0}".format(self.filename))
+                    #
+                    #     if not self.data.empty:
+                    #         # Write the header so we knwo things about this
+                    #         with open(self.filename,'w') as fp:
+                    #             final = self.probe.getProbeHeader()
+                    #             fp.writelines(final)
+                    #             fp.close()
+                    #         # Write data
+                    #         self.data.to_csv(self.filename, mode = 'a')
+                    #         self.state = 5
 
             if self.output_preference == 'plot' or self.output_preference =='both':
                 self.data.plot()
@@ -380,6 +408,47 @@ class RADICL:
 
         return filename
 
+    def get_default_filename(self):
+        """
+        Creates a datetime path for writing to
+
+        Returns:
+            filename: csv path named by the datetime
+        """
+
+        t = datetime.datetime.now()
+        fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
+        fname = fstr.format(t.year,t.month,t.day,t.hour,t.minute,t.second)
+        filename = os.path.expanduser('./{0}.csv'.format(fname))
+
+        return filename
+
+
+    def write_probe_data(self, df, filename=''):
+        """
+        Writes out a dataframe with a probe header to csv
+        Args:
+            df: pandas dataframe containing data
+            filename: valid path to output to, if empty uses datetime
+        """
+
+        # Recieve a default request
+        if filename == '':
+            filename = self.get_default_filename()
+
+        else:
+            filename = os.path.expanduser(filename)
+
+        out.msg("Saving Data to :\n{0}".format(filename))
+
+        if not df.empty:
+            # Write the header so we knwo things about this
+            with open(filename,'w') as fp:
+                final = self.probe.getProbeHeader()
+                fp.writelines(final)
+                fp.close()
+            # Write data
+            df.to_csv(filename, mode = 'a')
 
     def ask_user(self,question_str, answer_lst = None, helpme = None, next_state = True, default_answer = None):
         """
