@@ -106,21 +106,26 @@ def columnize_str(entrie,width):
     """
     pass
 
-def print_helpme(help_str,help_dict):
+def print_helpme(help_str, help_dict):
     """
     Trys to help the user on request for help.
+
+    Args:
+        help_str -
+        help_dict -
     """
     out_str = ""
     show_all = False
     no_help = 0
     no_doc = False
+
     # User provides specific help request
     if help_dict != None:
         if "-" in help_str:
             h = help_str.split("-")
             k = ("".join(h[1:]).strip()).lower()
             if k in help_dict:
-                formatted = textwrap.fill(long_str,width = width)
+                formatted = textwrap.fill(long_str, width = width)
 
                 for i,line in enumerate(formatted.split('\n')):
                     if i != 0:
@@ -144,11 +149,13 @@ def print_helpme(help_str,help_dict):
         no_doc = True
 
     if no_doc:
-        out_str = ('\nNo help documentation.\nPlease email micah@adventuredata.com\n')
+        out_str = ('\nNo help documentation.\nPlease email micah@adventuredata.com or file an issue at https://github.com/Adventuredata/radicl/issues\n')
         print(help_dict)
+
+    # Doctor up the print out
     t = '\n{0:<20} {1:<20}\n'.format('OPTIONS','DESCRIPTION')
-    print_able='\n{0}'.format(colored(t,'magenta',attrs=['bold']))
-    print_able+=out_str
+    print_able='\n{0}'.format(colored(t,'magenta', attrs=['bold']))
+    print_able += out_str
     print(print_able)
 
 def get_logger(name, level='DEBUG', ext_logger=None,):

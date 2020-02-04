@@ -12,6 +12,8 @@ from radicl import __version__
 from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help
 import struct
 import datetime
+import os
+import numpy as np
 
 
 error_codes = {2049:"The probe measurement/sensor is not running"}
@@ -20,13 +22,13 @@ class RAD_Probe():
     """
     Class for directly interacting with the probe.
     """
-    def __init__(self, ext_api=None):
+    def __init__(self, ext_api=None, debug=False):
         """
         Args:
             ext_api: rad_api.RAD_API object preinstantiated
         """
 
-        self.log = get_logger(__name__, level='DEBUG')
+        self.log = get_logger(__name__, level=debug)
 
         # Check if an external API object was passed in.
         if (ext_api != None):
@@ -60,8 +62,13 @@ class RAD_Probe():
                 # Manages the settings
                 settings_funcs = inspect.getmembers(self.api,
                                                     predicate=inspect.ismethod)
-                self.settings = parse_func_list(settings_funcs,['Meas','Set'])
-                self.getters = parse_func_list(settings_funcs,['Meas','Get'])
+                ignores = ['reset']
+                self.settings = parse_func_list(settings_funcs,
+                                                ['Meas','Set'],
+                                                ignore_keywords=ignores)
+                self.getters = parse_func_list(settings_funcs,
+                                               ['Meas','Get'],
+                                               ignore_keywords=ignores)
 
     def manage_error(self,  ret_dict, stack_id=1):
         """
@@ -334,8 +341,7 @@ class RAD_Probe():
         attempts = 0
         pstate = self.getProbeMeasState()
         result = False
-
-        self.log.debug("Waiting for state {0}, current state = {1}".format(state, pstate))
+        self.log.info("Waiting for state {0}, current state = {1}".format(state, pstate))
 
         while not result:
             result = pstate == state
@@ -551,11 +557,12 @@ class RAD_Probe():
             pressure_data = []
             total_runs = total_bytes // 3
             offset = 0
+
             for ii in range(0, total_runs):
                 this_value = data[(offset + 0)] + (data[(offset + 1)] * 256) + \
                             (data[(offset + 2)] * 65536)
 
-                pressure_data.append(this_value/4096)
+                pressure_data.append(this_value / 4096)
                 offset = offset + 3
             return pressure_data
 
@@ -563,10 +570,11 @@ class RAD_Probe():
         else:
             return None
 
-    def readDepthData(self):
+    def readRawDepthData(self):
         """
         Reads the converted depth data, including the correlation index
         Return type is a dict containing data or None if read failed
+        helpme - Unfiltered elevation data from the depth sensor
         """
         ret = self.__readData(3)
         if (ret['status'] == 1):
@@ -609,9 +617,9 @@ class RAD_Probe():
         filter (equivalent to Matlab's 'filtfilt'). The amount of filtering
         applied is set by :func:`~radicl.RAD_API.MeasSetZPFO`
 
-        helpme - The probe's filtered depth data is the filtered depth
-        calculated from barometer data where the amount of filtering is set by
-        the ZPFO option under settings.
+        helpme - The probe's filtered depth data is the raw depth data made
+                 relative to the change and the amount filtered set by the ZPFO
+                 option.
 
         """
 
@@ -645,6 +653,11 @@ class RAD_Probe():
                 this_value = struct.unpack('f', this_byte_object)
                 depth_data.append(this_value)
                 offset = offset + 4
+
+            if depth_data != None:
+                # Convert to cm
+                depth_data = [(c[0]/100,) for c in depth_data]
+
             return depth_data
 
         else:
@@ -767,7 +780,8 @@ class RAD_Probe():
 
     def getZPFO(self):
         """
-        Reads the probes zpfo
+        Reads the probes zero phase shift applied to the depth data
+
         """
 
         ret = self.api.MeasGetZPFO()

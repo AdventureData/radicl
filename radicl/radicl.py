@@ -31,38 +31,32 @@ class RADICL:
         self.settings = dir(self.probe)
 
         # Get all the functions available in api and probe
-        api_funcs = inspect.getmembers(self.probe, predicate=inspect.ismethod)
-
-        # Dictionary of the options available that can be auto parsed
-        # Each option type has keys word that searched for in the api and probe classes
-        self.options_keywords = {'data':{'parseable':['read','Data'],
-                                         'ignore':['correlation']},
-                                'settings':{'parseable':['Meas','Set'],
-                                             'ignore':[]},
-                                'getters':{'parseable':['Meas','Get'],
-                                           'ignore':[]}
-                        }
+        probe_funcs = inspect.getmembers(self.probe, predicate=inspect.ismethod)
 
         self.options = {}
 
-        # Assign all functions with keys word to auto gather settings and data packages
-        for op,kws in self.options_keywords.items():
-            self.options[op] = parse_func_list(api_funcs, kws['parseable'],
-                                             ignore_keywords = kws['ignore'])
-        # self.options['data'].update(parse_func_list(self.probe.getters.values(),['read','Data'],
-        #                                      ignore_keywords = ['correlation']))
-        self.options['settings']["show"] = self.print_settings
+        # Assign all data functions with keywords to auto gather data packages
+        self.options['data'] = parse_func_list(probe_funcs,
+                                    ['read','Data'],
+                                    ignore_keywords=['correlation'])
+
+        # Grab the settings from the probe
+        self.options['settings'] = self.probe.settings
+        self.options['getters'] = self.probe.getters
+
+        # Assign a single help statement for the help option
+        self.options['settings']["help"] = self.print_settings
 
         # User runtime preferences
         self.output_preference = None
         self.filename = None
         self.daq = None
 
-
         # Gather help dialogs
         self.help_dialog= {}
 
         for s in self.options.keys():
+
             # We haven't added the category yet
             if s not in self.help_dialog:
                 self.help_dialog[s] = {}
@@ -120,7 +114,11 @@ class RADICL:
         fn()
 
 
-    def take_a_reading(self,data_request):
+    def take_a_reading(self, data_request):
+        """
+        Walks a user through the measurement taking process through the
+        keyboard
+        """
 
         input("Press any key to begin a measurement.\n")
         response = self.probe.startMeasurement()
@@ -128,26 +126,20 @@ class RADICL:
         input("Press any key to stop the measurement.\n")
         response = self.probe.stopMeasurement()
 
-
         fn = self.options['data'][data_request]
+        out.msg('Downloading data from probe...')
         out.dbg("Requesting data using function {0}".format(fn.__name__))
 
         self.probe.wait_for_state(3)
 
-        # temp = self.probe.readMeasurementTemperature()
-        # if (temp != None):
-        #     out.dbg("Temp = %i" % temp)
-        # else:
-        #     out.error("Error reading temp")
-
         data = fn()
 
         response = self.probe.resetMeasurement()
-        data = self.dataframe_this(data,data_request)
+        data = self.dataframe_this(data, data_request)
 
         return data
 
-    def dataframe_this(self,data,name):
+    def dataframe_this(self, data,name):
         """
         Takes the data returned from a function and converts it into a DataFrame
         There appears to be two scenarios so we cover it here.
@@ -238,32 +230,33 @@ class RADICL:
                 plt.show()
                 self.state = 5
 
-        elif self.state==5:
-            pos_ans = self.ask_user("Take another measurement?")
-            if pos_ans:
-                self.state = 3
-            elif not pos_ans:
-                self.state = 1
+        elif self.state == 5:
+            response = self.ask_user("Take another measurement?")
 
+            if response in ['y','yes', True]:
+                self.state = 3
+
+            # Go to DAQ menu
+            else:
+                self.state = 0
 
     def task_settings(self):
         """
         Routine for handling users requests for modifying probe settings settings
         """
 
-        # Data Selection
+        # Setting Selection
         if self.state == 1:
             pstate = self.probe.getProbeMeasState()
             out.msg("Checking to see if probe is ready...")
             out.dbg("Probe State = {0}".format(pstate))
 
             # Make sure probe is ready
-            if pstate == 0 or pstate == 5:
-                print( self.help_dialog['settings'])
-                self.setting_request = self.ask_user("What settings do you want"
-                                                     " to adjust?",
-                               list(self.options['settings'].keys()),
-                                helpme = self.help_dialog['settings'])
+            if pstate in [0, 5]:
+                self.setting_request = \
+                self.ask_user("What setting do you want to adjust?",
+                               sorted(list(self.probe.settings.keys())),
+                                helpme=self.help_dialog['settings'])
 
         # Get current setting
         elif self.state == 2:
@@ -281,7 +274,7 @@ class RADICL:
                         self.probe.getSetting(setting_name=self.setting_request)
                 self.state += 1
 
-        # Set settings
+        # Modify setting
         elif self.state == 3:
 
                 if self.setting_request == 'calibdata':
@@ -290,7 +283,8 @@ class RADICL:
 
                 else:
                     msg = ("Currently {0} = {1}\nEnter value to change probe {0}\n"
-                           "".format(self.setting_request,self.current_setting_value))
+                           "".format(self.setting_request,
+                                     self.current_setting_value))
                     valid = False
 
                     # All entries have to be numeric. Ensure this is the case.
@@ -300,23 +294,25 @@ class RADICL:
                             self.new_value = int(self.new_value)
                             valid = True
                         except Exception as e:
-                            print(e)
+                            out.error(e)
                             out.error("Value must be numeric!")
 
                     # Call the function to change the setting
-                    self.probe.setSetting(setting_name = self.setting_request,
+                    self.probe.setSetting(setting_name=self.setting_request,
                                           value = self.new_value)
                     time.sleep(0.2)
 
                     # Confirm the value was changed
                     test_value = self.probe.getSetting(
-                                            setting_name = self.setting_request)
+                                            setting_name=self.setting_request)
 
                     if test_value == self.new_value:
                         out.respond("{0} was changed from {1} to {2}!\n"
                                     "".format(self.setting_request,
                                               self.current_setting_value,
                                               self.new_value))
+                    time.sleep(1)
+
                     # Go back to settings menu
                     self.state = 1
 
@@ -324,14 +320,13 @@ class RADICL:
         """
         print all the current settings
 
-        helpme - Prints out all the settings fro the probe
+        helpme - Prints out all the settings for the probe
 
         """
 
         msg = "\n===== Current Probe Settings =====\n"
 
-        for s, fn in self.options['getters'].items():
-
+        for s, fn in self.probe.getters.items():
             if s.lower() not in ['calibdata','numsegments']:
                 value = self.probe.getSetting(setting_name=s)
                 msg += "{} = {}\n".format(s, value)
@@ -381,9 +376,19 @@ class RADICL:
         return filename
 
 
-    def ask_user(self,question_str, answer_lst = None, helpme = None, next_state = True, default_answer = None):
+    def ask_user(self, question_str, answer_lst=None, helpme=None, next_state=True, default_answer=None):
         """
         Function is used to wait for an appropriate response from user and handle unknown answers
+
+        Args:
+            question_str - String of the question
+            answer_lst - list of acceptable answers
+            helpme - help strings in a dictionary to elaborate on acceptable answers
+            next_state - Advance the state of the cli state machine
+            default_answer - if the user selects nothing and hits enter the answer will default to this
+
+        Returns:
+            response - string of the valid response from the user
         """
 
         # Ask user for a yes no question
@@ -395,44 +400,53 @@ class RADICL:
 
         # Keep question to one line if small number of options
         lower_lst = [i.lower() for i in sorted(answer_lst)]
-        lower_lst.append('exit')
-        lower_lst.append('home')
+
+        # Add in option to return to main menu
+        if self.state != 0:
+            lower_lst.append('home')
 
         # Help documentation
         if helpme != None:
             lower_lst.append("help")
 
+        # Exit the program
+        lower_lst.append('exit')
+
+        # If the options list if small keep it on the same line
         if len(lower_lst) <= 5:
             print_able=" ("
             print_able += ", ".join(lower_lst)
             print_able+=")"
-        # Create a column of choices
+
+        # If the list of choices is long create a column of choices
         else:
-            print_able='\n{0}'.format(colored('[OPTIONS]','magenta',attrs=['bold']))
+            print_able='\n\n{0}'.format(colored('[OPTIONS]', 'magenta',
+                                                             attrs=['bold']))
             for s in lower_lst:
                 print_able+= '\n  {0}'.format(s)
 
-        question_str+=print_able
+        question_str += print_able
 
         # Provide prompt for default options
         if default_answer != None:
             if default_answer not in answer_lst:
-                raise ValueError("default answer must be a member of the acceptable answers list in ask_user function")
+                raise ValueError("Default answer must be a member of the "
+                                 "acceptable answers list in ask_user function")
 
             question_str += '(Default: {0})'.format(default_answer)
 
         out.msg(question_str)
 
-        acceptable_answer=False
+        acceptable_answer = False
 
-        while acceptable_answer==False:
+        while acceptable_answer == False:
             user_answer = input('\n')
-            response = user_answer.lower()
+            response = user_answer.lower().strip()
 
             # User requests help with options
             if "help" in response:
-                print_helpme(response,helpme)
-                acceptable_answer=False
+                print_helpme(response, helpme)
+                acceptable_answer = False
                 out.msg(question_str)
 
             # Request to leave the program
@@ -462,12 +476,11 @@ class RADICL:
                         response = False
 
                 if next_state:
-                    self.state +=1
-
+                    self.state += 1
 
             else:
                 out.error('Only acceptable answers are:')
                 out.msg(print_able)
-                acceptable_answer=False
+                acceptable_answer = False
 
         return response
