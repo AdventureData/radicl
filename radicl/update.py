@@ -3,7 +3,7 @@
 import time
 import binascii
 import hashlib
-from radicl.ui_tools import get_logger
+from .ui_tools import get_logger
 
 class FW_Update():
 
@@ -185,10 +185,11 @@ class FW_Update():
 		ret = self.api.UpdateGetState()
 		if (ret['status'] == 1):
 			byte_arr = ret['data']
-			print(ret)
 			return int.from_bytes(byte_arr, byteorder='little')
+
 		if (ret['errorCode'] != None):
 			self.log.error("FW_Update.getState returned error %d" % ret['errorCode'])
+
 		return None
 
 	def waitForStateChange(self, timeout):
@@ -199,17 +200,16 @@ class FW_Update():
 		"""
 
 		ret = self.api.UpdateWaitForStateChange(timeout)
-		print(ret)
 
 		if (ret['status'] == 1):
 			byte_arr = ret['data']
-			print(ret['data'])
 			return int.from_bytes(byte_arr, byteorder='little')
 
 		# Retry in case of timeout
 		else:
-			self.log.debug("Timeout - Retry!")
+			self.log.debug("Timeout - Retrying!")
 			return self.getState()
+
 		if (ret['errorCode'] != None):
 			self.log.error("FW_Update.waitForStateChange returned error %d" % \
 				  ret['errorCode'])
@@ -256,6 +256,7 @@ class FW_Update():
 				if (state == 2):
 					self.log.info("FSM Enter Done!")
 					return 1
+
 				self.log.error("Error: Incorrect state (%d)" % state)
 				return 0
 
@@ -449,7 +450,7 @@ class FW_Update():
 		self.log.info("*** FW UPDATE PROCESS STARTED ***")
 		# First, check if we need to reset the FSM
 		state = self.getState()
-		print(state)
+
 		if (state == None):
 			self.log.error("Error. No response")
 			return 0

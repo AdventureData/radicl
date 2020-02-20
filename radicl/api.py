@@ -313,7 +313,7 @@ class RAD_API():
 		Identifies the connected device
 		Returns 1 if a valid device was detected
 		"""
-
+		self.log.debug("Retrieving probe information...")
 		ret = self.getHWID()
 		self.hw_id = ret['data']
 		time.sleep(0.5)
@@ -332,11 +332,11 @@ class RAD_API():
 				return 1
 
 			else:
-				self.log.info("Unknown device detected!")
+				self.log.warning("Unknown device detected!")
 				return 0
 
 		else:
-			self.log.error("Invalid response to ID request")
+			self.log.warning("Invalid response to ID request")
 			return 0
 
 

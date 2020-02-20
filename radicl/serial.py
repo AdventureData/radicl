@@ -24,7 +24,7 @@ def find_kw_port(kw):
 	for p in port_list:
 		# Make a list of true for every keyword we find in the port data
 		kw_match = [True for k in kw if k.lower() in p[1].lower()]
-
+	
 		# If the match list is not empty append this port name
 		if kw_match:
 			match_list.append(p)
@@ -62,6 +62,7 @@ class RAD_Serial():
 			com_port = this_p[0]
 
 		try:
+			self.log.debug("Attempting to establish a connection with the probe...")
 			self.serial_port = serial.Serial(port=com_port,
 											 baudrate=115200,
 											 parity=serial.PARITY_NONE,

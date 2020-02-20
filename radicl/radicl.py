@@ -7,7 +7,7 @@ import os
 from termcolor import colored
 import inspect
 import pandas as pd
-from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help
+from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help, get_logger
 import datetime
 
 from radicl import probe
@@ -19,6 +19,8 @@ out = Messages()
 
 class RADICL:
     def __init__(self,**kwargs):
+
+        self.log = get_logger(__name__)
 
         self.tasks = ['daq','settings','update']
         self.task_help = {'daq':"Data acquisition using the probe.",
@@ -110,7 +112,7 @@ class RADICL:
         fn = getattr(self,task_at)
 
         # Call task_function
-        out.dbg("Using task function {0}".format(fn.__name__))
+        self.log.debug("Using task function {0}".format(fn.__name__))
         fn()
 
 
@@ -127,19 +129,18 @@ class RADICL:
         response = self.probe.stopMeasurement()
 
         fn = self.options['data'][data_request]
-        out.msg('Downloading data from probe...')
-        out.dbg("Requesting data using function {0}".format(fn.__name__))
+        self.log.info('Downloading {} data from probe...'.format(data_request))
+        self.log.debug("Requesting data using function {0}".format(fn.__name__))
 
         self.probe.wait_for_state(3)
 
-        data = fn()
-
+        data = self.grab_data(data_request)
         response = self.probe.resetMeasurement()
         data = self.dataframe_this(data, data_request)
 
         return data
 
-    def dataframe_this(self, data,name):
+    def dataframe_this(self, data, name):
         """
         Takes the data returned from a function and converts it into a DataFrame
         There appears to be two scenarios so we cover it here.
@@ -155,6 +156,21 @@ class RADICL:
             data = pd.DataFrame(data, columns = [name])
         return data
 
+    def grab_data(self, data_request):
+        """
+        Grabs data from the probe and puts it into a dataframe
+
+        Args:
+            data_request: String name of the data requesting from probe, must be a key in the self.options
+        Returns:
+            data: Dataframe of the data requested
+        """
+        fn = self.options['data'][data_request]
+        data = fn()
+        data = self.dataframe_this(data, data_request)
+
+        return data
+
 
     def task_daq(self):
         """
@@ -163,8 +179,8 @@ class RADICL:
         # Data Selection
         if self.state==1:
             pstate = self.probe.getProbeMeasState()
-            out.msg("Checking to see if probe is ready...")
-            out.dbg("Probe State = {0}".format(pstate))
+            self.log.info("Checking to see if probe is ready...")
+            self.log.debug("Probe State = {0}".format(pstate))
 
             # Make sure probe is ready
             if pstate==0 or pstate==5:
@@ -213,7 +229,7 @@ class RADICL:
                     else:
                         self.filename = filename
                         valid = True
-                        out.msg("Saving Data to :\n{0}".format(self.filename))
+                        self.log.info("Saving Data to :\n{0}".format(self.filename))
 
                         if not self.data.empty:
                             # Write the header so we knwo things about this
@@ -248,8 +264,8 @@ class RADICL:
         # Setting Selection
         if self.state == 1:
             pstate = self.probe.getProbeMeasState()
-            out.msg("Checking to see if probe is ready...")
-            out.dbg("Probe State = {0}".format(pstate))
+            self.log.info("Checking to see if probe is ready...")
+            self.log.debug("Probe State = {0}".format(pstate))
 
             # Make sure probe is ready
             if pstate in [0, 5]:
@@ -307,7 +323,7 @@ class RADICL:
                                             setting_name=self.setting_request)
 
                     if test_value == self.new_value:
-                        out.respond("{0} was changed from {1} to {2}!\n"
+                        self.log.info("{0} was changed from {1} to {2}!\n"
                                     "".format(self.setting_request,
                                               self.current_setting_value,
                                               self.new_value))
@@ -451,12 +467,12 @@ class RADICL:
 
             # Request to leave the program
             elif response=='exit':
-                out.respond("Exiting the RAD CLI.")
+                self.log.info("Exiting the RAD CLI.")
                 self.running = False
                 sys.exit()
 
             elif response=='home':
-                out.respond("Returning to the main menu.")
+                self.log.info("Returning to the main menu.")
                 self.running = True
                 acceptable_answer=True
                 self.state = 0

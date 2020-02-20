@@ -28,7 +28,7 @@ class RAD_Probe():
             ext_api: rad_api.RAD_API object preinstantiated
         """
 
-        self.log = get_logger(__name__, level=debug)
+        self.log = get_logger(__name__, level='debug')
 
         # Check if an external API object was passed in.
         if (ext_api != None):
@@ -57,6 +57,11 @@ class RAD_Probe():
                 # Delay a bit and then identify the attached device
                 time.sleep(0.5)
                 ret = api.Identify()
+
+                if ret == 0:
+                    self.log.error("Unable to connect to the probe. Unplug and"
+                                   " power cycle it.")
+                    sys.exit()
                 time.sleep(0.5)
 
                 # Manages the settings
@@ -345,6 +350,15 @@ class RAD_Probe():
 
         while not result:
             result = pstate == state
+
+            # Check for a probe advanced past the state
+            if type(pstate) == int:
+                if state != 0:
+                    if pstate >= state:
+                        result = True
+                if state == 5:
+                    if pstate == 0:
+                        result = True
 
             if attempts > retry:
                 self.log.error("Retry Exceeded waiting for state(s) {0}".format(state))
