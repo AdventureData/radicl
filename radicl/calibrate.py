@@ -2,66 +2,44 @@
 
 import os
 import time
-from radicl.serial import RadConnection, MessageColors, ProbeCommand
+from radicl.ui_tools import get_logger
+import numpy as np
 
-out = MessageColors()
+def get_avg_sensor(probe, delay=3, sensor='Sensor1'):
+    """
+    Take a probe measurement of 3 seconds and return the mean of that data.
 
-def calibrate(probe, value_str):
+    Args:
+        probe: radicl.probe.RAD_Probe object
+        delay: Measurement time in seconds
+        sensor: String name of the column of the data to avg
+    Returns:
+        probe_data: Mean of the Raw Sensor over the delay time period
+    """
+    log = get_logger(__name__)
 
-    # raw_input(out.msg("Press enter to start a reading:"))
-    # probe.send('meas start')
-    # raw_input(out.msg("Press enter to stop a reading:"))
-    # probe.send('meas stop')
-    probe.take_a_reading(method = 'keyboard', timed = 1)
+    # Start the probe
+    probe.startMeasurement()
+    log.info("\tProbe measurement started...")
+    time.sleep(delay)
 
-    cmd = ProbeCommand('fDump')
-    try:
-        result = probe.get_data(cmd)
-    except:
-        out.msg('ERROR: Failed to retrieve data. Exiting...','FAIL')
-        probe.close()
-        sys.exit()
-    calib = []
-    i = 1
-    for col in result[1:]:
-        if value_str == 'max':
-            value = max(col)
-        else:
-            value = min(col)
-        out.msg("Detected Sensor {1} calibration value = {0}".format(value,i))
-        i+=1
-        calib.append(value)
+    # Stop probe
+    probe.stopMeasurement()
+    log.info("Measurement Stopped.")
 
-    time.sleep(0.25)
-    probe.reset_probe()
+    # Probe data extraction and average
+    probe_data = np.array((probe.readRawSensorData())[sensor])
+    probe_data = probe_data[probe_data < 4096].mean()
 
-    return calib
+    # Start the reset in another thread
+    probe.resetMeasurement()
 
-def main():
-    if 'nt' in os.name:
-        os.system('cls')  # for Windows
-    else:
-        os.system('clear')  # for Linux/OS X
-    out.msg(out.BOLD + "-------------LYTE Probe Calibrator-------------",'HEADER')
-    out.msg("USE:",'BOLD')
-    out.msg("\tCalibrator will first take a reading\n\tto calibrate the high value then the\n\tlow value. Use targets to accomplish\n\tthe values for each high and low.")
-    out.msg(out.BOLD + "----------------------------------------------",'HEADER')
+    # If we like the data
+    if probe_data in [None, 65535]:
+        log.error("Probe data invalid! Trying again")
 
-    probe = RadConnection()
-    out.msg("\nCover sensors using the high value producing target.")
-    hi = calibrate(probe,"max")
-    out.msg("\nCover sensors using the low value producing target.")
-    low = calibrate(probe,"min")
+    return int(probe_data)
 
-    for i in range(4):
-        if low[i] > hi[i]:
-            out.msg('ERROR: Sensor {0}s Low calibration value is greater than the high calibration value.'.format(i),'FAIL')
-        else:
-            out.msg('\nApplying calibration values to sensor {0}'.format(i))
-            probe.send('meas setCalib {0} {1} {2}'.format(i,low[i],hi[i]))
-
-            probe.listen_for('calibration')
-            out.msg("\n\tSensor {0} calibrated!".format(i),'OKGREEN')
 
 if __name__ == '__main__':
     main()

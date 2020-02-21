@@ -9,7 +9,7 @@ import inspect
 import pandas as pd
 from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help, get_logger
 import datetime
-
+from radicl.calibrate import get_avg_sensor
 from radicl import probe
 from radicl import serial
 from radicl import api
@@ -115,6 +115,41 @@ class RADICL:
         self.log.debug("Using task function {0}".format(fn.__name__))
         fn()
 
+    def calibrate(self):
+        """
+        Walks the user through calibrating
+        """
+        answer = self.ask_user('Do you want to manually input or measure calibration values?', answer_lst=['manual','measure'])
+
+        for i in range(1,3):
+
+            out.msg("For Sensor {}:".format(i))
+            if answer == 'manual':
+                hi = int(input('\tEnter high ADC value:\n\t'))
+                lo = int(input('\n\tEnter low ADC value:\n\t'))
+
+            elif answer == 'measure':
+                input("\tApply the high value to the sensor and press enter:")
+                hi = get_avg_sensor(self.probe, sensor='Sensor{}'.format(i))
+
+                input("\n\tApply the low value to the sensor and press enter:")
+                lo = get_avg_sensor(self.probe, sensor='Sensor{}'.format(i))
+                
+            else:
+                raise ValueError("Invalid request for calibration.")
+
+            self.log.info("Setting calibration data to : low = {} hi = {}".format(lo,hi))
+
+            if i == 1:
+                self.log.debug("Inverting for hardness...")
+                low = hi
+                hi = lo
+                lo = low
+            self.log.debug("Setting calibration data to : low = {} hi = {}".format(lo,hi))
+            self.probe.api.MeasSetCalibData(i, lo, hi)
+
+            values = self.probe.getSetting(setting_name='calibdata', sensor=i)
+            self.log.debug("Calibdata now set to = {}".format(", ".join([str(v) for v in values])))
 
     def take_a_reading(self, data_request):
         """
@@ -277,30 +312,44 @@ class RADICL:
         # Get current setting
         elif self.state == 2:
 
-            if self.setting_request == 'calibdata':
-                out.error("Calibration method are under developed at this time")
-                self.state = 1
-
-            elif self.setting_request == 'show':
+            if self.setting_request == 'show':
                 self.options['settings'][self.setting_request]()
                 self.state = 1
+
+            # Retrieve calibration values
+            elif self.setting_request == 'calibdata':
+                for i in range(1, 3):
+                    self.current_setting_value = []
+                    self.current_setting_value.append(
+                    self.probe.getSetting(setting_name=self.setting_request,
+                                          sensor=i))
+                    values = ", ".join([str(v) for v in self.current_setting_value])
+                    msg = ("Currently {0}[{2}] = {1}\nEnter value to change probe {0}\n"
+                           "".format(self.setting_request,
+                                    values, i))
+                    self.log.info(msg)
+                self.state += 1
 
             else:
                 self.current_setting_value = \
                         self.probe.getSetting(setting_name=self.setting_request)
+                values = self.current_setting_value
                 self.state += 1
+
+                msg = ("Currently {0} = {1}\nEnter value to change probe {0}\n"
+                       "".format(self.setting_request,
+                                values))
+                self.log.info(msg)
 
         # Modify setting
         elif self.state == 3:
 
                 if self.setting_request == 'calibdata':
-                    out.error("Calibration method are under developed at this time")
+                    self.calibrate()
                     self.state = 1
 
                 else:
-                    msg = ("Currently {0} = {1}\nEnter value to change probe {0}\n"
-                           "".format(self.setting_request,
-                                     self.current_setting_value))
+
                     valid = False
 
                     # All entries have to be numeric. Ensure this is the case.

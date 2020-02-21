@@ -443,17 +443,17 @@ class RAD_Probe():
             # For the calibration for sensor 1 we invert
             if id == 1:
                 # Set the slope to the negative difference
-                m = (d[0] - d[1]) / 4095
+                m = 4095 / (d[0] - d[1])
                 # Set the intercept to the HIGH value
                 b = d[1]
             else:
                 # Set the slope to the positive difference
-                m = (d[1] - d[0]) / 4095
+                m = 4095/(d[1] - d[0])
                 # Set the intercept to the LOW value
                 b = d[0]
 
             # Calibrate the data linearly
-            calib_data[sensor] = [m*x + b for x in raw[sensor]]
+            calib_data[sensor] = [m*(x - b) for x in raw[sensor]]
 
         return calib_data
 
