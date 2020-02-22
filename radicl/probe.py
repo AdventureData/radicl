@@ -180,7 +180,7 @@ class RAD_Probe():
                             wait_time = wait_time * 2
                             ret3 = self.api.MeasReadDataSegment(buffer_ID, ii)
 
-                            if (ret3['status'] == 1):
+                            if (ret3['status'] == 1 and ret2['data'] != None):
                                 byte_counter = byte_counter + len(ret3['data'])
 
                                 data_chunk = ret3['data']
@@ -444,16 +444,16 @@ class RAD_Probe():
             if id == 1:
                 # Set the slope to the negative difference
                 m = 4095 / (d[0] - d[1])
-                # Set the intercept to the HIGH value
+                # Set the intercept to the LOW value
                 b = d[1]
+
             else:
                 # Set the slope to the positive difference
                 m = 4095/(d[1] - d[0])
                 # Set the intercept to the LOW value
                 b = d[0]
 
-            # Calibrate the data linearly
-            calib_data[sensor] = [m*(x - b) for x in raw[sensor]]
+            calib_data[sensor] = [m * (x - b) for x in raw[sensor]]
 
         return calib_data
 
