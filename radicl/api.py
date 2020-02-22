@@ -193,7 +193,7 @@ class RAD_API():
 		responses into account
 		"""
 
-		if (message[2] == 0x02):
+		if (message[2] == 0x02 or message[2] == 0x03):
 			return message[4]
 		elif (message[2] == 0x06):
 			return 256
@@ -231,7 +231,7 @@ class RAD_API():
 			# Message is not long enough. Indicate an error
 			return 0
 
-	def __waitForMessage(self, timeout):
+	def __waitForMessage(self, timeout, expected_bytes = 5):
 		"""
 		This function simply waits for a message. It is like a read, but waits
 		up to the specified timeout for new data to arrive
@@ -244,16 +244,18 @@ class RAD_API():
 		if (timeout < delay_time):
 			timeout = delay_time
 		num_iter = timeout / delay_time
+		response = []
+		num_bytes_in_buffer = 0
 		while(num_iter):
 			try:
-				num_bytes_in_buffer = self.port.numBytesInBuffer()
+				num_bytes_in_buffer += self.port.numBytesInBuffer()
 
 				if (num_bytes_in_buffer > 0):
-					response = self.port.readPort(num_bytes_in_buffer)
+					response.extend(self.port.readPort(num_bytes_in_buffer))
 			except Exception as e:
 				self.log.error(e)
 			else:
-				if (num_bytes_in_buffer >= 5):
+				if (num_bytes_in_buffer >= expected_bytes):
 					return response
 				else:
 					num_iter = num_iter - 1
@@ -322,10 +324,19 @@ class RAD_API():
 		time.sleep(0.5)
 		ret = self.getFWREV()
 		self.fw_rev = ret ['data']
+		time.sleep(0.5)
+		ret = self.getFullFWREV()
+		self.full_fw_rev = ret['data']
 
 		if (self.hw_id != None):
 			if (self.hw_id < len(pca_id_list)):
-				self.log.info("Attached device: %s, Rev=%s, FW=%s" % \
+				if (self.full_fw_rev != None):
+					self.log.info("Attached device: %s, Rev=%s, FW=%s" % \
+				  									(pca_id_list[self.hw_id],
+													self.hw_rev,
+													self.full_fw_rev))
+				else:
+					self.log.info("Attached device: %s, Rev=%s, FW=%s" % \
 				  									(pca_id_list[self.hw_id],
 													self.hw_rev,
 													format(self.fw_rev, '.02f')))
@@ -339,6 +350,20 @@ class RAD_API():
 			self.log.warning("Invalid response to ID request")
 			return 0
 
+	def HWID(self):
+		return self.hw_id
+
+	def HWID_String(self):
+		return pca_id_list[self.hw_id]
+
+	def HWRev(self):
+		return self.hw_rev
+
+	def FWRev(self):
+		return self.fw_rev
+
+	def FullFWRev(self):
+		return self.full_fw_rev
 
 	# ***************************
 	# ***** BASIC COMMANDS ******
@@ -380,7 +405,7 @@ class RAD_API():
 
 	def getFWREV(self):
 		"""
-		Queries the board's FW revision
+		Queries the board's FW revision in MAJOR.MINOR format
 		"""
 
 		response = self.__send_receive([0x9F, 0x03, 0x00, 0x00, 0x00])
@@ -393,6 +418,17 @@ class RAD_API():
 			ret_val['data'] = fw_rev
 		return ret_val
 
+	def getFullFWREV(self):
+		"""
+		Queries the board's FW revision in the full A.B.C.D format
+		"""
+		response = self.__send_receive([0x9F, 0x09, 0x00, 0x00, 0x00])
+		ret_val = self.__EvaluateAndReturn(response, 0x09, 4)
+		if (ret_val['status'] == 1):
+			value = ret_val['data']
+			rev_string = str(value[0]) + "." + str(value[1]) + "." + str(value[2]) + "." + str(value[3])
+			ret_val['data'] = rev_string
+		return ret_val
 	def startBootloader(self):
 		"""
 		Starts the bootloader
@@ -648,7 +684,7 @@ class RAD_API():
 		# Expect 4 bytes back two for the low value and 2 for the high value
 		return self.__EvaluateAndReturn(response, 0x4E, 4)
 
-	def MeasSetCalibData(self, num_sensor, low_value, hi_value):
+	def MeasSetCalibData(self, num_sensor, calibration_value_low, calibration_value_high):
 		"""
 		Sets the probes calibration values. A high and low are set where the
 		low. This is applied linearly and thus the low value should be the
@@ -673,8 +709,8 @@ class RAD_API():
 
 		# Convert values each into a 1 and 2 bytes
 		message.extend(num_sensor.to_bytes(1, byteorder='little'))
-		message.extend(low_value.to_bytes(2, byteorder='little'))
-		message.extend(hi_value.to_bytes(2, byteorder='little'))
+		message.extend(calibration_value_low.to_bytes(2, byteorder='little'))
+		message.extend(calibration_value_high.to_bytes(2, byteorder='little'))
 		response = self.__send_receive(message)
 		return self.__EvaluateAndReturn(response, 0x4E, 0)
 
@@ -686,6 +722,85 @@ class RAD_API():
 
 		response = self.__send_receive([0x9F, 0x4F, 0x00, 0x00, 0x00])
 		return self.__EvaluateAndReturn(response, 0x4F, 0)
+	def MeasGetAccThreshold(self):
+		"""
+		Reads the accelerometer threshold setting (an unsigned 32-bit integer in mG)
+		Returns status=1 if successfull, status=0 otherwise		
+		"""
+		response = self.__send_receive([0x9F, 0x50, 0x00, 0x00, 0x00])
+		return self.__EvaluateAndReturn(response, 0x50, 4)
+		
+	def MeasSetAccThreshold(self, threshold):
+		"""
+		Sets the accelerometer threshold setting (accelerometer thresholding algorithm)
+		The parameter 'threshold' is an unsigned 32-bit (4-bytes) absolute value indicating the threshold in mG
+		A value of 0 turns the accelerometer thresholding algorithm off
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		message = [0x9F, 0x50, 0x01, 0x00, 0x04]
+		message.extend(threshold.to_bytes(4, byteorder='little'))
+		response = self.__send_receive(message)
+		return self.__EvaluateAndReturn(response, 0x50, 0)
+		
+	def MeasGetAccZPFO(self):
+		"""
+		Reads the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		response = self.__send_receive([0x9F, 0x51, 0x00, 0x00, 0x00])
+		return self.__EvaluateAndReturn(response, 0x51, 4)
+		
+	def MeasSetAccZPFO(self, zpfo):
+		"""
+		Sets the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
+		The parameter 'zpfo' is an unsigned 32-bit (4-bytes) value indicaing the filter order
+		A value of 0 turns the filtering off (filter is bypassed)
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		message = [0x9F, 0x51, 0x01, 0x00, 0x04]
+		message.extend(zpfo.to_bytes(4, byteorder='little'))
+		response = self.__send_receive(message)
+		return self.__EvaluateAndReturn(response, 0x51, 0)
+
+	def MeasGetAccThreshold(self):
+		"""
+		Reads the accelerometer threshold setting (an unsigned 32-bit integer in mG)
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		response = self.__send_receive([0x9F, 0x50, 0x00, 0x00, 0x00])
+		return self.__EvaluateAndReturn(response, 0x50, 4)
+
+	def MeasSetAccThreshold(self, threshold):
+		"""
+		Sets the accelerometer threshold setting (accelerometer thresholding algorithm)
+		The parameter 'threshold' is an unsigned 32-bit (4-bytes) absolute value indicating the threshold in mG
+		A value of 0 turns the accelerometer thresholding algorithm off
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		message = [0x9F, 0x50, 0x01, 0x00, 0x04]
+		message.extend(threshold.to_bytes(4, byteorder='little'))
+		response = self.__send_receive(message)
+		return self.__EvaluateAndReturn(response, 0x50, 0)
+
+	def MeasGetAccZPFO(self):
+		"""
+		Reads the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		response = self.__send_receive([0x9F, 0x51, 0x00, 0x00, 0x00])
+		return self.__EvaluateAndReturn(response, 0x51, 4)
+
+	def MeasSetAccZPFO(self, zpfo):
+		"""
+		Sets the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
+		The parameter 'zpfo' is an unsigned 32-bit (4-bytes) value indicaing the filter order
+		A value of 0 turns the filtering off (filter is bypassed)
+		Returns status=1 if successfull, status=0 otherwise
+		"""
+		message = [0x9F, 0x51, 0x01, 0x00, 0x04]
+		message.extend(zpfo.to_bytes(4, byteorder='little'))
+		response = self.__send_receive(message)
+		return self.__EvaluateAndReturn(response, 0x51, 0)
 
 	# ******************************
 	# ***** FW UPDATE COMMANDS *****
@@ -713,7 +828,7 @@ class RAD_API():
 		Waits for the state change message
 		"""
 
-		response = self.__waitForMessage(wait_time)
+		response = self.__waitForMessage(wait_time, 6)
 		return self.__EvaluateAndReturn(response, 0xF1, 1)
 
 	def UpdateSetSize(self, num_packets, packet_size):
@@ -736,7 +851,7 @@ class RAD_API():
 
 		message = [0x9F, 0xF3, 0x01, 0x00, 0x00]
 		message[3] = crc8
-		message[4] = 16
+		message[4] = len(data)
 		message.extend(data)
 		self.__sendCommand(message)
 		response = self.__waitForMessage(20)

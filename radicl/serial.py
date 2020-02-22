@@ -84,6 +84,7 @@ class RAD_Serial():
 	def closePort(self):
 		if (self.serial_port != None):
 			self.serial_port.close
+			self.serial_port = None
 
 	def flushPort(self):
 		if (self.serial_port != None):
