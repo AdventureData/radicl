@@ -3,6 +3,8 @@
 import os
 from radicl.radicl import RADICL
 from radicl.ui_tools import Messages
+from radicl import __version__
+import argparse
 debug = False
 
 # Get the screen outputter
@@ -40,6 +42,12 @@ logo = """\
 """
 
 def main():
+    parser = argparse.ArgumentParser(description="CLI script for live interactions with the Lyte probe.")
+    parser.add_argument('--version', action='version',
+                                 version=('%(prog)s {version}'
+                                 '').format(version=__version__))
+    args = parser.parse_args()
+
     #Clear the screen in console
     if 'nt' in os.name:
         os.system('cls')  # for Windows

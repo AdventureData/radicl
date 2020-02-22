@@ -8,7 +8,9 @@ import numpy as np
 import argparse
 
 def open_adjust_profile(fname):
-
+	"""
+	Open a profile and make a dataframe for plotting
+	"""
 	df = pd.read_csv(fname,header=11)
 
 	df['DEPTH'] = np.linspace(0,-1.0*(np.max(df['DEPTH'])/100.0),len(df.index))
@@ -19,6 +21,9 @@ def open_adjust_profile(fname):
 
 
 def shift_ambient_sensor(df):
+	"""
+	Shift the ambient data
+	"""
 		new_df = df.copy()
 
 		S4 = new_df['SENSOR 4'].copy()

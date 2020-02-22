@@ -11,7 +11,7 @@ with open('README.rst', encoding='utf-8') as readme_file:
 with open('docs/history.rst', encoding='utf-8') as history_file:
     history = history_file.read()
 
-with open('./requirements_dev.txt', encoding='utf-8') as req_file:
+with open('./requirements.txt', encoding='utf-8') as req_file:
     requirements = req_file.read()
 
 setup_requirements = ['pytest-runner', ]
@@ -45,10 +45,11 @@ setup(
     url='https://github.com/adventuredata/radicl',
     version='0.3.2',
     zip_safe=False,
-    scripts = ['scripts/plotlyte',],
      entry_points = {
           'console_scripts': [
               'radicl = radicl.cli:main',
+              'plotlyte = radicl.plotting.main',
+
           ],
       },
 )

@@ -12,6 +12,6 @@ install:
    - python setup.py install
 
 
-# Command to run tests, e.g. python setup.py test
-script: radicl
+# Check radicl was installed
+script: radicl --version
 
