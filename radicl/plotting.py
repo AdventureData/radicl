@@ -11,35 +11,55 @@ def open_adjust_profile(fname):
 	"""
 	Open a profile and make a dataframe for plotting
 	"""
-	df = pd.read_csv(fname,header=11)
 
-	df['DEPTH'] = np.linspace(0,-1.0*(np.max(df['DEPTH'])/100.0),len(df.index))
+	# Collect the header
+	header_info = {}
 
-	df.set_index('DEPTH',inplace =  True)
+	with open(fname) as fp:
+	    for i, line in enumerate(fp):
+	        if '=' in line:
+	            k,v = line.split('=')
+	            k,v = (c.lower().strip() for c in [k,v])
+	            header_info[k] = v
+	        else:
+	            header = i
+	            break
 
-	return df
+	    fp.close()
+
+	if 'radicl version' in  header_info.keys():
+	    data_type = 'radicl'
+	    columns = ['depth','sensor_1','sensor_2','sensor_3','sensor_4']
+
+	else:
+	    data_type = 'rad_app'
+	    columns = ['sample','depth','sensor_1','sensor_2','sensor_3','sensor_4']
+
+	df = pd.read_csv(fname, header=header, names=columns)
+
+	return df, data_type
 
 
 def shift_ambient_sensor(df):
 	"""
 	Shift the ambient data
 	"""
-		new_df = df.copy()
+	new_df = df.copy()
 
-		S4 = new_df['SENSOR 4'].copy()
-		S4 = S4.to_frame()
+	S4 = new_df['SENSOR 4'].copy()
+	S4 = S4.to_frame()
 
-		S4 = S4.sub(np.min(S4['SENSOR 4']),axis=1)
+	S4 = S4.sub(np.min(S4['SENSOR 4']), axis=1)
 
-		#Account for physical location of the sensor, offset by 1.2cm
-		S4.index = S4.index+3
+	#Account for physical location of the sensor, offset by 1.2cm
+	S4.index = S4.index+3
 
-		#Rejoin it back in
-		new_df = pd.concat([new_df[['SENSOR {0}'.format(i) for i in range(1,4)]],S4],axis=1)
+	#Rejoin it back in
+	new_df = pd.concat([new_df[['SENSOR {0}'.format(i) for i in range(1,4)]],S4],axis=1)
 
-		#Interpolate
-		new_df = new_df.interpolate(method='cubic') #Due to mismatch index interpolate
-		return new_df
+	#Interpolate
+	new_df = new_df.interpolate(method='cubic') #Due to mismatch index interpolate
+	return new_df
 
 def enough_ambient(df):
 	"""
@@ -120,7 +140,7 @@ def main():
 			print('\n'+os.path.basename(f))
 			print('='*len(f))
 			#Open the file and set the index to depth
-			df_o = open_adjust_profile(f)
+			df_o, data_type = open_adjust_profile(f)
 			df = df_o.copy()
 
 

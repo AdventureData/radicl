@@ -48,7 +48,7 @@ setup(
      entry_points = {
           'console_scripts': [
               'radicl = radicl.cli:main',
-              'plotlyte = radicl.plotting.main',
+              'plotlyte = radicl.plotting:main',
 
           ],
       },
