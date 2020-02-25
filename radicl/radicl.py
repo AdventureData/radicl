@@ -17,7 +17,14 @@ import radicl
 
 out = Messages()
 
-class RADICL:
+class RADICL(object):
+    '''
+    This is the main interface for end users to interact with the API and the
+    probe.
+
+    Attributes:
+        probe: radicl
+    '''
     def __init__(self,**kwargs):
 
         self.log = get_logger(__name__)
@@ -151,10 +158,10 @@ class RADICL:
             values = self.probe.getSetting(setting_name='calibdata', sensor=i)
             self.log.debug("Calibdata now set to = {}".format(", ".join([str(v) for v in values])))
 
-    def take_a_reading(self, data_request):
+    def take_a_reading(self):
         """
-        Walks a user through the measurement taking process through the
-        keyboard
+        Walks a user through the measurement taking process through pressing a
+        key to start and stop measurements on the probe
         """
 
         input("Press any key to begin a measurement.\n")
@@ -175,11 +182,19 @@ class RADICL:
         self.probe.wait_for_state(3, retry=1000, delay=0.3)
         out.respond("Measurement ended...")
 
-        data = self.grab_data(data_request)
-        response = self.probe.resetMeasurement()
-        data = self.dataframe_this(data, data_request)
+    def listen_for_a_reading(self):
+        """
+        Simple CLI function to take a measurement by listening for a button
+        triggering the start and stop on the probe.
+        """
 
-        return data
+        out.msg("Press the probe button to start the measurement:")
+        self.probe.wait_for_state(1, retry=1000, delay=0.3)
+        out.respond("Measurement Started...")
+
+        out.msg("Press the probe button to end the measurement:")
+        self.probe.wait_for_state(3, retry=1000, delay=0.3)
+        out.respond("Measurement ended...")
 
     def dataframe_this(self, data, name):
         """

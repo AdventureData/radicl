@@ -21,7 +21,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-
+import datetime
 import radicl
 
 # -- General configuration ---------------------------------------------
@@ -48,7 +48,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'radicl'
-copyright = u"2019, Micah Johnson"
+copyright = u"{}, Adventure Data".format(datetime.datetime.now().year)
 author = u"Micah Johnson"
 
 # The version info for the project you're documenting, acts as replacement
@@ -158,6 +158,3 @@ texinfo_documents = [
      'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-

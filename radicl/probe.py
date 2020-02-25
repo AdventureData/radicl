@@ -21,6 +21,7 @@ error_codes = {2049:"The probe measurement/sensor is not running"}
 class RAD_Probe():
     """
     Class for directly interacting with the probe.
+
     """
     def __init__(self, ext_api=None, debug=False):
         """
