@@ -170,18 +170,6 @@ class RADICL(object):
         input("Press any key to stop the measurement.\n")
         response = self.probe.stopMeasurement()
 
-        fn = self.options['data'][data_request]
-        self.log.info('Downloading {} data from probe...'.format(data_request))
-        self.log.debug("Requesting data using function {0}".format(fn.__name__))
-
-        out.msg("Press the probe button to start the measurement:")
-        self.probe.wait_for_state(1, retry=1000, delay=0.3)
-        out.respond("Measurement Started...")
-
-        out.msg("Press the probe button to end the measurement:")
-        self.probe.wait_for_state(3, retry=1000, delay=0.3)
-        out.respond("Measurement ended...")
-
     def listen_for_a_reading(self):
         """
         Simple CLI function to take a measurement by listening for a button
@@ -223,6 +211,9 @@ class RADICL(object):
             data: Dataframe of the data requested
         """
         fn = self.options['data'][data_request]
+        fn = self.options['data'][data_request]
+        self.log.info('Downloading {} data from probe...'.format(data_request))
+        self.log.debug("Requesting data using function {0}".format(fn.__name__))
         data = fn()
         data = self.dataframe_this(data, data_request)
 
@@ -357,13 +348,7 @@ class RADICL(object):
             else:
                 self.current_setting_value = \
                         self.probe.getSetting(setting_name=self.setting_request)
-                values = self.current_setting_value
                 self.state += 1
-
-                msg = ("Currently {0} = {1}\nEnter value to change probe {0}\n"
-                       "".format(self.setting_request,
-                                values))
-                self.log.info(msg)
 
         # Modify setting
         elif self.state == 3:
@@ -373,6 +358,11 @@ class RADICL(object):
                     self.state = 1
 
                 else:
+                    values = self.current_setting_value
+                    msg = ("Currently {0} = {1}\nEnter value to change probe {0}\n"
+                           "".format(self.setting_request,
+                                    values))
+                    self.log.info(msg)
 
                     valid = False
 
