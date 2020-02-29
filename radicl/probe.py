@@ -500,12 +500,12 @@ class RAD_Probe():
             offset = 0
 
             for ii in range(0, total_runs):
-                byte_data = bytes( [ data[(offset + 0)], data[(offset + 1)] ] ) 
-                x_axis.append((struct.unpack('<h', byte_data) / 1000)
-                byte_data = bytes( [ data[(offset + 2)], data[(offset + 3)] ] ) 
-                y_axis.append((struct.unpack('<h', byte_data) / 1000)
-                byte_data = bytes( [ data[(offset + 4)], data[(offset + 5)] ] ) 
-                z_axis.append((struct.unpack('<h', byte_data) / 1000)
+                acc_data_x = struct.unpack('<h', bytes(data[(offset + 0): (offset + 2)]) )
+                acc_data_y = struct.unpack('<h', bytes(data[(offset + 2): (offset + 4)]) )
+                acc_data_z = struct.unpack('<h', bytes(data[(offset + 4): (offset + 6)]) )
+                x_axis.append(acc_data_x[0] / 1000)
+                y_axis.append(acc_data_y[0] / 1000)
+                z_axis.append(acc_data_z[0] / 1000)
                 offset = offset + 6
             return {'X-Axis': x_axis, 'Y-Axis': y_axis, 'Z-Axis': z_axis}
         # Read failed!
