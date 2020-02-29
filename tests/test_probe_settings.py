@@ -1,4 +1,5 @@
 import unittest
+
 from radicl.probe import RAD_Probe
 
 
@@ -13,7 +14,7 @@ class TestProbeSettings(unittest.TestCase):
         Test retrieve calibration values from the probe
         """
         # Loop through 1-4 sensors
-        for i in range(1,5):
+        for i in range(1, 5):
             d = self.probe.getSetting(setting_name='calibdata', sensor=1)
 
             # Confirm calibration data is always length 2

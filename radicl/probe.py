@@ -1,29 +1,31 @@
 # coding: utf-8
 
-import sys
 import binascii
-import serial
-import time
-import inspect
-from radicl.api import RAD_API
-from radicl import serial as rs
-from radicl.ui_tools import get_logger
-from radicl import __version__
-from radicl.ui_tools import Messages, parse_func_list, print_helpme, parse_help
-import struct
 import datetime
+import inspect
 import os
-import numpy as np
 import struct
+import sys
+import time
 
+import numpy as np
+import serial
 
-error_codes = {2049:"The probe measurement/sensor is not running"}
+from radicl import __version__
+from radicl import serial as rs
+from radicl.api import RAD_API
+from radicl.ui_tools import (
+    Messages, get_logger, parse_func_list, parse_help, print_helpme)
+
+error_codes = {2049: "The probe measurement/sensor is not running"}
+
 
 class RAD_Probe():
     """
     Class for directly interacting with the probe.
 
     """
+
     def __init__(self, ext_api=None, debug=False):
         """
         Args:
@@ -33,7 +35,7 @@ class RAD_Probe():
         self.log = get_logger(__name__, level='debug')
 
         # Check if an external API object was passed in.
-        if (ext_api != None):
+        if (ext_api is not None):
             # An external API object was provided. Use it. Note: We assume here
             # that the appropriate initialization, identification, and API port
             # enable procedure has already taken place
@@ -45,7 +47,7 @@ class RAD_Probe():
             port.openPort()
 
             if not port:
-        	    self.log.info("No device present")
+                self.log.info("No device present")
             else:
                 port.flushPort()
                 # Create the API and FMTR instances The API class is linked to
@@ -71,13 +73,13 @@ class RAD_Probe():
                                                     predicate=inspect.ismethod)
                 ignores = ['reset']
                 self.settings = parse_func_list(settings_funcs,
-                                                ['Meas','Set'],
+                                                ['Meas', 'Set'],
                                                 ignore_keywords=ignores)
                 self.getters = parse_func_list(settings_funcs,
-                                               ['Meas','Get'],
+                                               ['Meas', 'Get'],
                                                ignore_keywords=ignores)
 
-    def manage_error(self,  ret_dict, stack_id=1):
+    def manage_error(self, ret_dict, stack_id=1):
         """
         Handles the common scenario of looking at the returned Dictionary
         from the probe where there may be an error or simply a com error.
@@ -91,7 +93,7 @@ class RAD_Probe():
         """
         name = inspect.stack()[stack_id][3]
 
-        if (ret_dict['errorCode'] != None):
+        if (ret_dict['errorCode'] is not None):
             self.log.error("{} error:{}".format(name, ret_dict['errorCode']))
 
         else:
@@ -111,7 +113,7 @@ class RAD_Probe():
         """
         result = []
 
-        if ( (ret['status'] == 1) and (ret['data'] != None) ):
+        if ((ret['status'] == 1) and (ret['data'] is not None)):
 
             data_size = len(ret['data'])
             increment = int(data_size / num_values)
@@ -121,8 +123,8 @@ class RAD_Probe():
                               "divided by the expected number of values = "
                               "{}".format(data_size, num_values))
 
-            for i in range(0, data_size,increment):
-                data = ret['data'][i:i+increment]
+            for i in range(0, data_size, increment):
+                data = ret['data'][i:i + increment]
                 if dtype == int:
                     value = int.from_bytes(data, byteorder='little')
 
@@ -130,7 +132,8 @@ class RAD_Probe():
                     value = data.decode('utf-8')
 
                 else:
-                    raise ValueError("No types other than str and int are implemented")
+                    raise ValueError(
+                        "No types other than str and int are implemented")
 
                 result.append(value)
 
@@ -143,8 +146,8 @@ class RAD_Probe():
 
         return result
 
-
     # Generic read function
+
     def __readData(self, buffer_ID):
         """
         Prive function to retrieve data from the probe.
@@ -158,17 +161,17 @@ class RAD_Probe():
         if (ret1['status'] == 1):
             num_segments = int.from_bytes(ret1['data'], byteorder='little')
 
-            if (num_segments != 0 and num_segments != None):
+            if (num_segments != 0 and num_segments is not None):
                 self.log.debug("Reading %d segments" % num_segments)
                 byte_counter = 0
 
-                for ii in range(1, (num_segments+1)):
-                    ret2 = self.api.MeasReadDataSegment(buffer_ID, (ii-1))
+                for ii in range(1, (num_segments + 1)):
+                    ret2 = self.api.MeasReadDataSegment(buffer_ID, (ii - 1))
 
                     if (ret2['status'] == 1):
                         # Data segment read successfull
 
-                        if (ret2['data'] != None):
+                        if (ret2['data'] is not None):
                             byte_counter = byte_counter + len(ret2['data'])
                             data_chunk = ret2['data']
                             data.extend(data_chunk)
@@ -182,26 +185,27 @@ class RAD_Probe():
                             wait_time = wait_time * 2
                             ret3 = self.api.MeasReadDataSegment(buffer_ID, ii)
 
-                            if (ret3['status'] == 1 and ret2['data'] != None):
+                            if (ret3['status'] ==
+                                    1 and ret2['data'] is not None):
                                 byte_counter = byte_counter + len(ret3['data'])
 
                                 data_chunk = ret3['data']
                                 data.extend(data_chunk)
                                 break
 
-                            elif (ret3['errorCode'] != None):
+                            elif (ret3['errorCode'] is not None):
                                 self.log.error("readSegmentData error: %d (Retry %d, "
-                                      "Segment=%d, buffer_ID=%d)" % \
-                                      (ret3['errorCode'], jj, ii, buffer_ID))
+                                               "Segment=%d, buffer_ID=%d)" %
+                                               (ret3['errorCode'], jj, ii, buffer_ID))
 
                             else:
                                 self.log.error("readSegmentData error: COM "
-                                                "(Retry %d, Segment=%d, "
-                                                "buffer_ID=%d)" % \
-                                                (jj, ii, buffer_ID))
+                                               "(Retry %d, Segment=%d, "
+                                               "buffer_ID=%d)" %
+                                               (jj, ii, buffer_ID))
 
                         # Retry failed! Return here
-                        if ((ret3['status'] != 1) or (ret3['data'] == None) ):
+                        if ((ret3['status'] != 1) or (ret3['data'] is None)):
                             return {'status': 0,
                                     'SegmentsAvailable': num_segments,
                                     'SegmentsRead': ii,
@@ -217,9 +221,9 @@ class RAD_Probe():
                 self.log.error("Data read error: No data segments available")
 
         # No error code provided
-        elif (ret1['errorCode'] != None):
-            self.log.error("getNumSegments error: %d (buffer_ID = %d)" % \
-            (ret1['errorCode'], buffer_ID))
+        elif (ret1['errorCode'] is not None):
+            self.log.error("getNumSegments error: %d (buffer_ID = %d)" %
+                           (ret1['errorCode'], buffer_ID))
         else:
             self.log.error("getNumSegments error: COM")
         return {'status': 0, 'SegmentsAvailable': 0, 'SegmentsRead': 0,
@@ -248,7 +252,6 @@ class RAD_Probe():
 
         return self.manage_data_return(ret, dtype=int)
 
-
     def getProbeRunState(self):
         """
         Returns the probe's run state. The return value is an integer.
@@ -257,7 +260,6 @@ class RAD_Probe():
 
         ret = self.api.getRunState()
         return self.manage_data_return(ret, dtype=int)
-
 
     def getProbeMeasState(self):
         """
@@ -269,10 +271,10 @@ class RAD_Probe():
         data = None
         attempts = 0
 
-        while data == None and attempts < 10:
+        while data is None and attempts < 10:
             ret = self.api.getMeasState()
             data = self.manage_data_return(ret, dtype=int)
-            attempts+=1
+            attempts += 1
 
         return data
 
@@ -348,13 +350,15 @@ class RAD_Probe():
         attempts = 0
         pstate = self.getProbeMeasState()
         result = False
-        self.log.info("Waiting for state {0}, current state = {1}".format(state, pstate))
+        self.log.info(
+            "Waiting for state {0}, current state = {1}".format(
+                state, pstate))
 
         while not result:
             result = pstate == state
 
             # Check for a probe advanced past the state
-            if type(pstate) == int:
+            if isinstance(pstate, int):
                 if state != 0:
                     if pstate >= state:
                         result = True
@@ -363,17 +367,20 @@ class RAD_Probe():
                         result = True
 
             if attempts > retry:
-                self.log.error("Retry Exceeded waiting for state(s) {0}".format(state))
+                self.log.error(
+                    "Retry Exceeded waiting for state(s) {0}".format(state))
                 result = False
                 break
             else:
-                attempts +=1
+                attempts += 1
 
             time.sleep(delay)
             pstate = self.getProbeMeasState()
 
         if result:
-            self.log.debug("{} queries while waiting for state {}".format(attempts, state))
+            self.log.debug(
+                "{} queries while waiting for state {}".format(
+                    attempts, state))
 
         return result
 
@@ -389,22 +396,25 @@ class RAD_Probe():
 
         # Sucessfully read data
         if (ret['status'] == 1):
-            #***** DATA INTEGRITY CHECK *****
+            # ***** DATA INTEGRITY CHECK *****
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
                 # Data integrity error (not all segments read)
                 self.log.error("readRawSensorData error: Data integrity error (not all "
-                      "segments read)")
+                               "segments read)")
                 return None
             expected_bytes = ret['SegmentsRead'] * 256
             if (expected_bytes != ret['BytesRead']):
                 # Data integrity error (not all bytes read - incomplete segment)
-                # For the raw sensor data, this is also the check to ensure we have an even amount of bytes to break into sensor pairs
+                # For the raw sensor data, this is also the check to ensure we
+                # have an even amount of bytes to break into sensor pairs
                 self.log.error("readRawSensorData error: Data integrity error (not all "
-                      "bytes read - incomplete segment)")
-                self.log.error("Expected=%d, Read=%d" % (expected_bytes, ret['BytesRead']))
+                               "bytes read - incomplete segment)")
+                self.log.error(
+                    "Expected=%d, Read=%d" %
+                    (expected_bytes, ret['BytesRead']))
                 return None
 
-            #***** DATA PARSING *****
+            # ***** DATA PARSING *****
             data = ret['Data']
             sensor1 = []
             sensor2 = []
@@ -425,7 +435,6 @@ class RAD_Probe():
         # Read failed!
         else:
             return None
-
 
     def readCalibratedSensorData(self):
         """
@@ -451,14 +460,13 @@ class RAD_Probe():
 
             else:
                 # Set the slope to the positive difference
-                m = 4095/(d[1] - d[0])
+                m = 4095 / (d[1] - d[0])
                 # Set the intercept to the LOW value
                 b = d[0]
 
             calib_data[sensor] = [m * (x - b) for x in raw[sensor]]
 
         return calib_data
-
 
     def readRawAccelerationData(self):
         """
@@ -474,24 +482,25 @@ class RAD_Probe():
 
         # Sucessfully read data
         if (ret['status'] == 1):
-            #***** DATA INTEGRITY CHECK *****
+            # ***** DATA INTEGRITY CHECK *****
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
                 # Data integrity error (not all segments read)
                 self.log.error("readRawAccelerationData error: Data integrity error (not"
-                      " all segments read)")
+                               " all segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
 
-            # Data integrity error (not all bytes read - incomplete data segment)
-            if ( (total_bytes % 6) != 0 ):
+            # Data integrity error (not all bytes read - incomplete data
+            # segment)
+            if ((total_bytes % 6) != 0):
                 # The data set is not an integer multiple of 6 (2 bytes per
                 # axis, 3 axes total)
                 self.log.error("readRawAccelerationData error: Data integrity error "
-                      "(incomplete data set)")
+                               "(incomplete data set)")
                 return None
 
-            #***** DATA PARSING *****
+            # ***** DATA PARSING *****
             data = ret['Data']
             x_axis = []
             y_axis = []
@@ -500,9 +509,12 @@ class RAD_Probe():
             offset = 0
 
             for ii in range(0, total_runs):
-                acc_data_x = struct.unpack('<h', bytes(data[(offset + 0): (offset + 2)]) )
-                acc_data_y = struct.unpack('<h', bytes(data[(offset + 2): (offset + 4)]) )
-                acc_data_z = struct.unpack('<h', bytes(data[(offset + 4): (offset + 6)]) )
+                acc_data_x = struct.unpack('<h', bytes(
+                    data[(offset + 0): (offset + 2)]))
+                acc_data_y = struct.unpack('<h', bytes(
+                    data[(offset + 2): (offset + 4)]))
+                acc_data_z = struct.unpack('<h', bytes(
+                    data[(offset + 4): (offset + 6)]))
                 x_axis.append(acc_data_x[0] / 1000)
                 y_axis.append(acc_data_y[0] / 1000)
                 z_axis.append(acc_data_z[0] / 1000)
@@ -519,33 +531,35 @@ class RAD_Probe():
 
         ret = self.__readData(5)
         if (ret['status'] == 1):
-            #Sucessfully read data
-            #***** DATA INTEGRITY CHECK *****
+            # Sucessfully read data
+            # ***** DATA INTEGRITY CHECK *****
             # Data integrity error (not all segments read)
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
                 self.log.error("readAccelerationCorrelationData error: Data integrity "
-                      "error (not all segments read)")
+                               "error (not all segments read)")
                 return None
             total_bytes = ret['BytesRead']
-            if ( (total_bytes % 4) != 0 ):
+            if ((total_bytes % 4) != 0):
                 # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Correlation number is a 32-bit int => 4 bytes)
+                # The data set is not an integer multiple of 4 (Correlation
+                # number is a 32-bit int => 4 bytes)
                 self.log.error("readAccelerationCorrelationData error: Data integrity "
-                      "error (incomplete data set)")
+                               "error (incomplete data set)")
                 return None
 
-            #***** DATA PARSING *****
+            # ***** DATA PARSING *****
             data = ret['Data']
             correll_data = []
             total_runs = total_bytes // 4
             offset = 0
 
             for ii in range(0, total_runs):
-                correll_data.append(data[(offset + 0)] + (data[(offset + 1)] * 256) + (data[(offset + 2)] * 65536) + (data[(offset + 3)] * 16777216))
+                correll_data.append(data[(offset + 0)] + (data[(offset + 1)] * 256) + (
+                    data[(offset + 2)] * 65536) + (data[(offset + 3)] * 16777216))
                 offset = offset + 4
             return correll_data
         else:
-            #Read failed!
+            # Read failed!
             return None
 
     def readRawPressureData(self):
@@ -561,14 +575,17 @@ class RAD_Probe():
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
                 # Data integrity error (not all segments read)
                 self.log.error("readRawPressureData error: Data integrity error (not "
-                      "all segments read)")
+                               "all segments read)")
                 return None
 
-            # Data integrity error (not all bytes read - incomplete data segment)
+            # Data integrity error (not all bytes read - incomplete data
+            # segment)
             total_bytes = ret['BytesRead']
             if ((total_bytes % 3) != 0):
-                # The data set is not an integer multiple of 3 (Raw pressure is in 24-bit format => 3 bytes)
-                self.log.error("readRawPressureData error: Data integrity error (incomplete data set)")
+                # The data set is not an integer multiple of 3 (Raw pressure is
+                # in 24-bit format => 3 bytes)
+                self.log.error(
+                    "readRawPressureData error: Data integrity error (incomplete data set)")
                 return None
 
             # ***** DATA PARSING *****
@@ -579,7 +596,7 @@ class RAD_Probe():
 
             for ii in range(0, total_runs):
                 this_value = data[(offset + 0)] + (data[(offset + 1)] * 256) + \
-                            (data[(offset + 2)] * 65536)
+                    (data[(offset + 2)] * 65536)
 
                 pressure_data.append(this_value / 4096)
                 offset = offset + 3
@@ -602,16 +619,16 @@ class RAD_Probe():
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
                 # Data integrity error (not all segments read)
                 self.log.error("readDepthData error: Data integrity error (not all "
-                      "segments read)")
+                               "segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
             if ((total_bytes % 4) != 0):
                 # Data integrity error (not all bytes read - incomplete data segment)
                 # The data set is not an integer multiple of 4 (Floatingpoint
-                #values are 32-bit long => 4 bytes)
+                # values are 32-bit long => 4 bytes)
                 self.log.error("readDepthData error: Data integrity error "
-                      "(incomplete data set)")
+                               "(incomplete data set)")
                 return None
 
             # ***** DATA PARSING *****
@@ -649,15 +666,16 @@ class RAD_Probe():
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
                 # Data integrity error (not all segments read)
                 self.log.error("readFilteredDepthData error: Data integrity error "
-                      "(not all segments read)")
+                               "(not all segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
             if ((total_bytes % 4) != 0):
                 # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Floatingpoint values are 32-bit long => 4 bytes)
+                # The data set is not an integer multiple of 4 (Floatingpoint
+                # values are 32-bit long => 4 bytes)
                 self.log.error("readFilteredDepthData error: Data integrity error "
-                      "(incomplete data set)")
+                               "(incomplete data set)")
                 return None
 
             # ***** DATA PARSING *****
@@ -673,9 +691,9 @@ class RAD_Probe():
                 depth_data.append(this_value)
                 offset = offset + 4
 
-            if depth_data != None:
+            if depth_data is not None:
                 # Convert to cm
-                depth_data = [(c[0]/100,) for c in depth_data]
+                depth_data = [(c[0] / 100,) for c in depth_data]
 
             return depth_data
 
@@ -690,37 +708,38 @@ class RAD_Probe():
 
         ret = self.__readData(6)
         if (ret['status'] == 1):
-            #Sucessfully read data
-            #***** DATA INTEGRITY CHECK *****
+            # Sucessfully read data
+            # ***** DATA INTEGRITY CHECK *****
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
-                #Data integrity error (not all segments read)
+                # Data integrity error (not all segments read)
                 self.log.error("readPressureDepthCorrelationData error: Data integrity "
-                      "error (not all segments read)")
+                               "error (not all segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
-            if ( (total_bytes % 4) != 0 ):
+            if ((total_bytes % 4) != 0):
                 # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Correlation number is a 32-bit int => 4 bytes)
+                # The data set is not an integer multiple of 4 (Correlation
+                # number is a 32-bit int => 4 bytes)
                 self.log.error("readPressureDepthCorrelationData error: Data integrity "
-                      "error (incomplete data set)")
+                               "error (incomplete data set)")
                 return None
 
-            #***** DATA PARSING *****
+            # ***** DATA PARSING *****
             data = ret['Data']
             correll_data = []
             total_runs = total_bytes // 4
             offset = 0
 
             for ii in range(0, total_runs):
-                correll_data.append(data[(offset + 0)] + (data[(offset + 1)] * \
-                                    256) + (data[(offset + 2)] * 65536) + \
+                correll_data.append(data[(offset + 0)] + (data[(offset + 1)] *
+                                                          256) + (data[(offset + 2)] * 65536) +
                                     (data[(offset + 3)] * 16777216))
                 offset = offset + 4
             return correll_data
 
         else:
-            #Read failed!
+            # Read failed!
             return None
 
     def readSensorDepthComboData(self):
@@ -730,24 +749,25 @@ class RAD_Probe():
 
         ret = self.__readData(7)
         if (ret['status'] == 1):
-            #Sucessfully read data
-            #***** DATA INTEGRITY CHECK *****
+            # Sucessfully read data
+            # ***** DATA INTEGRITY CHECK *****
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
-                #Data integrity error (not all segments read)
+                # Data integrity error (not all segments read)
                 self.log.error("readSensorDepthCombo error: Data integrity error (not "
-                      "all segments read)")
+                               "all segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
-            if ( (total_bytes % 16) != 0 ):
+            if ((total_bytes % 16) != 0):
                 # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Correlation number is a 32-bit int => 4 bytes)
+                # The data set is not an integer multiple of 4 (Correlation
+                # number is a 32-bit int => 4 bytes)
                 self.log.error("readSensorDepthCombo error: Data integrity"
-                      " error (incomplete data set)")
+                               " error (incomplete data set)")
                 return None
 
             self.log.info("Total Datapoints = %d" % ret['SegmentsRead'])
-            #***** DATA PARSING *****
+            # ***** DATA PARSING *****
             data = ret['Data']
             total_runs = total_bytes // 16
             offset = 0
@@ -760,12 +780,12 @@ class RAD_Probe():
 
             for ii in range(0, total_runs):
                 this_data_set = data[offset: (offset + 16)]
-                transaction_id.append(this_data_set[0] + (this_data_set[1] * \
-                                      256) + (this_data_set[2] * 65536) + \
+                transaction_id.append(this_data_set[0] + (this_data_set[1] *
+                                                          256) + (this_data_set[2] * 65536) +
                                       (this_data_set[3] * 16777216))
-                depth.append(this_data_set[4] + (this_data_set[5] * 256) + \
-                             (this_data_set[6] * 65536) + (this_data_set[7] * \
-                             16777216))
+                depth.append(this_data_set[4] + (this_data_set[5] * 256) +
+                             (this_data_set[6] * 65536) + (this_data_set[7] *
+                                                           16777216))
                 sensor1.append(this_data_set[8] + (this_data_set[9] * 256))
                 sensor2.append(this_data_set[10] + (this_data_set[11] * 256))
                 sensor3.append(this_data_set[12] + (this_data_set[13] * 256))
@@ -777,7 +797,7 @@ class RAD_Probe():
                     'Sensor4': sensor4,
                     'Depth': depth}
         else:
-            #Read failed!
+            # Read failed!
             return None
 
     def readMeasurementTemperature(self):
@@ -812,8 +832,8 @@ class RAD_Probe():
         """
         t = datetime.datetime.now()
         fstr = "{0}-{1:02d}-{2:02d}--{3:02d}:{4:02d}:{5:02d}"
-        time_stamp = fstr.format(t.year,t.month,t.day,
-                                 t.hour,t.minute,t.second)
+        time_stamp = fstr.format(t.year, t.month, t.day,
+                                 t.hour, t.minute, t.second)
 
         header = "RECORDED={0}\n"
         header += "radicl VERSION={1}\n"
@@ -830,7 +850,7 @@ class RAD_Probe():
                               )
         return final
 
-    def getSetting(self,**kwargs):
+    def getSetting(self, **kwargs):
         """
         Reads the probes setting from the dictionary of functions. Calls the
         function and manages the data.
@@ -852,8 +872,7 @@ class RAD_Probe():
 
         return self.manage_data_return(ret, num_values=num_values, dtype=int)
 
-
-    def setSetting(self,**kwargs):
+    def setSetting(self, **kwargs):
         """
         sets the probe's setting
         """

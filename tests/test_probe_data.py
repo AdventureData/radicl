@@ -1,7 +1,10 @@
-import unittest
-from radicl.probe import RAD_Probe
 import time
+import unittest
+
 import matplotlib.pyplot as plt
+
+from radicl.probe import RAD_Probe
+
 
 class TestProbeData(unittest.TestCase):
 
@@ -28,6 +31,7 @@ class TestProbeData(unittest.TestCase):
 
         except Exception as e:
             raise(e)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,8 +2,11 @@
 
 import os
 import time
-from radicl.ui_tools import get_logger
+
 import numpy as np
+
+from radicl.ui_tools import get_logger
+
 
 def get_avg_sensor(probe, delay=3, sensor='Sensor1'):
     """

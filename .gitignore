@@ -101,3 +101,5 @@ docs/radicl.rst
 docs/modules.rst
 # mypy
 .mypy_cache/
+
+**.csv

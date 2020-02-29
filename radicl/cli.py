@@ -1,14 +1,16 @@
 # coding: utf-8
 
+import argparse
 import os
+
+from radicl import __version__
 from radicl.radicl import RADICL
 from radicl.ui_tools import Messages
-from radicl import __version__
-import argparse
+
 debug = False
 
 # Get the screen outputter
-out=Messages()
+out = Messages()
 
 
 logo = """\
@@ -41,14 +43,16 @@ logo = """\
 ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
 """
 
+
 def main():
-    parser = argparse.ArgumentParser(description="CLI script for live interactions with the Lyte probe.")
+    parser = argparse.ArgumentParser(
+        description="CLI script for live interactions with the Lyte probe.")
     parser.add_argument('--version', action='version',
-                                 version=('%(prog)s {version}'
+                        version=('%(prog)s {version}'
                                  '').format(version=__version__))
     args = parser.parse_args()
 
-    #Clear the screen in console
+    # Clear the screen in console
     if 'nt' in os.name:
         os.system('cls')  # for Windows
     else:
@@ -57,14 +61,14 @@ def main():
     out.msg("")
     out.msg(logo)
 
-    #Information
+    # Information
     out.headline("\nWELCOME TO THE LYTE PROBE CLI")
     out.warn("\n\tWarning: This CLI is not meant to run with the mobile app."
-            "\n\tPlease make sure your RAD app is closed out.")
-    out.msg("\nThings you can do with this tool:\n",'header')
-    out.msg("\t* Plot various data from the probe."+
-            "\n\t* Write various data to a file. (In development)"+
-            "\n\t* Modify probe settings.  (In development)"+
+             "\n\tPlease make sure your RAD app is closed out.")
+    out.msg("\nThings you can do with this tool:\n", 'header')
+    out.msg("\t* Plot various data from the probe." +
+            "\n\t* Write various data to a file. (In development)" +
+            "\n\t* Modify probe settings.  (In development)" +
             "\n\t* Update the firmware (In development)\n")
 
     # try:
