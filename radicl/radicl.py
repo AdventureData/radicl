@@ -92,7 +92,7 @@ class RADICL(object):
             pstate = self.probe.getProbeMeasState()
 
             if self.state == 0:
-                #If probe is not ready.
+                # If probe is not ready.
                 if pstate not in [0,5]:
                     self.probe.resetMeasurement()
 
@@ -201,21 +201,41 @@ class RADICL(object):
 
         return data
 
-    def grab_data(self, data_request):
+    def grab_data(self, data_request, retries=3):
         """
         Grabs data from the probe and puts it into a dataframe
 
         Args:
             data_request: String name of the data requesting from probe, must be a key in the self.options
+            retries: Number of times to attempt to retrieve data before throwing an error
         Returns:
             data: Dataframe of the data requested
         """
         fn = self.options['data'][data_request]
-        fn = self.options['data'][data_request]
+
         self.log.info('Downloading {} data from probe...'.format(data_request))
-        self.log.debug("Requesting data using function {0}".format(fn.__name__))
-        data = fn()
-        data = self.dataframe_this(data, data_request)
+
+        attempts = 0
+        success = False
+
+        while attempts < retries and not success:
+            self.log.debug("Requesting data using function {0}".format(fn.__name__))
+
+            try:
+                data = fn()
+                data = self.dataframe_this(data, data_request)
+                success = True
+            except Exception as e:
+                self.log.warning('Failed to retrieve {} data, retrying...'.format(data_request))
+                self.log.debug("Failed {} attempt #{}".format(data_request, attempts))
+                success = False
+                attempts += 1
+
+        if not success:
+            m = ("Unable to retrieve {} data after {} attempts"
+                           "".format(data_request, attempts))
+            self.log.error(m)
+            raise Exception(m)
 
         return data
 

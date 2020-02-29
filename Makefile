@@ -50,8 +50,9 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-lint: ## check style with flake8
-	flake8 radicl tests
+lint: ## check style with isort and pep8
+	isort radicl/*.py tests/*.py scripts/*.py
+	autopep8 --aggressive --in-place radicl/*.py tests/*.py scripts/*.py
 
 test: ## run tests quickly with the default Python
 	py.test

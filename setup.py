@@ -49,6 +49,7 @@ setup(
           'console_scripts': [
               'radicl = radicl.cli:main',
               'plotlyte = radicl.plotting:main',
+              'lyte_hi_res = radicl.high_resolution:main',
 
           ],
       },
