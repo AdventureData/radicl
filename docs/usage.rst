@@ -26,6 +26,36 @@ at data. This makes it a great way to test an experimental setup.
 only pull one dataset off at a time per measurement*. This means you will only
 get time series measurements!
 
+Using lyte_hi_res
+------------------
+
+To receive full functioning datasets from the probe for reconstructing a
+profile of the snowpack use::
+  lyte_hi_res
+
+This script provides a simple daq interface for retrieving enough data to
+reconstruct a profile of the snow. To do this this script will download the
+following timeseries per measurement:
+
+* Hardness
+* Active NIR
+* Passive NIR
+* Depth
+* Acceleration in the action of the pole.
+
+This script will auto-resize the data sets so they are the same size in the
+number of samples. This is achieved using linear interpolation. All datsets are
+sized to match the sensors in the probe tip which are the highest in sample rate
+by default.
+
+The script will also save the data to a CSV using a datetime filename.
+Each file is stamped with a header containing
+
+* Recording time to the second.
+* radicl version
+* Probe firmware, hardware, and model information.
+
+
 Python Scripting
 ----------------
 
