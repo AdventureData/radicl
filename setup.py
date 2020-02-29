@@ -43,7 +43,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/adventuredata/radicl',
-    version='0.3.2',
+    version='0.4.0',
     zip_safe=False,
      entry_points = {
           'console_scripts': [
