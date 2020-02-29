@@ -35,4 +35,16 @@ Overhaul (2017-10-17)
 
 * Improvements to the firmware updating process
 * General API fixes
-* Starting unittests 
+* Starting unittests
+
+
+0.4.0 (2020-02-29)
+------------------
+* Fixes for #6_
+* Added in a high resolution daq script.
+* Added linting with autopep8 and isort
+* Resilience improvements to grabbing data
+* Added back in the listening function for measurements via buttons
+
+
+.. _6: https://github.com/AdventureData/radicl/issues/6

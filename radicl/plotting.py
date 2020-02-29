@@ -9,6 +9,67 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
+def plot_hi_res(fname=None, df=None):
+    """
+    Plots the timeseries, the depth corrected, and the depth data
+    """
+    names = {'Sensor1':'Hardness','Sensor2':'Ambient NIR','Sensor3':'Active NIR'}
+
+    if fname != None:
+        df = pd.read_csv(fname, header=5)
+
+    f, axes = plt.subplots(1, 3)
+    #fig = matplotlib.pyplot.gcf()
+    f.set_size_inches(8, 10)
+    pseudo_depth = np.arange(0, len(df.index))
+
+    print("Number of samples: {}".format(len(df.index)))
+    print("Max depth achieved: {} cm".format(df['depth'].min()))
+
+    ambient_shift = 6
+    active_shift = 4.5
+
+    for k,v in names.items():
+        # Build the timeseries plot
+        if 'Ambient' in v:
+            d = df.index + ambient_shift
+        elif "Active" in v:
+            d = df.index + active_shift
+        else:
+            d = df.index
+
+        # build time series plot oriented vertically
+        axes[0].plot(df[k], pseudo_depth, label=v)
+
+        # Build depth corrected
+        axes[1].plot(df[k], df['depth'], label=v)
+
+    # plot data as timeseries
+    axes[0].set_title("Timeseries")
+    axes[0].set_ylim(len(df.index), 0)
+    axes[0].legend()
+    axes[0].set_xlim((0,4096))
+    axes[0].set_ylabel('Time index')
+
+    # plot data with depth
+    axes[1].set_title("Depth Corrected")
+    axes[1].legend()
+    axes[1].set_xlim((0, 4096))
+    axes[1].set_ylabel('Depth from max height [cm]')
+
+    # plot the depth and accel
+    axes[2].plot(pseudo_depth, df['acceleration'],'g')
+    axes[2].set_ylabel('Accelerometer [g]')
+    axes[2].set_xlabel('time index')
+    axes[2].set_title('Depth + Accelerometer')
+    twin = axes[2].twinx()
+    twin.plot(df['depth'],'m')
+    twin.set_ylabel('Depth from Max Height [cm]')
+
+    plt.tight_layout()
+    plt.show()
+
+
 def open_adjust_profile(fname):
     """
     Open a profile and make a dataframe for plotting
@@ -31,7 +92,7 @@ def open_adjust_profile(fname):
 
     if 'radicl version' in header_info.keys():
         data_type = 'radicl'
-        columns = ['depth', 'sensor_1', 'sensor_2', 'sensor_3', 'sensor_4']
+        columns = ['depth', 'sensor_1', 'sensor_2', 'sensor_3']
 
     else:
         data_type = 'rad_app'
@@ -115,6 +176,11 @@ def ambient_removed(df):
     new_df.index = new_df.index - new_df.index.max()
     return new_df
 
+def plot_hi_res_cli():
+    files = sys.argv[1:]
+
+    for f in files:
+        plot_hi_res(fname=f)
 
 def main():
     parser = argparse.ArgumentParser(

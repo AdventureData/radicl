@@ -24,7 +24,7 @@ from radicl import __version__
 from radicl.radicl import RADICL
 # Import the colored logging from radicl to report more human readable info
 from radicl.ui_tools import get_logger
-
+from radicl.plotting import plot_hi_res
 
 def pad_with_nans(ts, match_ts):
     '''
@@ -132,13 +132,15 @@ def main():
 
         log.info('Processing the depth data...')
         # Set the 0 point of depth to the Starting point or the snow Surface
-        depth = depth - depth.min()
+        depth = depth - depth.values.min()
 
         # Invert Depth so bottom is negative max depth
-        depth = depth - depth.max()
+        depth = depth - depth.values.max()
 
-        # Convert to centimeters
-        depth = depth.div(100)
+
+        log.info("Depth achieved: {} cm".format(abs(depth.max() - depth.min())))
+        log.info("Depth Samples: {}".format(len(depth)))
+        log.info("Acceleration Samples: {}".format(acc))
 
         supplemental_data = {'acceleration': acc,
                              'depth': depth
@@ -153,11 +155,10 @@ def main():
 
             # Assign the data
             ts[name] = new_data.copy()
-
+        log.info("Interpolating between nan's...")
         ts = ts.interpolate()
-        ts = ts.set_index('depth')
 
-        # plot_hi_res(ts)
+        plot_hi_res(df=ts)
 
         # ouptut the data to a datetime file
         cli.write_probe_data(ts, filename='')

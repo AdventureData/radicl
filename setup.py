@@ -50,7 +50,7 @@ setup(
               'radicl = radicl.cli:main',
               'plotlyte = radicl.plotting:main',
               'lyte_hi_res = radicl.high_resolution:main',
-
+              'plot_hi_res = radicl.plotting:plot_hi_res_cli',
           ],
       },
 )
