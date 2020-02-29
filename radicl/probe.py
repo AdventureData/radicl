@@ -14,6 +14,7 @@ import struct
 import datetime
 import os
 import numpy as np
+import struct
 
 
 error_codes = {2049:"The probe measurement/sensor is not running"}
@@ -498,9 +499,12 @@ class RAD_Probe():
             offset = 0
 
             for ii in range(0, total_runs):
-                x_axis.append((data[(offset + 0)] + (data[(offset + 1)] * 256) ) / 1000)
-                y_axis.append((data[(offset + 2)] + (data[(offset + 3)] * 256) ) / 1000)
-                z_axis.append((data[(offset + 4)] + (data[(offset + 5)] * 256) ) / 1000)
+                byte_data = bytes( [ data[(offset + 0)], data[(offset + 1)] ] ) 
+                x_axis.append((struct.unpack('<h', byte_data) / 1000)
+                byte_data = bytes( [ data[(offset + 2)], data[(offset + 3)] ] ) 
+                y_axis.append((struct.unpack('<h', byte_data) / 1000)
+                byte_data = bytes( [ data[(offset + 4)], data[(offset + 5)] ] ) 
+                z_axis.append((struct.unpack('<h', byte_data) / 1000)
                 offset = offset + 6
             return {'X-Axis': x_axis, 'Y-Axis': y_axis, 'Z-Axis': z_axis}
         # Read failed!
