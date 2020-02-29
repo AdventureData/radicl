@@ -1,49 +1,66 @@
 =====
 Usage
 =====
+Using radicl to interact with your Lyte probe has been made easy by the
+developers here at Adventure Data. Simply connect the probe via USB, wait for
+about a minute. Then you are ready to go.
 
-To use the command line program simple the following in a command prompt::
+There are two ways to use radicl:
+1. Through the interactive CLI program called radicl.
+2. By writing your own python script importing radicl to get the data you want.
+
+Interactive CLI
+---------------
+To use the command line program called radicl, simple the following in a command prompt::
 
   radicl
 
+There you will be asked a series of questions it will eventually navigate you
+to a loop for data acquisition. Should you ever need help, you can always enter
+help in the answer to get a description of what the options mean.
 
-To use radicl in a project::
+The best advantage to radicl is the ease to change settings, and quickly look
+at data. This makes it a great way to test an experimental setup.
 
+*The key limitation with using radicl interactively is that right now you can
+only pull one dataset off at a time per measurement*. This means you will only
+get time series measurements!
+
+Python Scripting
+----------------
+
+If you want to pull your own custom set(s) of data from the probe you are
+going to want to write a script.
+
+The following is a simple data acquisition script:
+
+.. code-block:: python
 
     from radicl.radicl import RADICL
 
+    # Instantiate the CLI
     cli = radicl.radicl.RADICL()
+
+    # Isolate the probe for ease of use
     probe = cli.probe
 
-
-The following is a simple data acquisition script::
-
-
-    from radicl.radicl import RADICL
-
-    cli = radicl.radicl.RADICL()
-    probe = cli.probe
-
-    # Confirm the probe is ready
+    # Confirm the probe clear of previous data
     probe.resetMeasurement()
 
-    # Start the probe
-    probe.startMeasurement()
+    cli.take_a_reading()
 
-    # Wait for the probe to acknowledge a measurement started
-    probe.wait_for_state(1)
+    # Extract raw data as a dataframe
+    data = cli.grab_data('rawsensor')
 
-    # Delay some time
-    time.sleep(2)
+    # Save the data
+    cli.write_probe_data(df)
 
-    # Stop Measurment
-    probe.stopMeasurement()
+The above script will allow a user to :
 
-    # Wait for processing
-    probe.wait_for_state(3)
+* Start and stop a measurement via the key board (pressing enter)
+* Extract the data as a pandas dataframe
+* Save the data with important headers to a simple csv
 
-    # Accelerometer data extract
-    accel_data = probe.readRawAccelerationData()
-
-The probe has a lot of data that can be pulled from it. If you would like
-to see what options are available please see: 
+Please note that not all the datasets retrievable from the probe are measured
+with the same sampling rate so some resampling methods may needed to merge
+datasets if you want to save them to a single file.
