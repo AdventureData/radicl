@@ -154,81 +154,86 @@ class RAD_Probe():
          Args:
             buffer_ID:
         """
+
+        result = False
         num_segments = 0
         data = []
+
+        # Final data to return
+        final = {}
+
+        # How much data is there?
         ret1 = self.api.MeasGetNumSegments(buffer_ID)
-        # Returns a positive status
+
+        # NSegments received something
         if (ret1['status'] == 1):
             num_segments = int.from_bytes(ret1['data'], byteorder='little')
+        else:
 
-            if (num_segments != 0 and num_segments is not None):
-                self.log.debug("Reading %d segments" % num_segments)
-                byte_counter = 0
+            final = {'status': 0, 'SegmentsAvailable': 0, 'SegmentsRead': 0,
+                                                         'BytesRead': 0,
+                                                         'Data': None}
 
-                for ii in range(1, (num_segments + 1)):
-                    ret2 = self.api.MeasReadDataSegment(buffer_ID, (ii - 1))
+            self.log.error("Data read error: No data segments available")
 
-                    if (ret2['status'] == 1):
-                        # Data segment read successfull
 
-                        if (ret2['data'] is not None):
-                            byte_counter = byte_counter + len(ret2['data'])
-                            data_chunk = ret2['data']
-                            data.extend(data_chunk)
+        if (num_segments != 0 and num_segments is not None):
+            self.log.debug("Reading %d segments" % num_segments)
+            byte_counter = 0
 
-                    # Data segment read failed. Retry
+            # Data Segments to collect
+            for ii in range(0, num_segments + 1 ):
+                result = False
+
+                # initial delay time
+                wait_time = 0.005
+
+                # Delays and retry
+                for jj in range(0, 10):
+                    time.sleep(wait_time)
+
+                    # Request the data
+                    ret = self.api.MeasReadDataSegment(buffer_ID, ii)
+
+                    if (ret['status'] == 1 and ret['data'] is not None):
+
+                        byte_counter = byte_counter + len(ret['data'])
+                        data_chunk = ret['data']
+                        data.extend(data_chunk)
+                        result = True
+                        break
+
+                    elif (ret['errorCode'] is not None):
+                        self.log.error("readSegmentData error: %d (Retry %d, "
+                                       "Segment=%d, buffer_ID=%d)" %
+                                       (ret['errorCode'], jj, ii, buffer_ID))
+
                     else:
-                        wait_time = 0.005
+                        self.log.error("readSegmentData error: COM "
+                                       "(Retry %d, Segment=%d, "
+                                       "buffer_ID=%d)" %
+                                       (jj, ii, buffer_ID))
+                    if not result:
+                        # Increas the wait time every failed request
+                        wait_time += wait_time
 
-                        for jj in range(0, 10):
-                            time.sleep(wait_time)
-                            wait_time = wait_time * 2
-                            ret3 = self.api.MeasReadDataSegment(buffer_ID, ii)
 
-                            if (ret3['status'] ==
-                                    1 and ret2['data'] is not None):
-                                byte_counter = byte_counter + len(ret3['data'])
+            # Was the data read successfull?
+            final['status'] = int(result)
+            final['SegmentsAvailable'] = num_segments
+            final['SegmentsRead'] = ii
+            final['BytesRead'] = byte_counter
 
-                                data_chunk = ret3['data']
-                                data.extend(data_chunk)
-                                break
+            if result:
+                final['data'] = data
 
-                            elif (ret3['errorCode'] is not None):
-                                self.log.error("readSegmentData error: %d (Retry %d, "
-                                               "Segment=%d, buffer_ID=%d)" %
-                                               (ret3['errorCode'], jj, ii, buffer_ID))
-
-                            else:
-                                self.log.error("readSegmentData error: COM "
-                                               "(Retry %d, Segment=%d, "
-                                               "buffer_ID=%d)" %
-                                               (jj, ii, buffer_ID))
-
-                        # Retry failed! Return here
-                        if ((ret3['status'] != 1) or (ret3['data'] is None)):
-                            return {'status': 0,
-                                    'SegmentsAvailable': num_segments,
-                                    'SegmentsRead': ii,
-                                    'BytesRead': byte_counter,
-                                    'Data': None}
-                # -- END OF FOR LOOP --
-                # Read process has successfully completed
-                return {'status': 1, 'SegmentsAvailable': num_segments,
-                                     'SegmentsRead': ii,
-                                     'BytesRead': byte_counter,
-                                     'Data': data}
-            else:
-                self.log.error("Data read error: No data segments available")
-
-        # No error code provided
-        elif (ret1['errorCode'] is not None):
+        # Error Code Provided
+        if (ret1['errorCode'] is not None):
             self.log.error("getNumSegments error: %d (buffer_ID = %d)" %
                            (ret1['errorCode'], buffer_ID))
         else:
             self.log.error("getNumSegments error: COM")
-        return {'status': 0, 'SegmentsAvailable': 0, 'SegmentsRead': 0,
-                                                     'BytesRead': 0,
-                                                     'Data': None}
+        return final
 
     # ********************
     # * PUBLIC FUNCTIONS *
@@ -400,7 +405,7 @@ class RAD_Probe():
             if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
                 # Data integrity error (not all segments read)
                 self.log.error("readRawSensorData error: Data integrity error (not all "
-                               "segments read)")
+                               "segments read), Retrieved {}/{} segements.".format(ret['SegmentsRead'], ret['SegmentsAvailable']))
                 return None
             expected_bytes = ret['SegmentsRead'] * 256
             if (expected_bytes != ret['BytesRead']):
