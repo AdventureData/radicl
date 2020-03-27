@@ -8,7 +8,6 @@ import coloredlogs
 from colorama import init
 from termcolor import colored
 
-
 class Messages():
     init()
 
