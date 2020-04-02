@@ -87,7 +87,7 @@ class RAD_Probe():
         function.
 
         Args:
-            ret_dict: Dictionary of keys ['status','data','errorCode']
+            ret_dict: Dictionary of keys ['Status','data','errorCode']
             stack_id: number of functions up the stack to use for reporting
                       function name when errors occur.
         """
@@ -146,7 +146,6 @@ class RAD_Probe():
 
         return result
 
-    # Generic read function
 
     def __readData(self, buffer_ID):
         """
@@ -160,29 +159,24 @@ class RAD_Probe():
         data = []
 
         # Final data to return
-        final = {}
-
+        final = {'status': 0, 'SegmentsAvailable': 0, 'SegmentsRead': 0,
+                                                     'BytesRead': 0,
+                                                     'data': None}
         # How much data is there?
         ret1 = self.api.MeasGetNumSegments(buffer_ID)
-
         # NSegments received something
         if (ret1['status'] == 1):
             num_segments = int.from_bytes(ret1['data'], byteorder='little')
         else:
-
-            final = {'status': 0, 'SegmentsAvailable': 0, 'SegmentsRead': 0,
-                                                         'BytesRead': 0,
-                                                         'Data': None}
-
             self.log.error("Data read error: No data segments available")
 
-
+        # If we do have number of segments
         if (num_segments != 0 and num_segments is not None):
             self.log.debug("Reading %d segments" % num_segments)
             byte_counter = 0
 
             # Data Segments to collect
-            for ii in range(0, num_segments + 1 ):
+            for ii in range(0, num_segments):
                 result = False
 
                 # initial delay time
@@ -190,13 +184,13 @@ class RAD_Probe():
 
                 # Delays and retry
                 for jj in range(0, 10):
+
                     time.sleep(wait_time)
 
                     # Request the data
                     ret = self.api.MeasReadDataSegment(buffer_ID, ii)
 
                     if (ret['status'] == 1 and ret['data'] is not None):
-
                         byte_counter = byte_counter + len(ret['data'])
                         data_chunk = ret['data']
                         data.extend(data_chunk)
@@ -214,25 +208,27 @@ class RAD_Probe():
                                        "buffer_ID=%d)" %
                                        (jj, ii, buffer_ID))
                     if not result:
-                        # Increas the wait time every failed request
+                        # Increase the wait time every failed request
                         wait_time += wait_time
 
 
-            # Was the data read successfull?
+            # Was the data read successful?
             final['status'] = int(result)
             final['SegmentsAvailable'] = num_segments
-            final['SegmentsRead'] = ii
+            final['SegmentsRead'] = ii + 1
             final['BytesRead'] = byte_counter
 
-            if result:
+            if final['SegmentsRead'] > 0:
                 final['data'] = data
 
         # Error Code Provided
-        if (ret1['errorCode'] is not None):
+        elif (ret1['errorCode'] is not None):
             self.log.error("getNumSegments error: %d (buffer_ID = %d)" %
                            (ret1['errorCode'], buffer_ID))
         else:
+            print("error")
             self.log.error("getNumSegments error: COM")
+
         return final
 
     # ********************
@@ -420,7 +416,7 @@ class RAD_Probe():
                 return None
 
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             sensor1 = []
             sensor2 = []
             sensor3 = []
@@ -506,7 +502,7 @@ class RAD_Probe():
                 return None
 
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             x_axis = []
             y_axis = []
             z_axis = []
@@ -553,7 +549,7 @@ class RAD_Probe():
                 return None
 
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             correll_data = []
             total_runs = total_bytes // 4
             offset = 0
@@ -594,7 +590,7 @@ class RAD_Probe():
                 return None
 
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             pressure_data = []
             total_runs = total_bytes // 3
             offset = 0
@@ -637,7 +633,7 @@ class RAD_Probe():
                 return None
 
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             depth_data = []
             total_runs = total_bytes // 4
             offset = 0
@@ -684,7 +680,7 @@ class RAD_Probe():
                 return None
 
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             depth_data = []
             total_runs = total_bytes // 4
             offset = 0
@@ -731,7 +727,7 @@ class RAD_Probe():
                 return None
 
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             correll_data = []
             total_runs = total_bytes // 4
             offset = 0
@@ -773,7 +769,7 @@ class RAD_Probe():
 
             self.log.info("Total Datapoints = %d" % ret['SegmentsRead'])
             # ***** DATA PARSING *****
-            data = ret['Data']
+            data = ret['data']
             total_runs = total_bytes // 16
             offset = 0
             transaction_id = []

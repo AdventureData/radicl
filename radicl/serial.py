@@ -22,9 +22,7 @@ def find_kw_port(kw):
 
     # Run through all available COM ports grabs ones that match our keywords
     port_list = list_ports.comports()
-
     for p in port_list:
-        print(*p)
         # Make a list of true for every keyword we find in the port data
         kw_match = [True for k in kw if k.lower() in p[1].lower()]
 
@@ -34,10 +32,10 @@ def find_kw_port(kw):
 
     # Throw an exception if there are no ports
     if not match_list and len(port_list) == 1:
-        log.warning("Unable to find matching com, attempting only port available...")
+        log.warning("Unable to find matching port, attempting only port available...")
         match_list.append(port_list[0])
 
-    elif match_list:
+    elif not match_list:
         log.error("No serial ports were found for the Lyte probe!")
         sys.exit()
 
