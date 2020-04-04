@@ -17,9 +17,9 @@ class RAD_API():
     Class for directly interacting with the probe in a non-human friendly way
     """
 
-    def __init__(self, port):
+    def __init__(self, port, debug=False):
         self.port = port
-        self.log = get_logger(__name__, level='DEBUG')
+        self.log = get_logger(__name__, debug=debug)
 
     def __sendCommand(self, data):
         """

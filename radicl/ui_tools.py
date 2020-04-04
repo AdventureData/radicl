@@ -165,7 +165,7 @@ def print_helpme(help_str, help_dict):
     print(print_able)
 
 
-def get_logger(name, level='DEBUG', ext_logger=None,):
+def get_logger(name, debug=False, ext_logger=None,):
     """
 
     """
@@ -174,6 +174,10 @@ def get_logger(name, level='DEBUG', ext_logger=None,):
         log = logging.getLogger(name)
     else:
         log = ext_logger
-
+    if debug:
+        level = 'DEBUG'
+    else:
+        level = 'INFO'
+        
     coloredlogs.install(fmt=fmt, level=level, logger=log)
     return log

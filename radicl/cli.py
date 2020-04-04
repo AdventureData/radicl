@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--version', action='version',
                         version=('%(prog)s {version}'
                                  '').format(version=__version__))
+    parser.add_argument('-d', '--debug', action='store_true', help='Log debug statements')
     args = parser.parse_args()
 
     # Clear the screen in console
@@ -44,7 +45,7 @@ def main():
             "\n\t* Update the firmware (In development)\n")
 
     # try:
-    cli = RADICL()
+    cli = RADICL(debug=args.debug)
     cli.run()
 
 

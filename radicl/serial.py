@@ -48,9 +48,9 @@ class RAD_Serial():
     as an abstraction layer
     """
 
-    def __init__(self):
+    def __init__(self, debug=False):
         self.serial_port = None
-        self.log = get_logger(__name__, level='DEBUG')
+        self.log = get_logger(__name__, debug=debug)
 
     def openPort(self, com_port=None):
 
