@@ -241,20 +241,23 @@ class RADICL(object):
                 data = fn()
                 data = self.dataframe_this(data, data_request)
                 success = True
+
             except Exception as e:
                 self.log.warning(
                     'Failed to retrieve {} data, retrying...'.format(data_request))
                 self.log.debug(
                     "Failed {} attempt #{}".format(
                         data_request, attempts))
+
                 success = False
                 attempts += 1
+
 
         if not success:
             m = ("Unable to retrieve {} data after {} attempts"
                  "".format(data_request, attempts))
             self.log.error(m)
-            raise Exception(m)
+            data = None
 
         return data
 
@@ -286,6 +289,11 @@ class RADICL(object):
         elif self.state == 3:
             self.take_a_reading()
             self.data = self.grab_data(self.daq)
+
+            if self.data is None:
+                self.state = 3
+                self.log.error('Retrieving probe data failed, try again.')
+
             response = self.probe.resetMeasurement()
 
             self.state = 4
