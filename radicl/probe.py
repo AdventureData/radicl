@@ -175,8 +175,8 @@ class RAD_Probe():
 
         # Final data to return
         final = {'status': 0, 'SegmentsAvailable': 0, 'SegmentsRead': 0,
-                                                     'BytesRead': 0,
-                                                     'data': None}
+                                                      'BytesRead': 0,
+                                                      'data': None}
 
         # Get the number of data segments available
         ret = self.api.MeasGetNumSegments(buffer_id)
@@ -413,7 +413,7 @@ class RAD_Probe():
 
         return result
 
-    def read_check_data_integrity(self, buffer_id, bits):
+    def read_check_data_integrity(self, buffer_id, nbytes_per_value=None, nvalues=None, from_spi=False):
         '''
         Recieves a data function and  performs the data integrity check
         '''
@@ -425,31 +425,46 @@ class RAD_Probe():
 
         # Sucessfully read data
         if (ret_dict['status'] != 1):
-            self.log.error('Read {} error: invalid data status!'.format(buffer_name))
+            self.log.error('Read {} error: No data available!'.format(buffer_name))
+            self.log.error('Data received from probe:\n{}'.format(ret_dict))
 
         else:
 
             # ***** DATA INTEGRITY CHECK *****
-            expected_bytes = ret_dict['SegmentsRead'] * (2**bits)
-
+            # Check for all segments read in
             all_segments = (ret_dict['SegmentsAvailable'] == ret_dict['SegmentsRead'])
-            all_bytes = (ret_dict['SegmentsAvailable'] == ret_dict['SegmentsRead'])
 
-            if not all_segments or not all_bytes:
+            # Data from SPI Flash
+            if from_spi:
+                expected_bytes = ret_dict['SegmentsRead'] * 256
+
+                # Check we read all bytes:
+                complete_bytes = expected_bytes == ret_dict['BytesRead']
+                total_runs = expected_bytes // (nvalues * nbytes_per_value)
+
+
+            # From chip memory
+            else:
+                int_multiple = nbytes_per_value * nvalues
+                # We can have incomplete segments, so check for even numbers
+                complete_bytes = ret_dict['BytesRead'] % int_multiple == 0
+
+                total_runs = ret_dict['BytesRead'] // int_multiple
+
+
+            if not all_segments or not complete_bytes:
                 self.log.error("Data Integrity Error: Unable to retrieve all "
-                               " data for {}.".format(buffer_name))
+                               "data for {}.".format(buffer_name))
 
-                # Data integrity error (not all segments read)
-                # Data integrity error (not all bytes read - incomplete segment)
-                # For the raw sensor data, this is also the check to ensure we
-                # have an even amount of bytes to break into sensor pairs
-                self.log.debug("Segment Retrieved {:d}/{:d}."
-                               " Bytes Retrieved {:d}/{}:d"
-                               "".format(ret_dict['SegmentsRead'],
-                                         ret_dict['SegmentsAvailable'],
-                                         expected_bytes, ret_dict['BytesRead']))
             else:
                 final = ret_dict
+                final['total_runs'] = total_runs
+
+            self.log.debug("Segment Retrieved {:d}/{:d}."
+                           " Bytes Retrieved {:d}"
+                           "".format(ret_dict['SegmentsRead'],
+                                     ret_dict['SegmentsAvailable'],
+                                     ret_dict['BytesRead']))
 
             return final
 
@@ -466,32 +481,36 @@ class RAD_Probe():
         buffer_id = 0
 
         # Expected bit size of the data
-        bits = 8
-        sgbytes = 2**bits
+        sgbytes = 256
+        nbytes_per_value = 2
+        nvalues = 4
 
-        ret = self.read_check_data_integrity(buffer_id, bits)
+        ret = self.read_check_data_integrity(buffer_id, nbytes_per_value=nbytes_per_value, nvalues=nvalues, from_spi=True)
 
         # ***** DATA PARSING *****
         if ret is not None:
             data = ret['data']
-            expected_bytes = ret['SegmentsRead'] * sgbytes
-
-            sensor1 = []
-            sensor2 = []
-            sensor3 = []
-            sensor4 = []
-            total_runs = expected_bytes // bits
+            total_runs = ret['total_runs']
             offset = 0
+            final = {'Sensor1': [], 'Sensor2': [], 'Sensor3': [], 'Sensor4': []}
 
             for ii in range(0, total_runs):
-                sensor1.append(data[offset] + data[(offset + 1)] * sgbytes)
-                sensor2.append(data[(offset + 2)] + data[(offset + 3)] * sgbytes)
-                sensor3.append(data[(offset + 4)] + data[(offset + 5)] * sgbytes)
-                sensor4.append(data[(offset + 6)] + data[(offset + 7)] * sgbytes)
-                offset = offset + bits
 
-            data = {'Sensor1': sensor1, 'Sensor2': sensor2, 'Sensor3': sensor3,
-                    'Sensor4': sensor4}
+                # Loop over each sensor and add it to the final dict
+                for idx in range(nvalues):
+                    # Create a name for the dictionary
+                    name = 'Sensor{}'.format(idx + 1)
+
+                    # Form the index for the bytes for the start of each value.
+                    byte_idx = idx * nbytes_per_value
+                    # Grab each sensor value in the byte array
+                    final[name].append(data[offset + byte_idx] + \
+                                       data[(offset + byte_idx + 1)] * sgbytes)
+
+                # Move farther down the bytes to read the next segment.
+                offset += nbytes_per_value * nvalues
+
+            data = final
         return data
 
     def readCalibratedSensorData(self):
@@ -534,28 +553,27 @@ class RAD_Probe():
         Returns:
             dict: containing accel data (x,y,z) or None if read failed
 
-
         """
 
         # Index in the probe buffer
         buffer_id = 1
 
         # Expected bit size of the data
-        bits = 6
-        sgbytes = 2**bits
+        nbytes_per_value = 2
+        nvalues = 3
 
-        ret = self.read_check_data_integrity(buffer_id, bits)
+        ret = self.read_check_data_integrity(buffer_id, nbytes_per_value=nbytes_per_value, nvalues=nvalues)
         data = None
 
         if ret is not None:
             data = ret['data']
-            expected_bytes = ret['SegmentsRead'] * sgbytes
+            total_runs = ret['total_runs']
             x_axis = []
             y_axis = []
             z_axis = []
             offset = 0
 
-            for ii in range(0, ret['SegmentsRead']):
+            for ii in range(0, total_runs):
                 acc_data_x = struct.unpack('<h', bytes(
                     data[(offset + 0): (offset + 2)]))
                 acc_data_y = struct.unpack('<h', bytes(
@@ -711,16 +729,15 @@ class RAD_Probe():
         buffer_id = 4
 
         # Expected bit size of the data
-        bits = 4
-        sgbytes = 2**bits
+        nbytes_per_value = 4
+        nvalues = 1
 
-        ret = self.read_check_data_integrity(buffer_id, bits)
-
-        # ***** DATA PARSING *****
+        ret = self.read_check_data_integrity(buffer_id, nbytes_per_value=nbytes_per_value, nvalues=nvalues)
         data = None
 
         if ret is not None:
             data = ret['data']
+            total_runs = ret['total_runs']
             depth_data = []
             offset = 0
 

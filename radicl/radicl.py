@@ -248,6 +248,7 @@ class RADICL(object):
                 self.log.debug(
                     "Failed {} attempt #{}".format(
                         data_request, attempts))
+                self.log.error(e)
 
                 success = False
                 attempts += 1
@@ -289,14 +290,14 @@ class RADICL(object):
         elif self.state == 3:
             self.take_a_reading()
             self.data = self.grab_data(self.daq)
+            self.state = 4
 
             if self.data is None:
                 self.state = 3
+                self.log.error('')
                 self.log.error('Retrieving probe data failed, try again.')
 
             response = self.probe.resetMeasurement()
-
-            self.state = 4
 
         # Data output and options
         elif self.state == 4:
@@ -339,7 +340,7 @@ class RADICL(object):
                             self.data.to_csv(self.filename, mode='a')
                             self.state = 5
 
-            if self.output_preference == 'plot' or self.output_preference == 'both':
+            if self.output_preference in ['plot','both'] and self.state == 4:
                 self.data.plot()
                 plt.show()
                 self.state = 5
