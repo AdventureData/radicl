@@ -51,7 +51,7 @@ class RADICL(object):
         # Assign all data functions with keywords to auto gather data packages
         self.options['data'] = parse_func_list(probe_funcs,
                                                ['read', 'Data'],
-                                               ignore_keywords=['correlation'])
+                                               ignore_keywords=['correlation','integrity'])
 
         # Grab the settings from the probe
         self.options['settings'] = self.probe.settings
