@@ -36,7 +36,7 @@ class TestSmallProbeData(TestProbeData):
         try:
             d = self.probe.readFilteredDepthData()
             assert d is not None
-
+            print(d)
         except Exception as e:
             raise(e)
 
@@ -48,6 +48,10 @@ class TestSmallProbeData(TestProbeData):
         try:
             d = self.probe.readRawAccelerationData()
             assert d is not None
+
+            # Make sure each sensor is not none also
+            for sensor, data in d.items():
+                assert data != None
 
         except Exception as e:
             raise(e)
@@ -66,6 +70,9 @@ class TestLargeProbeData(TestProbeData):
             d = self.probe.readCalibratedSensorData()
             assert d is not None
 
+            # Make sure each sensor is not none also
+            for sensor, data in d.items():
+                assert data != None
         except Exception as e:
             raise(e)
 

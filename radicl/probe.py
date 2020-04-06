@@ -413,7 +413,8 @@ class RAD_Probe():
 
         return result
 
-    def read_check_data_integrity(self, buffer_id, nbytes_per_value=None, nvalues=None, from_spi=False):
+    def read_check_data_integrity(self, buffer_id, nbytes_per_value=None,
+                                        nvalues=None, from_spi=False):
         '''
         Recieves a data function and  performs the data integrity check
         '''
@@ -426,13 +427,17 @@ class RAD_Probe():
         # Sucessfully read data
         if (ret_dict['status'] != 1):
             self.log.error('Read {} error: No data available!'.format(buffer_name))
-            self.log.error('Data received from probe:\n{}'.format(ret_dict))
+            self.log.debug('Data received from probe:\n{}'.format(ret_dict))
 
         else:
 
             # ***** DATA INTEGRITY CHECK *****
             # Check for all segments read in
             all_segments = (ret_dict['SegmentsAvailable'] == ret_dict['SegmentsRead'])
+            int_multiple = nbytes_per_value * nvalues
+
+            # Grab the number of samples, NOTE this is only valid if the conditions are true below
+            samples = ret_dict['BytesRead'] // int_multiple
 
             # Data from SPI Flash
             if from_spi:
@@ -440,31 +445,29 @@ class RAD_Probe():
 
                 # Check we read all bytes:
                 complete_bytes = expected_bytes == ret_dict['BytesRead']
-                total_runs = expected_bytes // (nvalues * nbytes_per_value)
-
 
             # From chip memory
             else:
-                int_multiple = nbytes_per_value * nvalues
                 # We can have incomplete segments, so check for even numbers
                 complete_bytes = ret_dict['BytesRead'] % int_multiple == 0
 
-                total_runs = ret_dict['BytesRead'] // int_multiple
-
-
+            # Check the data integrity
             if not all_segments or not complete_bytes:
                 self.log.error("Data Integrity Error: Unable to retrieve all "
                                "data for {}.".format(buffer_name))
 
             else:
                 final = ret_dict
-                final['total_runs'] = total_runs
+                final['samples'] = samples
 
+            # Final reporting
+            self.log.info('Retrieving {} samples of {} data...'
+                          ''.format(ret_dict['samples'], buffer_name))
             self.log.debug("Segment Retrieved {:d}/{:d}."
-                           " Bytes Retrieved {:d}"
+                           " Bytes Retrieved {:0.2f} Kb"
                            "".format(ret_dict['SegmentsRead'],
                                      ret_dict['SegmentsAvailable'],
-                                     ret_dict['BytesRead']))
+                                     ret_dict['BytesRead'] / 1000))
 
             return final
 
@@ -485,16 +488,18 @@ class RAD_Probe():
         nbytes_per_value = 2
         nvalues = 4
 
-        ret = self.read_check_data_integrity(buffer_id, nbytes_per_value=nbytes_per_value, nvalues=nvalues, from_spi=True)
+        ret = self.read_check_data_integrity(buffer_id,
+                                             nbytes_per_value=nbytes_per_value,
+                                             nvalues=nvalues, from_spi=True)
 
         # ***** DATA PARSING *****
         if ret is not None:
             data = ret['data']
-            total_runs = ret['total_runs']
+            samples = ret['samples']
             offset = 0
             final = {'Sensor1': [], 'Sensor2': [], 'Sensor3': [], 'Sensor4': []}
 
-            for ii in range(0, total_runs):
+            for ii in range(0, samples):
 
                 # Loop over each sensor and add it to the final dict
                 for idx in range(nvalues):
@@ -562,18 +567,21 @@ class RAD_Probe():
         nbytes_per_value = 2
         nvalues = 3
 
-        ret = self.read_check_data_integrity(buffer_id, nbytes_per_value=nbytes_per_value, nvalues=nvalues)
+        ret = self.read_check_data_integrity(buffer_id,
+                                             nbytes_per_value=nbytes_per_value,
+                                             nvalues=nvalues)
         data = None
 
         if ret is not None:
             data = ret['data']
-            total_runs = ret['total_runs']
+            print(data)
+            samples = ret['samples']
             x_axis = []
             y_axis = []
             z_axis = []
             offset = 0
 
-            for ii in range(0, total_runs):
+            for ii in range(0, samples):
                 acc_data_x = struct.unpack('<h', bytes(
                     data[(offset + 0): (offset + 2)]))
                 acc_data_y = struct.unpack('<h', bytes(
@@ -616,10 +624,10 @@ class RAD_Probe():
             # ***** DATA PARSING *****
             data = ret['data']
             correll_data = []
-            total_runs = total_bytes // 4
+            samples = total_bytes // 4
             offset = 0
 
-            for ii in range(0, total_runs):
+            for ii in range(0, samples):
                 correll_data.append(data[(offset + 0)] + (data[(offset + 1)] * 256) + (
                     data[(offset + 2)] * 65536) + (data[(offset + 3)] * 16777216))
                 offset = offset + 4
@@ -657,10 +665,10 @@ class RAD_Probe():
             # ***** DATA PARSING *****
             data = ret['data']
             pressure_data = []
-            total_runs = total_bytes // 3
+            samples = total_bytes // 3
             offset = 0
 
-            for ii in range(0, total_runs):
+            for ii in range(0, samples):
                 this_value = data[(offset + 0)] + (data[(offset + 1)] * 256) + \
                     (data[(offset + 2)] * 65536)
 
@@ -700,9 +708,9 @@ class RAD_Probe():
             # ***** DATA PARSING *****
             data = ret['data']
             depth_data = []
-            total_runs = total_bytes // 4
+            samples = total_bytes // 4
             offset = 0
-            for ii in range(0, total_runs):
+            for ii in range(0, samples):
                 this_byte_list = data[(offset + 0):(offset + 4)]
                 this_byte_object = bytes(this_byte_list)
                 this_value = struct.unpack('f', this_byte_object)
@@ -732,16 +740,19 @@ class RAD_Probe():
         nbytes_per_value = 4
         nvalues = 1
 
-        ret = self.read_check_data_integrity(buffer_id, nbytes_per_value=nbytes_per_value, nvalues=nvalues)
+        ret = self.read_check_data_integrity(buffer_id,
+                                             nbytes_per_value=nbytes_per_value,
+                                             nvalues=nvalues)
         data = None
 
         if ret is not None:
             data = ret['data']
-            total_runs = ret['total_runs']
+            print(data)
+            samples = ret['samples']
             depth_data = []
             offset = 0
 
-            for ii in range(0, ret['SegmentsRead']):
+            for ii in range(0, samples):
                 this_byte_list = data[(offset + 0):(offset + 4)]
                 this_byte_object = bytes(this_byte_list)
                 this_value = struct.unpack('f', this_byte_object)
@@ -750,7 +761,6 @@ class RAD_Probe():
 
                 # Convert to cm
                 depth_data = [(c[0] / 100.0) for c in depth_data]
-
                 data = depth_data
 
         return data
@@ -782,10 +792,10 @@ class RAD_Probe():
             # ***** DATA PARSING *****
             data = ret['data']
             correll_data = []
-            total_runs = total_bytes // 4
+            samples = total_bytes // 4
             offset = 0
 
-            for ii in range(0, total_runs):
+            for ii in range(0, samples):
                 correll_data.append(data[(offset + 0)] + (data[(offset + 1)] *
                                                           256) + (data[(offset + 2)] * 65536) +
                                     (data[(offset + 3)] * 16777216))
@@ -823,7 +833,7 @@ class RAD_Probe():
             self.log.info("Total Datapoints = %d" % ret['SegmentsRead'])
             # ***** DATA PARSING *****
             data = ret['data']
-            total_runs = total_bytes // 16
+            samples = total_bytes // 16
             offset = 0
             transaction_id = []
             sensor1 = []
@@ -832,7 +842,7 @@ class RAD_Probe():
             sensor4 = []
             depth = []
 
-            for ii in range(0, total_runs):
+            for ii in range(0, samples):
                 this_data_set = data[offset: (offset + 16)]
                 transaction_id.append(this_data_set[0] + (this_data_set[1] *
                                                           256) + (this_data_set[2] * 65536) +
