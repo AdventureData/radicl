@@ -417,6 +417,19 @@ class RAD_Probe():
                                         nvalues=None, from_spi=False):
         '''
         Recieves a data function and  performs the data integrity check
+        If the data is from _spi then we know how long the segments are.
+        If the are not, then it is possible we receive an incomplete segement
+        so we check for integer_multiples of that data
+
+        Args:
+            buffer_id: Index the data is in the probe buffer
+            nbytes_per_value: how many bytes expected per value per sample
+            nvalues: Number of values expecter per sample
+            from_spi: Is the data coming from SPI flash which guarantees a
+                      segment size
+        Returns:
+            final: dict containing data in bytes, number of samples and
+                   segements and return status.
         '''
 
         buffer_name = self.__data_buffer_guide[buffer_id]
@@ -426,17 +439,20 @@ class RAD_Probe():
 
         # Sucessfully read data
         if (ret_dict['status'] != 1):
-            self.log.error('Read {} error: No data available!'.format(buffer_name))
+            self.log.error('Read {} error: No data available!'
+                           ''.format(buffer_name))
             self.log.debug('Data received from probe:\n{}'.format(ret_dict))
 
         else:
 
             # ***** DATA INTEGRITY CHECK *****
             # Check for all segments read in
-            all_segments = (ret_dict['SegmentsAvailable'] == ret_dict['SegmentsRead'])
+            all_segments = (ret_dict['SegmentsAvailable'] == \
+                            ret_dict['SegmentsRead'])
             int_multiple = nbytes_per_value * nvalues
 
-            # Grab the number of samples, NOTE this is only valid if the conditions are true below
+            # Grab the number of samples, NOTE this is only valid if the
+            # ...conditions are true below
             samples = ret_dict['BytesRead'] // int_multiple
 
             # Data from SPI Flash
@@ -463,6 +479,7 @@ class RAD_Probe():
             # Final reporting
             self.log.info('Retrieving {} samples of {} data...'
                           ''.format(ret_dict['samples'], buffer_name))
+
             self.log.debug("Segment Retrieved {:d}/{:d}."
                            " Bytes Retrieved {:0.2f} Kb"
                            "".format(ret_dict['SegmentsRead'],
@@ -508,6 +525,7 @@ class RAD_Probe():
 
                     # Form the index for the bytes for the start of each value.
                     byte_idx = idx * nbytes_per_value
+
                     # Grab each sensor value in the byte array
                     final[name].append(data[offset + byte_idx] + \
                                        data[(offset + byte_idx + 1)] * sgbytes)
@@ -559,13 +577,14 @@ class RAD_Probe():
             dict: containing accel data (x,y,z) or None if read failed
 
         """
-
+        acc_axes = ['X','Y','Z']
+        name_str = '{}-Axis'
         # Index in the probe buffer
         buffer_id = 1
 
         # Expected bit size of the data
         nbytes_per_value = 2
-        nvalues = 3
+        nvalues = len(acc_axes)
 
         ret = self.read_check_data_integrity(buffer_id,
                                              nbytes_per_value=nbytes_per_value,
@@ -574,25 +593,45 @@ class RAD_Probe():
 
         if ret is not None:
             data = ret['data']
-            print(data)
+
             samples = ret['samples']
-            x_axis = []
-            y_axis = []
-            z_axis = []
+
+            # Initialize the data
+            final = {name_str.format(a):[] for a in acc_axes}
             offset = 0
 
+            # Loop over all the samples
             for ii in range(0, samples):
-                acc_data_x = struct.unpack('<h', bytes(
-                    data[(offset + 0): (offset + 2)]))
-                acc_data_y = struct.unpack('<h', bytes(
-                    data[(offset + 2): (offset + 4)]))
-                acc_data_z = struct.unpack('<h', bytes(
-                    data[(offset + 4): (offset + 6)]))
-                x_axis.append(acc_data_x[0] / 1000)
-                y_axis.append(acc_data_y[0] / 1000)
-                z_axis.append(acc_data_z[0] / 1000)
-                offset = offset + 6
-            data =  {'X-Axis': x_axis, 'Y-Axis': y_axis, 'Z-Axis': z_axis}
+                # Loop over the sample and extract each axis
+                for idx, axis in enumerate(acc_axes):
+                    # Form the dictionary name
+                    name = name_str.format(axis)
+
+                    # Form the index of where each axis is in the sample
+                    byte_idx = idx * nbytes_per_value + offset
+
+                    # Grab the bytes from the list for a single axis
+                    byte_list = data[byte_idx: (byte_idx + nbytes_per_value)]
+
+                    # Form a byte object
+                    byte_object = bytes(byte_list)
+
+                    # Unpck bytes originally a 32 bit long and save
+                    value = struct.unpack('<h', byte_object)[0]
+
+                    # Whats going on here?
+                    value /= 1000
+
+                    # Convert to G's, 2G's range
+                    value *= 0.06
+
+                    final[name].append(value)
+
+                # Advance forward in the data from probe for parsing
+                offset += nbytes_per_value * nvalues
+
+            # Assign final to the original data var for return
+            data = final
 
         return data
 
@@ -747,21 +786,20 @@ class RAD_Probe():
 
         if ret is not None:
             data = ret['data']
-            print(data)
             samples = ret['samples']
             depth_data = []
             offset = 0
 
             for ii in range(0, samples):
-                this_byte_list = data[(offset + 0):(offset + 4)]
+                this_byte_list = data[offset:(offset + nbytes_per_value)]
                 this_byte_object = bytes(this_byte_list)
                 this_value = struct.unpack('f', this_byte_object)
                 depth_data.append(this_value)
-                offset = offset + 4
+                offset += nbytes_per_value
 
-                # Convert to cm
-                depth_data = [(c[0] / 100.0) for c in depth_data]
-                data = depth_data
+            # Convert to cm
+            depth_data = [(c[0] / 100.0) for c in depth_data]
+            data = depth_data
 
         return data
 
