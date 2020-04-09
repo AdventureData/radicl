@@ -885,9 +885,6 @@ class RAD_Probe():
             # Loop over all the samples
             for ii in range(0, samples):
                 data_set = data[offset: offset + nbytes]
-                # transaction_id.append(data_set[0] + (data_set[1] *
-                #                                           256) + (data_set[2] * 65536) +
-                #                       (data_set[3] * 16777216))
 
                 # Grab the depth
                 final['depth'].append(data_set[4] + (data_set[5] * sgbytes) +
@@ -895,9 +892,11 @@ class RAD_Probe():
                                                            16777216))
 
                 for idx, name in enumerate(sensor_names):
+
                     # Starts at idx 8 in the buffer
                     byte_idx = idx * 2 + 8
-                    final[name].append(data_set[byte_idx] + data_set[byte_idx + 1] * sgbytes)
+                    final[name].append(data_set[byte_idx] + \
+                                       data_set[byte_idx + 1] * sgbytes)
                 offset += nbytes
 
             data = final
@@ -910,25 +909,7 @@ class RAD_Probe():
         """
 
         ret = self.api.MeasGetMeasTemp()
-        if (ret['status'] == 1):
-            data = ret['data']
-            this_byte_object = bytes(data)
-            this_value = struct.unpack('i', this_byte_object)
-            return this_value
-
-        else:
-            self.manage_error(ret)
-
-        return None
-
-    def getZPFO(self):
-        """
-        Reads the probes zero phase shift applied to the depth data
-
-        """
-
-        ret = self.api.MeasGetZPFO()
-        return self.manage_data_return(ret, dtype=int)
+        return self.manage_error(ret)
 
     def getProbeHeader(self):
         """
