@@ -35,7 +35,8 @@ class RAD_Probe():
     __data_buffer_guide = ['Raw Sensor','Acceleration',' Raw Pressure',
                            'Raw Depth','Filtered Depth',
                            'Acceleration Correlation',
-                           'Pressure/Depth Correlation']
+                           'Pressure/Depth Correlation',
+                           'Depth Corrected Sensor']
 
     def __init__(self, ext_api=None, debug=False):
         """
@@ -461,24 +462,28 @@ class RAD_Probe():
 
                 # Check we read all bytes:
                 complete_bytes = expected_bytes == ret_dict['BytesRead']
-
+                self.log.debug('Downloaded {:0.2f}/{:0.2f} Kb.'.format(
+                                                 ret_dict['BytesRead'] / 1000,
+                                                 expected_bytes / 1000))
             # From chip memory
             else:
                 # We can have incomplete segments, so check for even numbers
                 complete_bytes = ret_dict['BytesRead'] % int_multiple == 0
+                self.log.debug('Byte Multiples: {:0.2f}'.format(ret_dict['BytesRead'] / int_multiple))
 
             # Check the data integrity
             if not all_segments or not complete_bytes:
                 self.log.error("Data Integrity Error: Unable to retrieve all "
                                "data for {}.".format(buffer_name))
-
+                self.log.debug('All Segments not downloaded: {}, All bytes '
+                           'downloaded: {}'.format(all_segments, complete_bytes))
             else:
                 final = ret_dict
                 final['samples'] = samples
 
-            # Final reporting
-            self.log.info('Retrieving {} samples of {} data...'
-                          ''.format(ret_dict['samples'], buffer_name))
+                # Final reporting
+                self.log.info('Retrieving {} samples of {} data...'
+                              ''.format(ret_dict['samples'], buffer_name))
 
             self.log.debug("Segment Retrieved {:d}/{:d}."
                            " Bytes Retrieved {:0.2f} Kb"
@@ -524,11 +529,11 @@ class RAD_Probe():
                     name = 'Sensor{}'.format(idx + 1)
 
                     # Form the index for the bytes for the start of each value.
-                    byte_idx = idx * nbytes_per_value
+                    byte_idx = idx * nbytes_per_value + offset
 
                     # Grab each sensor value in the byte array
-                    final[name].append(data[offset + byte_idx] + \
-                                       data[(offset + byte_idx + 1)] * sgbytes)
+                    final[name].append(data[byte_idx] + \
+                                       data[byte_idx + 1] * sgbytes)
 
                 # Move farther down the bytes to read the next segment.
                 offset += nbytes_per_value * nvalues
@@ -844,63 +849,60 @@ class RAD_Probe():
             # Read failed!
             return None
 
-    def readSensorDepthComboData(self):
+    def readDepthCorrectedSensorData(self):
         """
         Reads the processed data as a sensor-depth combo
         """
+        # Data columns
+        nsensors = 4
+        name_str = 'Sensor{}'
+        sensor_names = [name_str.format(i) for i in range(1, nsensors + 1)]
 
-        ret = self.__readData(7)
-        if (ret['status'] == 1):
-            # Sucessfully read data
-            # ***** DATA INTEGRITY CHECK *****
-            if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
-                # Data integrity error (not all segments read)
-                self.log.error("readSensorDepthCombo error: Data integrity error (not "
-                               "all segments read)")
-                return None
+        # Index in the probe buffer
+        buffer_id = 7
 
-            total_bytes = ret['BytesRead']
-            if ((total_bytes % 16) != 0):
-                # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Correlation
-                # number is a 32-bit int => 4 bytes)
-                self.log.error("readSensorDepthCombo error: Data integrity"
-                               " error (incomplete data set)")
-                return None
+        # Expected byte size of the data
+        nbytes_per_value = 4
+        nvalues = 4
 
-            self.log.info("Total Datapoints = %d" % ret['SegmentsRead'])
-            # ***** DATA PARSING *****
+
+
+        ret = self.read_check_data_integrity(buffer_id,
+                                             nbytes_per_value=nbytes_per_value,
+                                             nvalues=nvalues, from_spi=False)
+        data = None
+
+        if ret is not None:
+            # initialize
             data = ret['data']
-            samples = total_bytes // 16
+            samples = ret['samples']
+            final = {sensor:[] for sensor in sensor_names}
+            final['depth'] = []
+            nbytes = nbytes_per_value * nvalues
+            sgbytes = 256
             offset = 0
-            transaction_id = []
-            sensor1 = []
-            sensor2 = []
-            sensor3 = []
-            sensor4 = []
-            depth = []
 
+            # Loop over all the samples
             for ii in range(0, samples):
-                this_data_set = data[offset: (offset + 16)]
-                transaction_id.append(this_data_set[0] + (this_data_set[1] *
-                                                          256) + (this_data_set[2] * 65536) +
-                                      (this_data_set[3] * 16777216))
-                depth.append(this_data_set[4] + (this_data_set[5] * 256) +
-                             (this_data_set[6] * 65536) + (this_data_set[7] *
+                data_set = data[offset: offset + nbytes]
+                # transaction_id.append(data_set[0] + (data_set[1] *
+                #                                           256) + (data_set[2] * 65536) +
+                #                       (data_set[3] * 16777216))
+
+                # Grab the depth
+                final['depth'].append(data_set[4] + (data_set[5] * sgbytes) +
+                             (data_set[6] * 65536) + (data_set[7] *
                                                            16777216))
-                sensor1.append(this_data_set[8] + (this_data_set[9] * 256))
-                sensor2.append(this_data_set[10] + (this_data_set[11] * 256))
-                sensor3.append(this_data_set[12] + (this_data_set[13] * 256))
-                sensor4.append(this_data_set[14] + (this_data_set[15] * 256))
-                offset = offset + 16
-            return {'Sensor1': sensor1,
-                    'Sensor2': sensor2,
-                    'Sensor3': sensor3,
-                    'Sensor4': sensor4,
-                    'Depth': depth}
-        else:
-            # Read failed!
-            return None
+
+                for idx, name in enumerate(sensor_names):
+                    # Starts at idx 8 in the buffer
+                    byte_idx = idx * 2 + 8
+                    final[name].append(data_set[byte_idx] + data_set[byte_idx + 1] * sgbytes)
+                offset += nbytes
+
+            data = final
+
+        return data
 
     def readMeasurementTemperature(self):
         """
