@@ -23,6 +23,18 @@ class TestProbeData(unittest.TestCase):
     def tearDownClass(self):
         self.probe.resetMeasurement()
 
+    def run_datatest(self,fn):
+        '''
+        Pass the probe data function to run. Apply a try and except.
+        Assert all data is not none.
+        '''
+        try:
+            d = fn()
+            assert d is not None
+
+        except Exception as e:
+            raise(e)
+
 class TestSmallProbeData(TestProbeData):
     '''
     Test all the data with lower sample rates so we take a larger measurement
@@ -33,42 +45,40 @@ class TestSmallProbeData(TestProbeData):
         """
         Test retrieve filtered depth data from the probe
         """
-        try:
-            d = self.probe.readFilteredDepthData()
-            assert d is not None
+        fn = self.probe.readFilteredDepthData
+        self.run_datatest(fn)
 
-        except Exception as e:
-            raise(e)
 
     def test_get_raw_accleration_depth_data(self):
         """
         Test retrieve acceleration data from the probe
         """
-        try:
-            d = self.probe.readRawAccelerationData()
-            assert d is not None
+        fn = self.probe.readRawAccelerationData
+        self.run_datatest(fn)
 
-            # Make sure each sensor is not none also
-            for sensor, data in d.items():
-                assert data != None
-
-        except Exception as e:
-            raise(e)
 
     def test_get_sensor_depth_combo_data(self):
         """
         Test retrieve calibration data from the probe
         """
-        try:
-            d = self.probe.readDepthCorrectedSensorData()
-            assert d is not None
 
-            # Make sure each sensor is not none also
-            for sensor, data in d.items():
-                assert data != None
+        fn = self.probe.readDepthCorrectedSensorData
+        self.run_datatest(fn)
+
+    @unittest.skip('Not working, needs some looking at with FW')
+    def test_get_temperature(self):
+        """
+        Reads the temperature from the last measurement
+        """
+        try:
+            d = self.probe.readMeasurementTemperature()
+            print(d)
+            assert d != None
+            assert type(d) == float
 
         except Exception as e:
             raise(e)
+
 
 class TestLargeProbeData(TestProbeData):
     '''
@@ -80,15 +90,9 @@ class TestLargeProbeData(TestProbeData):
         """
         Test retrieve calibration data from the probe
         """
-        try:
-            d = self.probe.readCalibratedSensorData()
-            assert d is not None
 
-            # Make sure each sensor is not none also
-            for sensor, data in d.items():
-                assert data != None
-        except Exception as e:
-            raise(e)
+        fn = self.probe.readCalibratedSensorData
+        self.run_datatest(fn)
 
 
 

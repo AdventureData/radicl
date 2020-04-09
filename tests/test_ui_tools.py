@@ -5,7 +5,7 @@ import radicl
 from radicl.probe import RAD_Probe
 from radicl.ui_tools import *
 
-
+@unittest.skip('Incomplete test. Needs work')
 class TestUITools(unittest.TestCase):
     def test_parse_func_list(self):
         """
