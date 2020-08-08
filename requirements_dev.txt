@@ -1,12 +1,10 @@
 -r requirements.txt
 pip
-bumpversion==0.5.3
-wheel==0.32.1
-watchdog==0.9.0
-coverage==4.5.1
+bumpversion
+wheel
 Sphinx==1.8.1
-twine==1.13.0
-pytest==3.8.2
-pytest-runner==4.2
+twine
+pytest
+pytest-runner
 autopep8==1.5
 isort==4.3.21
