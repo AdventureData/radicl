@@ -17,9 +17,9 @@ class RAD_API():
     Class for directly interacting with the probe in a non-human friendly way
     """
 
-    def __init__(self, port):
+    def __init__(self, port, debug=False):
         self.port = port
-        self.log = get_logger(__name__, level='DEBUG')
+        self.log = get_logger(__name__, debug=debug)
 
     def __sendCommand(self, data):
         """
@@ -72,11 +72,13 @@ class RAD_API():
         Generic send/receive function
         Returns the response if successfull, empty result otherwise
         """
+        # Dynamic delay variabl, increases with each failed loop
+        delay_counter = 0.001
 
-        delay_counter = 0
         # Make sure that the read delay is at least 1ms (i.e. it cannot be 0)
         if (read_delay < 0.001):
             read_delay = 0.001
+
         ret = self.__sendCommand(data)
 
         if (ret):
@@ -87,8 +89,8 @@ class RAD_API():
             # we haven't exceeded the max. read delay
             while (((ret is None) or (ret == ""))
                    and (delay_counter < read_delay)):
-                time.sleep(0.001)
-                delay_counter = delay_counter + 0.001
+                time.sleep(delay_counter)
+                delay_counter += 0.001
                 ret = self.__getResponse()
             # If we get here either we have exceeded the max. read delay, or
             #  we have received a response.

@@ -12,44 +12,17 @@ debug = False
 # Get the screen outputter
 out = Messages()
 
-
-logo = """\
-██████╗  █████╗ ██████╗
-██╔══██╗██╔══██╗██╔══██╗
-██████╔╝███████║██║  ██║
-██╔══██╗██╔══██║██║  ██║
-██║  ██║██║  ██║██████╔╝
-╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
-
- ██████╗ ██████╗ ███╗   ███╗███╗   ███╗ █████╗ ███╗   ██╗██████╗
-██╔════╝██╔═══██╗████╗ ████║████╗ ████║██╔══██╗████╗  ██║██╔══██╗
-██║     ██║   ██║██╔████╔██║██╔████╔██║███████║██╔██╗ ██║██║  ██║
-██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║
-╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝
- ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝
-
-██╗     ██╗███╗   ██╗███████╗
-██║     ██║████╗  ██║██╔════╝
-██║     ██║██╔██╗ ██║█████╗
-██║     ██║██║╚██╗██║██╔══╝
-███████╗██║██║ ╚████║███████╗
-╚══════╝╚═╝╚═╝  ╚═══╝╚══════╝
-
-██╗███╗   ██╗████████╗███████╗██████╗ ███████╗ █████╗  ██████╗███████╗
-██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝
-██║██╔██╗ ██║   ██║   █████╗  ██████╔╝█████╗  ███████║██║     █████╗
-██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██╔══╝  ██╔══██║██║     ██╔══╝
-██║██║ ╚████║   ██║   ███████╗██║  ██║██║     ██║  ██║╚██████╗███████╗
-╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
-"""
-
-
 def main():
+
+    logo = 'RADICL - RAD INTERFACE TO THE COMMANDLINE'
+    hdr = '=' * len(logo)
+    hdr = logo +'\n' + hdr
     parser = argparse.ArgumentParser(
         description="CLI script for live interactions with the Lyte probe.")
     parser.add_argument('--version', action='version',
                         version=('%(prog)s {version}'
                                  '').format(version=__version__))
+    parser.add_argument('-d', '--debug', action='store_true', help='Log debug statements')
     args = parser.parse_args()
 
     # Clear the screen in console
@@ -59,7 +32,7 @@ def main():
         os.system('clear')  # for Linux/OS X
 
     out.msg("")
-    out.msg(logo)
+    out.msg(hdr)
 
     # Information
     out.headline("\nWELCOME TO THE LYTE PROBE CLI")
@@ -72,7 +45,7 @@ def main():
             "\n\t* Update the firmware (In development)\n")
 
     # try:
-    cli = RADICL()
+    cli = RADICL(debug=args.debug)
     cli.run()
 
 

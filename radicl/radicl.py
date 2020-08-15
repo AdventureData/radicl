@@ -51,7 +51,7 @@ class RADICL(object):
         # Assign all data functions with keywords to auto gather data packages
         self.options['data'] = parse_func_list(probe_funcs,
                                                ['read', 'Data'],
-                                               ignore_keywords=['correlation'])
+                                               ignore_keywords=['correlation','integrity'])
 
         # Grab the settings from the probe
         self.options['settings'] = self.probe.settings
@@ -241,20 +241,24 @@ class RADICL(object):
                 data = fn()
                 data = self.dataframe_this(data, data_request)
                 success = True
+
             except Exception as e:
                 self.log.warning(
                     'Failed to retrieve {} data, retrying...'.format(data_request))
                 self.log.debug(
                     "Failed {} attempt #{}".format(
                         data_request, attempts))
+                self.log.error(e)
+
                 success = False
                 attempts += 1
+
 
         if not success:
             m = ("Unable to retrieve {} data after {} attempts"
                  "".format(data_request, attempts))
             self.log.error(m)
-            raise Exception(m)
+            data = None
 
         return data
 
@@ -286,9 +290,14 @@ class RADICL(object):
         elif self.state == 3:
             self.take_a_reading()
             self.data = self.grab_data(self.daq)
-            response = self.probe.resetMeasurement()
-
             self.state = 4
+
+            if self.data is None:
+                self.state = 3
+                self.log.error('')
+                self.log.error('Retrieving probe data failed, try again.')
+
+            response = self.probe.resetMeasurement()
 
         # Data output and options
         elif self.state == 4:
@@ -331,7 +340,7 @@ class RADICL(object):
                             self.data.to_csv(self.filename, mode='a')
                             self.state = 5
 
-            if self.output_preference == 'plot' or self.output_preference == 'both':
+            if self.output_preference in ['plot','both'] and self.state == 4:
                 self.data.plot()
                 plt.show()
                 self.state = 5

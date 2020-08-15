@@ -1,7 +1,6 @@
 # coding: utf-8
 
 import sys
-
 import serial
 from serial.tools import list_ports
 
@@ -17,12 +16,12 @@ def find_kw_port(kw):
     Return:
             match_list: list of port names that have at least one matching keyword
     """
+    log = get_logger(__name__)
 
     match_list = []
 
     # Run through all available COM ports grabs ones that match our keywords
     port_list = list_ports.comports()
-
     for p in port_list:
         # Make a list of true for every keyword we find in the port data
         kw_match = [True for k in kw if k.lower() in p[1].lower()]
@@ -32,8 +31,13 @@ def find_kw_port(kw):
             match_list.append(p)
 
     # Throw an exception if there are no ports
-    if not match_list:
-        raise IOError("No COM ports found")
+    if not match_list and len(port_list) == 1:
+        log.warning("Unable to find matching port, attempting only port available...")
+        match_list.append(port_list[0])
+
+    elif not match_list:
+        log.error("No serial ports were found for the Lyte probe!")
+        sys.exit()
 
     return match_list
 
@@ -44,9 +48,9 @@ class RAD_Serial():
     as an abstraction layer
     """
 
-    def __init__(self):
+    def __init__(self, debug=False):
         self.serial_port = None
-        self.log = get_logger(__name__, level='DEBUG')
+        self.log = get_logger(__name__, debug=debug)
 
     def openPort(self, com_port=None):
 
