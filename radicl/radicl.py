@@ -27,17 +27,22 @@ class RADICL(object):
     Attributes:
         probe: radicl
     '''
+    defaults = {'debug':False}
 
     def __init__(self, **kwargs):
 
-        self.log = get_logger(__name__)
+        for k,v in self.defaults.items():
+            if k not in kwargs.keys():
+                kwargs[k] = v
+
+        self.log = get_logger(__name__, debug=kwargs['debug'])
 
         self.tasks = ['daq', 'settings', 'update']
         self.task_help = {'daq': "Data acquisition using the probe.",
                           'settings': 'Interface for modifying the behavior of the probe',
                           'update': 'Firmware update dialog for the probe.'}
 
-        self.probe = probe.RAD_Probe()
+        self.probe = probe.RAD_Probe(debug=kwargs['debug'])
         self.running = True
 
         self.settings = dir(self.probe)
