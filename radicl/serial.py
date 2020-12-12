@@ -30,12 +30,8 @@ def find_kw_port(kw):
         if kw_match:
             match_list.append(p)
 
-    # Throw an exception if there are no ports
-    if not match_list and len(port_list) == 1:
-        log.warning("Unable to find matching port, attempting only port available...")
-        match_list.append(port_list[0])
-
-    elif not match_list:
+    # If no ports match then error out gracefully
+    if not match_list:
         log.error("No serial ports were found for the Lyte probe!")
         sys.exit()
 
