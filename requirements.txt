@@ -5,3 +5,4 @@ termcolor==1.1.0
 argparse==1.4.0
 coloredlogs==14.0
 matplotlib==3.3.0
+progressbar2==3.53.1

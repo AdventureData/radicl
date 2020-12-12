@@ -6,6 +6,7 @@ import time
 from radicl import serial as rs
 from radicl.api import RAD_API
 from radicl.update import FW_Update
+from radicl.ui_tools import get_logger
 
 
 def Upgrade(fw_image):
@@ -14,15 +15,16 @@ def Upgrade(fw_image):
     app_header_entry = 0
     app_header_crc = 0
     counter = 0
-
+    log = get_logger(__name__)
     port = rs.RAD_Serial()
 
     try:
         port.openPort()
+
     except Exception as e:
-        print(e)
+        log.error(e)
     if (port.serial_port is None):
-        print("No device present")
+        log.info("No device present")
     else:
         port.flushPort()
         # Create the API
@@ -55,31 +57,34 @@ def Upgrade(fw_image):
             if (ret == 1):
                 ret = fw.upgrade()
                 if (ret == 1):
+
                     # FW upgrade succeeded. Close the port, wait a bit, and
                     # then attempt to read the new FW version
                     port.closePort()
-                    print("***** CHECK NEW FW VERSION ON PROBE *****")
-                    print("Wait for probe to finish internal upgrade")
+                    log.info("***** CHECK NEW FW VERSION ON PROBE *****")
+                    log.info("Wait for probe to finish internal upgrade")
                     num_attempt = 1
+
                     while (num_attempt < 4):
-                        print("Attempt %d" % num_attempt)
+                        log.info("Attempt %d" % num_attempt)
                         num_attempt += 1
                         num_delay = 10
                         while (num_delay > 0):
-                            print(
+                            log.info(
                                 "\rAttempting to reconnect in %d seconds    " %
                                 num_delay, end=" ")
                             num_delay -= 1
                             time.sleep(1)
                         # Attempt to reconnect and read the FW version
-                        print("\n")
+                        log.info("\n")
                         try:
                             port.openPort()
                         except Exception as e:
-                            print(e)
+                            log.error(e)
                             port.closePort()
+
                         if (port.serial_port is None):
-                            print("No device found.")
+                            log.info("No device found.")
                             port.closePort()
                         else:
                             port.flushPort()
@@ -94,15 +99,15 @@ def Upgrade(fw_image):
                             time.sleep(0.5)
                             ret = api.Identify()
                             if (ret == 1):
-                                print("Device successfully identified")
-                                print("FW UPDATE COMPLETE AND VERIFIED. EXITING...")
+                                log.info("Device successfully identified")
+                                log.info("FW UPDATE COMPLETE AND VERIFIED. EXITING...")
                                 port.closePort()
                                 exit()
                     # If we get here then we have failed all retries and not
                     # probe is present
-                    print("##### NO PROBE FOUND #####")
+                    log.info("##### NO PROBE FOUND #####")
             else:
-                print("Unable to load file. Exiting")
+                log.error("Unable to load file. Exiting")
 
             fw.closeFile()
 
@@ -121,6 +126,6 @@ if __name__ == '__main__':
                 '.')[-1] == 'bin':
             Upgrade(fw_image_file)
         else:
-            print("Invalid file %s" % fw_image_image)
+            log.error("Invalid file %s" % fw_image_file)
 
     # Upgrade("RAD_PB3_REVC_1_45_3_0.bin")
