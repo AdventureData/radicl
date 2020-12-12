@@ -898,4 +898,5 @@ class RAD_API():
         """
 
         response = self.__send_receive([0x9F, 0xF5, 0x01, 0x00, 0x00])
+        print(self.__EvaluateAndReturn(response, 0xF5, 0))
         return self.__EvaluateAndReturn(response, 0xF5, 0)

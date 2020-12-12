@@ -5,7 +5,7 @@ import hashlib
 import time
 
 from .ui_tools import get_logger
-
+import progressbar
 
 class FW_Update():
 
@@ -251,6 +251,7 @@ class FW_Update():
         """
 
         ret = self.api.UpdateClose()
+
         if (ret['status'] == 1):
             return 1
 
@@ -343,6 +344,7 @@ class FW_Update():
             retry_count = 0
             packet_id = 0
             last_pct = 0
+            bar = progressbar.ProgressBar(max_value=100)
 
             for ii in range(0, int(self.num_packets)):
                 data = self.f.read(self.packet_size)
@@ -389,7 +391,9 @@ class FW_Update():
                         if (pct >= (last_pct + 1)):
                             last_pct = pct
                             #self.log.info("\rProgress = %d%%    " % pct, end=" ")
-                            self.log.info("Progress = %d%%" % pct)
+                            # self.log.info("Progress = %d%%" % pct)
+                            bar.update(int(pct))
+
                         packet_id = packet_id + 1
                         retry_count = 0
 
@@ -504,7 +508,7 @@ class FW_Update():
             self.log.error("Could not set number of packets")
             return 0
 
-        self.log.info("*** Step 3: Downloading data ***")
+        self.log.info("*** Step 3: Downloading firmware ***")
         if (self.downloadFile() != 1):
             self.log.error("Download failed")
             return 0

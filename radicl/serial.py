@@ -31,10 +31,6 @@ def find_kw_port(kw):
         if kw_match:
             match_list.append(p)
 
-    # Throw an exception if there are no ports
-    if not match_list:
-        raise IOError("No COM ports found")
-
     return match_list
 
 
@@ -59,6 +55,10 @@ class RAD_Serial():
             # Check if more than one was found
             if(len(match_list) > 1):
                 self.log.warn('Multiple COM ports found, using the first')
+
+            elif len(match_list) == 0:
+                self.log.error('No probe was found to be connected. Make sure the probe is turned on and plugged in via USB.')
+                sys.exit()
 
             # Finally, assign the found port to the serial_port variable
             this_p = match_list[0]
