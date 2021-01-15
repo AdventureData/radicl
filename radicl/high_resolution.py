@@ -91,13 +91,8 @@ def main():
 
     print(hdr)
     # Manage logging
-    if args.debug:
-        level = 'DEBUG'
-    else:
-        level = 'INFO'
-
     # Start this scripts logging
-    log = get_logger("RAD Hi-Res Script", level=level)
+    log = get_logger("RAD Hi-Res Script", debug=args.debug)
 
     finished = False
 
