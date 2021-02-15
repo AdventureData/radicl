@@ -18,7 +18,7 @@ class FW_Update():
         self.api = api
         self.file_crc = 0
         self.packet_size = packet_size
-        self.log = get_logger(__name__, level='DEBUG')
+        self.log = get_logger(__name__, debug=True)
 
     def __getFileSize(self):
         """
