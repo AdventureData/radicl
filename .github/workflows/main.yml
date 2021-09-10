@@ -30,7 +30,7 @@ jobs:
             pip install -r requirements.txt
 
       - name: Simple Install Test
-        run:
+        run: |
             export PATH="$HOME/.local/bin:$PATH"
             radicl --help
 
