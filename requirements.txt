@@ -1,5 +1,5 @@
 pyserial==3.4
-pandas==1.1.0
+pandas==1.2.0
 colorama==0.4.3
 termcolor==1.1.0
 argparse==1.4.0
