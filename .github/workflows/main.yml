@@ -28,7 +28,9 @@ jobs:
       - name: Install dependencies
         run: |
             pip install -r requirements.txt
+
       - name: Simple Install Test
         run:
+            export PATH="$HOME/.local/bin:$PATH"
             radicl --help
 
