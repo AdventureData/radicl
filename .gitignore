@@ -103,3 +103,4 @@ docs/modules.rst
 .mypy_cache/
 
 **.csv
+.idea/*
