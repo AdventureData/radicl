@@ -1,6 +1,6 @@
-======
-radicl
-======
+=================
+Welcome to radicl
+=================
 
 
 .. image:: https://img.shields.io/pypi/v/radicl.svg
