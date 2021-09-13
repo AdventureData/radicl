@@ -1,8 +1,8 @@
 -r requirements.txt
+-r ./docs/requirements.txt
 pip
 bumpversion
 wheel
-Sphinx==1.8.1
 twine
 pytest
 pytest-runner
