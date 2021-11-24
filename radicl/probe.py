@@ -32,8 +32,8 @@ class RAD_Probe():
     Class for directly interacting with the probe.
 
     """
-    __data_buffer_guide = ['Raw Sensor','Acceleration',' Raw Pressure',
-                           'Raw Depth','Filtered Depth',
+    __data_buffer_guide = ['Raw Sensor', 'Acceleration', ' Raw Pressure',
+                           'Raw Depth', 'Filtered Depth',
                            'Acceleration Correlation',
                            'Pressure/Depth Correlation',
                            'Depth Corrected Sensor']
@@ -159,7 +159,7 @@ class RAD_Probe():
         return result
 
 
-    def __readData(self, buffer_id, max_retry=10, init_delay=0.005):
+    def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
         """
         Prive function to retrieve data from the probe.
          Args:
@@ -230,8 +230,8 @@ class RAD_Probe():
                         break
 
                     else:
-                        self.log.warning('Missed data segment, retry '
-                                         '#{0:d}/{1:d}'.format(jj+1, max_retry))
+                        if jj >= max_retry:
+                            self.log.warning('Missed data segment, after {0:d} attempts.'.format(jj+1))
 
                         # Developer friendly response in event of read error
                         msg = ("{0} Data Error: Buffer ID = {1:d}, "
@@ -246,7 +246,11 @@ class RAD_Probe():
                         wait_time += wait_time
 
                         if ret['errorCode'] is not None:
-                            self.log.warning(error_codes[ret['errorCode']])
+                            if ret['errorCode'] in error_codes.keys():
+                                self.log.warning("Received error code:{}".format(error_codes[ret['errorCode']]))
+                            else:
+                                self.log.warning("Received unknown error code:{}".format(ret['errorCode']))
+
 
 
             # Was the data read successful?

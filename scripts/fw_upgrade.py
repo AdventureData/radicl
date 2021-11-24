@@ -72,7 +72,7 @@ def Upgrade(fw_image):
                         while (num_delay > 0):
                             log.info(
                                 "\rAttempting to reconnect in %d seconds    " %
-                                num_delay, end=" ")
+                                num_delay)
                             num_delay -= 1
                             time.sleep(1)
                         # Attempt to reconnect and read the FW version

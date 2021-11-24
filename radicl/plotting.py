@@ -7,7 +7,8 @@ import sys
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-
+import matplotlib
+matplotlib.rcParams['agg.path.chunksize'] = 100000
 
 def plot_hi_res(fname=None, df=None):
     """
@@ -48,7 +49,7 @@ def plot_hi_res(fname=None, df=None):
     axes[0].set_title("Timeseries")
     axes[0].set_ylim(len(df.index), 0)
     axes[0].legend()
-    axes[0].set_xlim((0,4096))
+    axes[0].set_xlim((0, 4096))
     axes[0].set_ylabel('Time index')
 
     # plot data with depth
@@ -236,9 +237,9 @@ def main():
 
             print("Pre-processed profile:")
             print("\tNum of samples: {0}".format(len(df_o.index)))
-            print("\tDepth achieved: {0:.1f}".format(min(df_o.index)))
+            print("\tDepth achieved: {0:.1f}".format(min(df_o.index)[-1]))
             print("\tResolution: {0:.1f} pts/cm".format(
-                abs(len(df_o.index) / min(df_o.index) - max(df_o.index))))
+                abs(len(df_o.index) / min(df_o.index)[1] - max(df_o.index)[1])))
 
             if post_processed:
                 print("\nPost-processed profile:")
@@ -250,17 +251,16 @@ def main():
             # Plot
             data = {}
             if args.average:
-                data['Average'] = df[['SENSOR 1',
-                                      'SENSOR 2', 'SENSOR 3']].mean(axis=1)
+                data['Average'] = df[['Sensor 1',
+                                      'Sensor 2', 'Sensor 3']].mean(axis=1)
 
             elif args.sensor is not None:
                 if args.sensor in [1, 2, 3, 4]:
                     col = "SENSOR {0}".format(args.sensor)
                     data[col] = df[[col]]
             else:
-                for i in range(1, 5):
-                    col = 'SENSOR %s' % i
-                    data[col] = df[col]
+                for i, c in enumerate(df.columns):
+                    data[c] = df[c].copy()
 
             if args.compare:
                 if args.average:

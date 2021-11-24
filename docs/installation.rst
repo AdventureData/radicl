@@ -67,13 +67,14 @@ instructions below to install them.
 
 .. _RAD Drivers: https://drive.google.com/file/d/18t1XQvWoSRbmwd9GQrSo6ij6BaIVpXsY/view?usp=sharing
 
-2. Unzip the folder and follow the instructions in the readme.txt, If you have
-   a Windows version greater than what is available, just use the highest
-   version. We have found the Windows 8 installer to work on Windows 10.
-3. Confirm the install by opening the device manager. Expand the
+2. Unzip the folder
+3. Run the VCP_V1.4.0_Setup.exe in the folder
+4. Navigate to C:\Program Files (x86)\STMicroelectronics\Software\Virtual comport driver/Win8
+5. Run dpinst_amd64.exe (for 64 bit machines)
+6. Confirm the install by opening the device manager. Expand the
    `Ports (COM & LPT)`, if you installed the drivers correct you should see a
    device labeled `STMicroeletronics Virtual Com Port` with out any error
-   symbols.
+   symbols. If it failed, you will see two associated devices one labeled with interface.
 
 If you have correctly installed the drivers move on to the radicl installation
 below.
