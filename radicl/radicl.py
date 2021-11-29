@@ -542,7 +542,7 @@ class RADICL(object):
         out.msg("Saving Data to :\n{0}".format(filename))
 
         if not df.empty:
-            # Write the header so we knwo things about this
+            # Write the header so we know things about this
             with open(filename, 'w') as fp:
                 final = self.probe.getProbeHeader()
                 fp.writelines(final)
