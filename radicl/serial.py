@@ -55,7 +55,6 @@ class RAD_Serial:
 
             # If no ports match then error out gracefully
             elif not match_list:
-                print(match_list)
                 self.log.error("No serial ports were found for the Lyte probe!")
                 raise serial.SerialException('No comports were found!')
 
@@ -97,7 +96,6 @@ class RAD_Serial:
         Writes data to the serial port
         """
         if self.serial_port is not None:
-            print('here')
             return self.serial_port.write(serial.to_bytes(data))
 
     def writePortClean(self, data):
@@ -116,7 +114,7 @@ class RAD_Serial:
     def readPort(self, numBytes=None):
         if self.serial_port is not None:
             if numBytes is None:
-                # No number of specifed bytes to read. Read all available bytes
+                # No number of specified bytes to read. Read all available bytes
                 return self.serial_port.read(self.serial_port.inWaiting())
             else:
                 return self.serial_port.read(numBytes)
