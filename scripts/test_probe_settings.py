@@ -12,17 +12,17 @@ class TestProbeSettings(unittest.TestCase):
     def run_fn(self, fn, **kwargs):
         try:
             d = fn(**kwargs)
-            assert d != None
+            assert d is not None
             return d
 
         except Exception as e:
-            raise(e)
+            raise e
 
     def run_setting(self, setting_name, value_in):
-        '''
+        """
         Run a test of a probe setting. Attempts to grab a value,
         change a value and change it back.
-        '''
+        """
         # Grab the original setting
         d_o = self.run_fn(self.probe.getSetting, setting_name=setting_name)
 
@@ -35,11 +35,10 @@ class TestProbeSettings(unittest.TestCase):
         # Change it back to avoid messing up probe settings
         self.run_fn(self.probe.setSetting, setting_name=setting_name, value=d_o)
 
-
     def test_zpfo(self):
-        '''
+        """
         Tests changing the zpfo
-        '''
+        """
         self.run_setting('zpfo', 100)
 
     def test_accthreshold(self):
@@ -62,7 +61,7 @@ class TestProbeSettings(unittest.TestCase):
         self.run_setting('ir', 0)
 
     def test_ppmm(self):
-        self.run_setting('ppmm',5)
+        self.run_setting('ppmm', 5)
 
     def test_samplingrate(self):
         self.run_setting('samplingrate', 5000)
@@ -73,24 +72,6 @@ class TestProbeSettings(unittest.TestCase):
 
     def test_usertemp(self):
         self.run_setting('usertemp', 15)
-
-
-    # def test_get_calibration_data(self):
-    #     """
-    #     Test retrieve calibration values from the probe
-    #     """
-    #     # Loop through 1-4 sensors
-    #     for i in range(1, 5):
-    #         d = self.probe.getSetting(setting_name='calibdata', sensor=1)
-    #
-    #         # Confirm calibration data is always length 2
-    #         assert len(d) == 2
-    #
-    #         # confirm its in the 12 bit range
-    #         for dv in d:
-    #             assert dv < 4096
-    #             assert dv >= 0
-
 
 if __name__ == '__main__':
     unittest.main()

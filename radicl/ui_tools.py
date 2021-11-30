@@ -8,6 +8,7 @@ import coloredlogs
 from colorama import init
 from termcolor import colored
 
+
 class Messages():
     init()
 
@@ -155,7 +156,8 @@ def print_helpme(help_str, help_dict):
         no_doc = True
 
     if no_doc:
-        out_str = ('\nNo help documentation.\nPlease email micah@adventuredata.com or file an issue at https://github.com/Adventuredata/radicl/issues\n')
+        out_str = (
+            '\nNo help documentation.\nPlease email micah@adventuredata.com or file an issue at https://github.com/Adventuredata/radicl/issues\n')
         print(help_dict)
 
     # Doctor up the print out
@@ -165,7 +167,7 @@ def print_helpme(help_str, help_dict):
     print(print_able)
 
 
-def get_logger(name, debug=False, ext_logger=None,):
+def get_logger(name, debug=False, ext_logger=None, ):
     """
 
     """
@@ -178,6 +180,6 @@ def get_logger(name, debug=False, ext_logger=None,):
         level = 'DEBUG'
     else:
         level = 'INFO'
-        
+
     coloredlogs.install(fmt=fmt, level=level, logger=log)
     return log

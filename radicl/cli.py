@@ -12,11 +12,11 @@ debug = False
 # Get the screen outputter
 out = Messages()
 
-def main():
 
+def main():
     logo = 'RADICL - RAD INTERFACE TO THE COMMANDLINE'
     hdr = '=' * len(logo)
-    hdr = logo +'\n' + hdr
+    hdr = logo + '\n' + hdr
     parser = argparse.ArgumentParser(
         description="CLI script for live interactions with the Lyte probe.")
     parser.add_argument('--version', action='version',

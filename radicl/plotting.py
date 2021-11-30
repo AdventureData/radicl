@@ -8,19 +8,21 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib
+
 matplotlib.rcParams['agg.path.chunksize'] = 100000
+
 
 def plot_hi_res(fname=None, df=None):
     """
     Plots the timeseries, the depth corrected, and the depth data
     """
-    names = {'Sensor1':'Hardness','Sensor2':'Ambient NIR','Sensor3':'Active NIR'}
+    names = {'Sensor1': 'Hardness', 'Sensor2': 'Ambient NIR', 'Sensor3': 'Active NIR'}
 
     if fname != None:
         df = pd.read_csv(fname, header=5)
 
     f, axes = plt.subplots(1, 3)
-    #fig = matplotlib.pyplot.gcf()
+    # fig = matplotlib.pyplot.gcf()
     f.set_size_inches(8, 10)
     pseudo_depth = np.arange(0, len(df.index))
 
@@ -30,7 +32,7 @@ def plot_hi_res(fname=None, df=None):
     ambient_shift = 6
     active_shift = 4.5
 
-    for k,v in names.items():
+    for k, v in names.items():
         # Build the timeseries plot
         if 'Ambient' in v:
             d = df.index + ambient_shift
@@ -59,12 +61,12 @@ def plot_hi_res(fname=None, df=None):
     axes[1].set_ylabel('Depth from max height [cm]')
 
     # plot the depth and accel
-    axes[2].plot(pseudo_depth, df['acceleration'],'g')
+    axes[2].plot(pseudo_depth, df['acceleration'], 'g')
     axes[2].set_ylabel('Accelerometer [g]')
     axes[2].set_xlabel('time index')
     axes[2].set_title('Depth + Accelerometer')
     twin = axes[2].twinx()
-    twin.plot(df['depth'],'m')
+    twin.plot(df['depth'], 'm')
     twin.set_ylabel('Depth from Max Height [cm]')
 
     plt.tight_layout()
@@ -177,11 +179,13 @@ def ambient_removed(df):
     new_df.index = new_df.index - new_df.index.max()
     return new_df
 
+
 def plot_hi_res_cli():
     files = sys.argv[1:]
 
     for f in files:
         plot_hi_res(fname=f)
+
 
 def main():
     parser = argparse.ArgumentParser(

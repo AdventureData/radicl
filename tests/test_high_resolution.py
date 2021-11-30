@@ -5,7 +5,6 @@ from radicl.ui_tools import get_logger
 import numpy as np
 
 
-
 @pytest.fixture(scope='session')
 def cli():
     class MOCKCLI():
@@ -35,6 +34,7 @@ def cli():
             return result
 
     return MOCKCLI()
+
 
 @pytest.mark.parametrize('data_name, expected_data', [
     ('depth', [-100, -50, 0, 0]),

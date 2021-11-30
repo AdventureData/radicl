@@ -22,6 +22,7 @@ from radicl.radicl import RADICL
 from radicl.ui_tools import get_logger
 from radicl.plotting import plot_hi_res
 
+
 def pad_with_nans(ts, match_ts):
     """
     Resamples a dataframe to match another dataframe
@@ -51,6 +52,7 @@ def pad_with_nans(ts, match_ts):
 
     return new_data
 
+
 def build_high_resolution_data(cli, log):
     """
     Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
@@ -58,6 +60,7 @@ def build_high_resolution_data(cli, log):
 
     Args:
         cli: Instantiated Radicl() class
+        log: Instantiated logger object
 
     Returns:
         ts: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
@@ -129,7 +132,7 @@ def main():
                    help="Debug flag will print out much more info")
     p.add_argument('-a', '--plot_all', dest='all', action='store_true',
                    help="When used will plot all datasets, otherwise it will "
-                   " just plot the depth corrected data.")
+                        " just plot the depth corrected data.")
     p.add_argument('--version', action='version',
                    version=('%(prog)s v{version}').format(version=__version__))
     args = p.parse_args()
@@ -154,7 +157,6 @@ def main():
 
     # Loop through each sensor and retrieve the calibration data
     while not finished:
-
         # take a measurement
         input("\nPress enter to start listening for the probe to start...\n")
         print("Press probe button to start...")

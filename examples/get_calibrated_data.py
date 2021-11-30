@@ -23,28 +23,13 @@ from radicl.ui_tools import get_logger
 probe = RAD_Probe()
 
 # Start this scripts logging
-log = get_logger(__name__, level='DEBUG')
+log = get_logger(__name__, debug=True)
 
 # Loop through each sensor and retrieve the calibration data
 log.info("Retrieving the calibration values for each sensor...")
-for sensor in range(1,5):
-
+for sensor in range(1, 5):
     # Grab setting data
     d = probe.getSetting(setting_name='calibdata', sensor=sensor)
 
     # Report data without decimals
-    log.info("Sensor {}: LOW = {:0.0f}, HIGH = {:0.0f}\n".format(sensor,d[0],d[1]))
-
-    ### Modify an change calibration values (Commented out for safety) ###
-    # # Modify values
-    # d[0] +=10
-    # d[1] -= 10
-    #
-    # # Report the new values
-    # log.debug("New values for # {}: LOW = {:0.0f}, HIGH = {:0.0f}\n".format(
-    #                                                                  sensor,
-    #                                                                  d[0],
-    #                                                                  d[1]))
-    # # Set the new values
-    # probe.setSetting(setting_name='calibdata', sensor=sensor, low_value=d[0],
-    #                                                           hi_value=d[1])
+    log.info("Sensor {}: LOW = {:0.0f}, HIGH = {:0.0f}\n".format(sensor, d[0], d[1]))
