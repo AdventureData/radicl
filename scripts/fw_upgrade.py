@@ -23,7 +23,7 @@ def Upgrade(fw_image):
 
     except Exception as e:
         log.error(e)
-    if (port.serial_port is None):
+    if port.serial_port is None:
         log.info("No device present")
     else:
         port.flushPort()
@@ -49,14 +49,14 @@ def Upgrade(fw_image):
 
         # If the identification succeeded, carry on with the normal operation
         ret = 1
-        if (ret):
+        if ret:
             # The device was successfully identified.
             # NORMAL OPERATION
 
             ret = fw.loadFile(fw_image)
-            if (ret == 1):
+            if ret == 1:
                 ret = fw.upgrade()
-                if (ret == 1):
+                if ret == 1:
 
                     # FW upgrade succeeded. Close the port, wait a bit, and
                     # then attempt to read the new FW version
@@ -65,11 +65,11 @@ def Upgrade(fw_image):
                     log.info("Wait for probe to finish internal upgrade")
                     num_attempt = 1
 
-                    while (num_attempt < 4):
+                    while num_attempt < 4:
                         log.info("Attempt %d" % num_attempt)
                         num_attempt += 1
                         num_delay = 10
-                        while (num_delay > 0):
+                        while num_delay > 0:
                             log.info(
                                 "\rAttempting to reconnect in %d seconds    " %
                                 num_delay)
@@ -83,7 +83,7 @@ def Upgrade(fw_image):
                             log.error(e)
                             port.closePort()
 
-                        if (port.serial_port is None):
+                        if port.serial_port is None:
                             log.info("No device found.")
                             port.closePort()
                         else:
@@ -98,7 +98,7 @@ def Upgrade(fw_image):
                             # Delay a bit and then identify the attached device
                             time.sleep(0.5)
                             ret = api.Identify()
-                            if (ret == 1):
+                            if ret == 1:
                                 log.info("Device successfully identified")
                                 log.info("FW UPDATE COMPLETE AND VERIFIED. EXITING...")
                                 port.closePort()

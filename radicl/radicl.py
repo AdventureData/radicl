@@ -20,18 +20,18 @@ out = Messages()
 
 
 class RADICL(object):
-    '''
+    """
     This is the main interface for end users to interact with the API and the
     probe.
 
     Attributes:
         probe: radicl
-    '''
-    defaults = {'debug':False}
+    """
+    defaults = {'debug': False}
 
     def __init__(self, **kwargs):
 
-        for k,v in self.defaults.items():
+        for k, v in self.defaults.items():
             if k not in kwargs.keys():
                 kwargs[k] = v
 
@@ -56,7 +56,7 @@ class RADICL(object):
         # Assign all data functions with keywords to auto gather data packages
         self.options['data'] = parse_func_list(probe_funcs,
                                                ['read', 'Data'],
-                                               ignore_keywords=['correlation','integrity'])
+                                               ignore_keywords=['correlation', 'integrity'])
 
         # Grab the settings from the probe
         self.options['settings'] = self.probe.settings
@@ -258,7 +258,6 @@ class RADICL(object):
                 success = False
                 attempts += 1
 
-
         if not success:
             m = ("Unable to retrieve {} data after {} attempts"
                  "".format(data_request, attempts))
@@ -287,9 +286,9 @@ class RADICL(object):
         elif self.state == 2:
             self.output_preference = self.ask_user("How do you want to output"
                                                    " {0} data?".format(
-                                                       self.daq),
-                                                   ['plot', 'write', 'both'],
-                                                   default_answer=self.output_preference)
+                self.daq),
+                ['plot', 'write', 'both'],
+                default_answer=self.output_preference)
 
         # Take Measurements
         elif self.state == 3:
@@ -345,7 +344,7 @@ class RADICL(object):
                             self.data.to_csv(self.filename, mode='a')
                             self.state = 5
 
-            if self.output_preference in ['plot','both'] and self.state == 4:
+            if self.output_preference in ['plot', 'both'] and self.state == 4:
                 self.data.plot()
                 plt.show()
                 self.state = 5

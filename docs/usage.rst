@@ -83,7 +83,7 @@ The following is a simple data acquisition script:
     data = cli.grab_data('rawsensor')
 
     # Save the data
-    cli.write_probe_data(df)
+    cli.write_probe_data(data)
 
 The above script will allow a user to :
 

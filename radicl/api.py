@@ -12,7 +12,7 @@ from radicl.ui_tools import get_logger
 pca_id_list = ["UNKNOWN", "PB1", "PB2", "PB3"]
 
 
-class RAD_API():
+class RAD_API:
     """
     Class for directly interacting with the probe in a non-human friendly way
     """
@@ -52,7 +52,7 @@ class RAD_API():
 
         try:
             num_bytes_in_buffer = self.port.numBytesInBuffer()
-            if (num_bytes_in_buffer > 0):
+            if num_bytes_in_buffer > 0:
                 response = self.port.readPort(num_bytes_in_buffer)
 
         except Exception as e:
@@ -62,7 +62,7 @@ class RAD_API():
             success = 1
 
         finally:
-            if (success):
+            if success:
                 return response
             else:
                 return None
@@ -76,12 +76,12 @@ class RAD_API():
         delay_counter = 0.001
 
         # Make sure that the read delay is at least 1ms (i.e. it cannot be 0)
-        if (read_delay < 0.001):
+        if read_delay < 0.001:
             read_delay = 0.001
 
         ret = self.__sendCommand(data)
 
-        if (ret):
+        if ret:
             # The command was successfully sent. Now read the response
             time.sleep(0.001)
             ret = self.__getResponse()
@@ -104,14 +104,14 @@ class RAD_API():
         """
         Returns 1 if the message contains an ACK
         """
-        if (len(message) >= 5):
+        if len(message) >= 5:
             # If a command was specified, check that it matches the message
-            if (cmd is not None):
-                if (message[1] != cmd):
+            if cmd is not None:
+                if message[1] != cmd:
                     return 0
             # If we get here then we have passed the additional specified
             # checks.
-            if (message[2] == 0x04):
+            if message[2] == 0x04:
                 # ACK detectec
                 return 1
             else:
@@ -126,16 +126,16 @@ class RAD_API():
         Returns 1 if the message contains a NACK
         """
 
-        if (len(message) >= 5):
+        if len(message) >= 5:
 
             # If a command was specified, check that it matches the message
-            if (cmd is not None):
-                if (message[1] != cmd):
+            if cmd is not None:
+                if message[1] != cmd:
                     return 0
 
             # If we get here then we have passed the additional user specified
             # checks.
-            if (message[2] == 0x05):
+            if message[2] == 0x05:
                 # NACK detectec
                 return 1
             else:
@@ -151,7 +151,7 @@ class RAD_API():
         If an error is detected, this will simply return 0
         """
 
-        if (len(message) >= 7):
+        if len(message) >= 7:
             nack_val = message[5:7]
             return int.from_bytes(nack_val, byteorder='little')
 
@@ -165,30 +165,30 @@ class RAD_API():
         """
 
         length = len(message)
-        if (length >= 5):
-            if (message[2] == 0x02):
+        if length >= 5:
+            if message[2] == 0x02:
                 calc_len = message[4] + 5
                 # If a command was specified we need to check if it matches.
                 # If it is incorrect we will return immediately
-                if (cmd is not None):
-                    if (message[1] != cmd):
+                if cmd is not None:
+                    if message[1] != cmd:
                         return 0
                 # If a data length was specified we need to check if it
                 # matches the message's data payload length. If it is incorrect
                 # we will return immediately
-                if ((data_len is not None) and (data_len != 0)):
-                    if (message[4] != data_len):
+                if (data_len is not None) and (data_len != 0):
+                    if message[4] != data_len:
                         return 0
                 # If we get here then we have passed the additional
                 # specified checks. Finally, check if the overall length
                 # matches (integrity check)
-                if (length == calc_len):
+                if length == calc_len:
                     # The length is correct
                     return 1
                 else:
                     # Not a response or incorrect length
                     return 0
-            elif ((message[2] == 0x06) and (length == 261)):
+            elif (message[2] == 0x06) and (length == 261):
                 return 1
             else:
                 return 0
@@ -201,9 +201,9 @@ class RAD_API():
         responses into account
         """
 
-        if (message[2] == 0x02 or message[2] == 0x03):
+        if message[2] == 0x02 or message[2] == 0x03:
             return message[4]
-        elif (message[2] == 0x06):
+        elif message[2] == 0x06:
             return 256
         else:
             return 0
@@ -213,23 +213,23 @@ class RAD_API():
         Returns 1 if the message is a valid push message/response
         """
         length = len(message)
-        if (length >= 5):
+        if length >= 5:
             calc_len = message[4] + 5
             # If a command was specified we need to check if it matches.
             # If it is incorrect we will return immediately
-            if (cmd is not None):
-                if (message[1] != cmd):
+            if cmd is not None:
+                if message[1] != cmd:
                     return 0
             # If a data length was specified we need to check if it matches the
             #  message's data payload length. If it is incorrect we will
             # return immediately
-            if (data_len is not None):
-                if (message[4] != data_len):
+            if data_len is not None:
+                if message[4] != data_len:
                     return 0
             # If we get here then we have passed the additional user specified
             # checks. Finally, check if the message is a response and if the
             # overall length matches (integrity check)
-            if ((message[2] == 0x03) and (length == calc_len)):
+            if (message[2] == 0x03) and (length == calc_len):
                 # This is a response and the length is correct
                 return 1
             else:
@@ -249,21 +249,21 @@ class RAD_API():
 
         delay_time = 0.01
         # Force the timeout to be at least 10ms
-        if (timeout < delay_time):
+        if timeout < delay_time:
             timeout = delay_time
         num_iter = timeout / delay_time
         response = []
         num_bytes_in_buffer = 0
-        while(num_iter):
+        while num_iter:
             try:
                 num_bytes_in_buffer += self.port.numBytesInBuffer()
 
-                if (num_bytes_in_buffer > 0):
+                if num_bytes_in_buffer > 0:
                     response.extend(self.port.readPort(num_bytes_in_buffer))
             except Exception as e:
                 self.log.error(e)
             else:
-                if (num_bytes_in_buffer >= expected_bytes):
+                if num_bytes_in_buffer >= expected_bytes:
                     return response
                 else:
                     num_iter = num_iter - 1
@@ -283,7 +283,7 @@ class RAD_API():
                 num_expected_payload_bytes: Integer number of bytes expecting to receive
         """
 
-        if (response is None):
+        if response is None:
             return {'status': 0, 'errorCode': None, 'data': None}
 
         elif (self.__isResponse(response, expected_command,
@@ -298,10 +298,10 @@ class RAD_API():
                     'data': response[-(
                         self.__getNumPayloadBytes(response)):]}
 
-        elif (self.__isACK(response)):
+        elif self.__isACK(response):
             return {'status': 1, 'errorCode': None, 'data': None}
 
-        elif (self.__isNACK(response)):
+        elif self.__isNACK(response):
             nack_value = self.__getNACKValue(response)
             return {'status': 0, 'errorCode': nack_value, 'data': None}
 
@@ -337,9 +337,9 @@ class RAD_API():
         ret = self.getFullFWREV()
         self.full_fw_rev = ret['data']
 
-        if (self.hw_id is not None):
-            if (self.hw_id < len(pca_id_list)):
-                if (self.full_fw_rev is not None):
+        if self.hw_id is not None:
+            if self.hw_id < len(pca_id_list):
+                if self.full_fw_rev is not None:
                     self.log.info("Attached device: %s, Rev=%s, FW=%s" %
                                   (pca_id_list[self.hw_id],
                                    self.hw_rev,
@@ -391,7 +391,7 @@ class RAD_API():
 
         response = self.__send_receive([0x9F, 0x01, 0x00, 0x00, 0x00])
         ret_val = self.__EvaluateAndReturn(response, 0x01, 1)
-        if (ret_val['status'] == 1):
+        if ret_val['status'] == 1:
             byte_arr = ret_val['data']
             data = int.from_bytes(byte_arr, byteorder='little')
             ret_val['data'] = data
@@ -405,7 +405,7 @@ class RAD_API():
 
         response = self.__send_receive([0x9F, 0x02, 0x00, 0x00, 0x00])
         ret_val = self.__EvaluateAndReturn(response, 0x02, 1)
-        if (ret_val['status'] == 1):
+        if ret_val['status'] == 1:
             byte_arr = ret_val['data']
             data = int.from_bytes(byte_arr, byteorder='little')
             ret_val['data'] = data
@@ -419,7 +419,7 @@ class RAD_API():
 
         response = self.__send_receive([0x9F, 0x03, 0x00, 0x00, 0x00])
         ret_val = self.__EvaluateAndReturn(response, 0x03, 2)
-        if (ret_val['status'] == 1):
+        if ret_val['status'] == 1:
             value = ret_val['data']
             major = value[0]  # value[-2]
             minor = value[1]  # value[-1]
@@ -433,7 +433,7 @@ class RAD_API():
         """
         response = self.__send_receive([0x9F, 0x09, 0x00, 0x00, 0x00])
         ret_val = self.__EvaluateAndReturn(response, 0x09, 4)
-        if (ret_val['status'] == 1):
+        if ret_val['status'] == 1:
             value = ret_val['data']
             rev_string = str(value[0]) + "." + str(value[1]) + \
                 "." + str(value[2]) + "." + str(value[3])

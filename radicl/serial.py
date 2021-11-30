@@ -81,7 +81,6 @@ class RAD_Serial:
             self.log.error("Serial port open failed: {}".format(e))
             raise IOError("Could not open COM port")
 
-
     def closePort(self):
         if self.serial_port is not None:
             self.serial_port.close()

@@ -18,13 +18,12 @@ from radicl.ui_tools import (
     Messages, get_logger, parse_func_list, parse_help, print_helpme)
 
 error_codes = {2049: "The probe measurement/sensor is not running",
-               2048:'Generic Measurement error',
+               2048: 'Generic Measurement error',
                2050: "Measurement FSM not ready to start measurement",
-               2051:" Measurement FSM already stopped (i.e. in ready/idle state)",
+               2051: " Measurement FSM already stopped (i.e. in ready/idle state)",
                2052: "Setting a parameter failed",
                2053: "Invalid buffer was addressed",
                2054: "Reading data failed"}
-
 
 
 class RAD_Probe():
@@ -47,7 +46,7 @@ class RAD_Probe():
         self.log = get_logger(__name__, debug=debug)
 
         # Check if an external API object was passed in.
-        if (ext_api is not None):
+        if ext_api is not None:
             # An external API object was provided. Use it. Note: We assume here
             # that the appropriate initialization, identification, and API port
             # enable procedure has already taken place
@@ -158,7 +157,6 @@ class RAD_Probe():
 
         return result
 
-
     def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
         """
         Prive function to retrieve data from the probe.
@@ -176,8 +174,8 @@ class RAD_Probe():
 
         # Final data to return
         final = {'status': 0, 'SegmentsAvailable': 0, 'SegmentsRead': 0,
-                                                      'BytesRead': 0,
-                                                      'data': None}
+                 'BytesRead': 0,
+                 'data': None}
 
         # Get the number of data segments available
         ret = self.api.MeasGetNumSegments(buffer_id)
@@ -199,7 +197,6 @@ class RAD_Probe():
                     self.log.error(error_codes[ret['errorCode']])
                 else:
                     self.log.warning("Unknown error code!")
-
 
         # If we do have number of segments
         if (num_segments != 0 and num_segments is not None):
@@ -231,14 +228,14 @@ class RAD_Probe():
 
                     else:
                         if jj >= max_retry:
-                            self.log.warning('Missed data segment, after {0:d} attempts.'.format(jj+1))
+                            self.log.warning('Missed data segment, after {0:d} attempts.'.format(jj + 1))
 
                         # Developer friendly response in event of read error
                         msg = ("{0} Data Error: Buffer ID = {1:d}, "
-                              "Segment ID={2:d}/{3:d}, Retry #{4:d}, "
-                              " COM Delay = {5}s "
-                              "").format(buffer_name, buffer_id, ii,
-                                         num_segments, jj,wait_time)
+                               "Segment ID={2:d}/{3:d}, Retry #{4:d}, "
+                               " COM Delay = {5}s "
+                               "").format(buffer_name, buffer_id, ii,
+                                          num_segments, jj, wait_time)
 
                         self.log.debug(msg)
 
@@ -251,12 +248,10 @@ class RAD_Probe():
                             else:
                                 self.log.warning("Received unknown error code:{}".format(ret['errorCode']))
 
-
-
             # Was the data read successful?
             final['status'] = int(result)
             final['SegmentsAvailable'] = num_segments
-            final['SegmentsRead'] = ii + 1 # Report this not zero based
+            final['SegmentsRead'] = ii + 1  # Report this not zero based
             final['BytesRead'] = byte_counter
 
             if final['SegmentsRead'] > 0:
@@ -419,7 +414,7 @@ class RAD_Probe():
         return result
 
     def read_check_data_integrity(self, buffer_id, nbytes_per_value=None,
-                                        nvalues=None, from_spi=False):
+                                  nvalues=None, from_spi=False):
         '''
         Recieves a data function and  performs the data integrity check
         If the data is from _spi then we know how long the segments are.
@@ -467,8 +462,8 @@ class RAD_Probe():
                 # Check we read all bytes:
                 complete_bytes = expected_bytes == ret_dict['BytesRead']
                 self.log.debug('Downloaded {:0.2f}/{:0.2f} Kb.'.format(
-                                                 ret_dict['BytesRead'] / 1000,
-                                                 expected_bytes / 1000))
+                    ret_dict['BytesRead'] / 1000,
+                    expected_bytes / 1000))
             # From chip memory
             else:
                 # We can have incomplete segments, so check for even numbers
@@ -480,7 +475,7 @@ class RAD_Probe():
                 self.log.error("Data Integrity Error: Unable to retrieve all "
                                "data for {}.".format(buffer_name))
                 self.log.debug('All Segments not downloaded: {}, All bytes '
-                           'downloaded: {}'.format(all_segments, complete_bytes))
+                               'downloaded: {}'.format(all_segments, complete_bytes))
             else:
                 final = ret_dict
                 final['samples'] = samples
@@ -586,7 +581,7 @@ class RAD_Probe():
             dict: containing accel data (x,y,z) or None if read failed
 
         """
-        acc_axes = ['X','Y','Z']
+        acc_axes = ['X', 'Y', 'Z']
         name_str = '{}-Axis'
         # Index in the probe buffer
         buffer_id = 1
@@ -606,7 +601,7 @@ class RAD_Probe():
             samples = ret['samples']
 
             # Initialize the data
-            final = {name_str.format(a):[] for a in acc_axes}
+            final = {name_str.format(a): [] for a in acc_axes}
             offset = 0
 
             # Loop over all the samples
@@ -718,7 +713,7 @@ class RAD_Probe():
 
             for ii in range(0, samples):
                 this_value = data[(offset + 0)] + (data[(offset + 1)] * 256) + \
-                    (data[(offset + 2)] * 65536)
+                             (data[(offset + 2)] * 65536)
 
                 pressure_data.append(this_value / 4096)
                 offset = offset + 3
@@ -869,8 +864,6 @@ class RAD_Probe():
         nbytes_per_value = 4
         nvalues = 4
 
-
-
         ret = self.read_check_data_integrity(buffer_id,
                                              nbytes_per_value=nbytes_per_value,
                                              nvalues=nvalues, from_spi=False)
@@ -880,7 +873,7 @@ class RAD_Probe():
             # initialize
             data = ret['data']
             samples = ret['samples']
-            final = {sensor:[] for sensor in sensor_names}
+            final = {sensor: [] for sensor in sensor_names}
             final['depth'] = []
             nbytes = nbytes_per_value * nvalues
             sgbytes = 256
@@ -892,11 +885,10 @@ class RAD_Probe():
 
                 # Grab the depth
                 final['depth'].append(data_set[4] + (data_set[5] * sgbytes) +
-                             (data_set[6] * 65536) + (data_set[7] *
-                                                           16777216))
+                                      (data_set[6] * 65536) + (data_set[7] *
+                                                               16777216))
 
                 for idx, name in enumerate(sensor_names):
-
                     # Starts at idx 8 in the buffer
                     byte_idx = idx * 2 + 8
                     final[name].append(data_set[byte_idx] + \
@@ -929,7 +921,7 @@ class RAD_Probe():
         header += "FIRMWARE REVISION={2}\n"
         header += "HARDWARE REVISION={3}\n"
         header += "MODEL NUMBER={4}\n"
-        #header += "SERIAL NUMBER={5}\n"
+        # header += "SERIAL NUMBER={5}\n"
 
         final = header.format(time_stamp,
                               __version__,
