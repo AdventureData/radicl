@@ -46,5 +46,21 @@ Overhaul (2017-10-17)
 * Resilience improvements to grabbing data
 * Added back in the listening function for measurements via buttons
 
-
 .. _6: https://github.com/AdventureData/radicl/issues/6
+
+0.5.0 (2021-11-30)
+------------------
+* Fixes for #4_, #8_, #9_, #15_, #16_, #18_, #19_
+* Migrated towards Github Actions
+* Added broader build tests
+* Improved data downloading/logging and integrity checks
+* Improved tools for high resolution measurements
+* Improved documentation on setup, install, and usage
+
+.. _4: https://github.com/AdventureData/radicl/issues/4
+.. _8: https://github.com/AdventureData/radicl/issues/8
+.. _:9 https://github.com/AdventureData/radicl/issues/9
+.. _15: https://github.com/AdventureData/radicl/issues/15
+.. _16: https://github.com/AdventureData/radicl/issues/16
+.. _18: https://github.com/AdventureData/radicl/issues/18
+.. _19: https://github.com/AdventureData/radicl/issues/19
