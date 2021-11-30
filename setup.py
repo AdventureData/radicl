@@ -20,7 +20,7 @@ test_requirements = ['pytest', ]
 
 setup(
     author="Micah Johnson",
-    author_email='micah@adventuredata.com',
+    author_email='info@adventuredata.com',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -45,12 +45,12 @@ setup(
     url='https://github.com/adventuredata/radicl',
     version='0.5.0',
     zip_safe=False,
-     entry_points = {
-          'console_scripts': [
-              'radicl = radicl.cli:main',
-              'plotlyte = radicl.plotting:main',
-              'lyte_hi_res = radicl.high_resolution:main',
-              'plot_hi_res = radicl.plotting:plot_hi_res_cli',
-          ],
-      },
+    entry_points={
+        'console_scripts': [
+            'radicl = radicl.cli:main',
+            'plotlyte = radicl.plotting:main',
+            'lyte_hi_res = radicl.high_resolution:main',
+            'plot_hi_res = radicl.plotting:plot_hi_res_cli',
+        ],
+    },
 )
