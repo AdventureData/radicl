@@ -26,7 +26,7 @@ error_codes = {2049: "The probe measurement/sensor is not running",
                2054: "Reading data failed"}
 
 
-class RAD_Probe():
+class RAD_Probe:
     """
     Class for directly interacting with the probe.
 
@@ -104,7 +104,7 @@ class RAD_Probe():
         """
         name = inspect.stack()[stack_id][3]
 
-        if (ret_dict['errorCode'] is not None):
+        if ret_dict['errorCode'] is not None:
             self.log.error("{} error:{}".format(name, ret_dict['errorCode']))
 
         else:
@@ -124,7 +124,7 @@ class RAD_Probe():
         """
         result = []
 
-        if ((ret['status'] == 1) and (ret['data'] is not None)):
+        if (ret['status'] == 1) and (ret['data'] is not None):
 
             data_size = len(ret['data'])
             increment = int(data_size / num_values)
@@ -180,7 +180,7 @@ class RAD_Probe():
         # Get the number of data segments available
         ret = self.api.MeasGetNumSegments(buffer_id)
 
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             num_segments = int.from_bytes(ret['data'], byteorder='little')
             self.log.debug('Retrieving {} segments of {} data...'.format(num_segments, buffer_name.lower()))
 
@@ -199,7 +199,7 @@ class RAD_Probe():
                     self.log.warning("Unknown error code!")
 
         # If we do have number of segments
-        if (num_segments != 0 and num_segments is not None):
+        if num_segments != 0 and num_segments is not None:
             self.log.debug("Reading %d segments" % num_segments)
             byte_counter = 0
 
@@ -218,7 +218,7 @@ class RAD_Probe():
                     # Request the data
                     ret = self.api.MeasReadDataSegment(buffer_id, ii)
 
-                    if (ret['status'] == 1 and ret['data'] is not None):
+                    if ret['status'] == 1 and ret['data'] is not None:
                         byte_counter = byte_counter + len(ret['data'])
                         data_chunk = ret['data']
                         data.extend(data_chunk)
@@ -315,7 +315,7 @@ class RAD_Probe():
         ret = self.api.MeasStart()
         self.log.debug("Start measurement Reqested.")
 
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             self.wait_for_state(1)
             self.log.info("Measurement started...")
 
@@ -334,7 +334,7 @@ class RAD_Probe():
         ret = self.api.MeasStop()
         self.log.debug("Stop measurement reqested.")
 
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             self.wait_for_state(3)
             self.log.info("Measurement stopped...")
 
@@ -353,7 +353,7 @@ class RAD_Probe():
         ret = self.api.MeasReset()
         self.log.debug("Measurement reset requested...")
 
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             self.wait_for_state(0, delay=0.1)
             self.log.info("Probe measurement reset...")
 
@@ -415,7 +415,7 @@ class RAD_Probe():
 
     def read_check_data_integrity(self, buffer_id, nbytes_per_value=None,
                                   nvalues=None, from_spi=False):
-        '''
+        """
         Recieves a data function and  performs the data integrity check
         If the data is from _spi then we know how long the segments are.
         If the are not, then it is possible we receive an incomplete segement
@@ -430,7 +430,7 @@ class RAD_Probe():
         Returns:
             final: dict containing data in bytes, number of samples and
                    segements and return status.
-        '''
+        """
 
         buffer_name = self.__data_buffer_guide[buffer_id]
 
@@ -438,7 +438,7 @@ class RAD_Probe():
         final = None
 
         # Sucessfully read data
-        if (ret_dict['status'] != 1):
+        if ret_dict['status'] != 1:
             self.log.error('Read {} error: No data available!'
                            ''.format(buffer_name))
             self.log.debug('Data received from probe:\n{}'.format(ret_dict))
@@ -645,18 +645,18 @@ class RAD_Probe():
         """
 
         ret = self.__readData(5)
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             # Sucessfully read data
             # ***** DATA INTEGRITY CHECK *****
             # Data integrity error (not all segments read)
-            if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
+            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 self.log.error("readAccelerationCorrelationData error: Data integrity "
                                "error (not all segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
 
-            if ((total_bytes % 4) != 0):
+            if (total_bytes % 4) != 0:
                 # Data integrity error (not all bytes read - incomplete data segment)
                 # The data set is not an integer multiple of 4 (Correlation
                 # number is a 32-bit int => 4 bytes)
@@ -687,9 +687,9 @@ class RAD_Probe():
         ret = self.__readData(2)
 
         # Sucessfully read data
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             # ***** DATA INTEGRITY CHECK *****
-            if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
+            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)
                 self.log.error("readRawPressureData error: Data integrity error (not "
                                "all segments read)")
@@ -698,7 +698,7 @@ class RAD_Probe():
             # Data integrity error (not all bytes read - incomplete data
             # segment)
             total_bytes = ret['BytesRead']
-            if ((total_bytes % 3) != 0):
+            if (total_bytes % 3) != 0:
                 # The data set is not an integer multiple of 3 (Raw pressure is
                 # in 24-bit format => 3 bytes)
                 self.log.error(
@@ -730,17 +730,17 @@ class RAD_Probe():
         helpme - Unfiltered elevation data from the depth sensor
         """
         ret = self.__readData(3)
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             # Sucessfully read data
             # ***** DATA INTEGRITY CHECK *****
-            if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
+            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)
                 self.log.error("readDepthData error: Data integrity error (not all "
                                "segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
-            if ((total_bytes % 4) != 0):
+            if (total_bytes % 4) != 0:
                 # Data integrity error (not all bytes read - incomplete data segment)
                 # The data set is not an integer multiple of 4 (Floatingpoint
                 # values are 32-bit long => 4 bytes)
@@ -813,17 +813,17 @@ class RAD_Probe():
         """
 
         ret = self.__readData(6)
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             # Sucessfully read data
             # ***** DATA INTEGRITY CHECK *****
-            if (ret['SegmentsAvailable'] != ret['SegmentsRead']):
+            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)
                 self.log.error("readPressureDepthCorrelationData error: Data integrity "
                                "error (not all segments read)")
                 return None
 
             total_bytes = ret['BytesRead']
-            if ((total_bytes % 4) != 0):
+            if (total_bytes % 4) != 0:
                 # Data integrity error (not all bytes read - incomplete data segment)
                 # The data set is not an integer multiple of 4 (Correlation
                 # number is a 32-bit int => 4 bytes)
@@ -967,7 +967,7 @@ class RAD_Probe():
         else:
             ret = self.settings[setting_name](kwargs['value'])
 
-        if (ret['status'] == 1):
+        if ret['status'] == 1:
             return True
 
         else:

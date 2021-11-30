@@ -7,7 +7,7 @@ Installation
 Windows Prerequisites
 ---------------------
 
-You will need to install python 3.5+ and the RAD Drivers for your probe to
+You will need to install python 3.6+ and the RAD Drivers for your probe to
 work on Windows 10.
 
 Python installation
@@ -39,11 +39,11 @@ search by python.
 
    .. code-block:: powershell
 
-      >> Python 3.6.5
+      >> Python 3.8.10
 
 4. Check that you have the correct `pip` associated by running:
 
-   If this is version number is 3.5 + Then you are set to continue on to the
+   If this is version number is 3.6+ Then you are set to continue on to the
    driver install portion of this guide.
 
    .. code-block:: powershell
@@ -83,7 +83,7 @@ below.
 Linux -Ubuntu Prerequisites
 ---------------------------
 
-* Python 3.5+
+* Python 3.6+
 * TKinter
 
 Installing TKinter on Ubuntu:

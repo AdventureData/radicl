@@ -9,7 +9,7 @@ from colorama import init
 from termcolor import colored
 
 
-class Messages():
+class Messages:
     init()
 
     def msg(self, str_msg, context_str=None):
@@ -147,7 +147,7 @@ def print_helpme(help_str, help_dict):
             for k, v in help_dict.items():
                 if v is None:
                     no_help += 1
-                    v = ('No help documentation.')
+                    v = 'No help documentation.'
 
                 out_str += '\n{0:<25} {1:<25}\n'.format(k, v)
         if no_help == len(help_dict.keys()):
@@ -157,7 +157,8 @@ def print_helpme(help_str, help_dict):
 
     if no_doc:
         out_str = (
-            '\nNo help documentation.\nPlease email micah@adventuredata.com or file an issue at https://github.com/Adventuredata/radicl/issues\n')
+            '\nNo help documentation.\nPlease email info@adventuredata.com or file an issue at '
+            'https://github.com/Adventuredata/radicl/issues\n')
         print(help_dict)
 
     # Doctor up the print out
@@ -169,7 +170,13 @@ def print_helpme(help_str, help_dict):
 
 def get_logger(name, debug=False, ext_logger=None, ):
     """
+    Args:
+        name: Name of the logger.
+        debug: Bool whether to show debug statements
+        ext_logger: Use ext logger to pass an already instantiated logger
 
+    Returns:
+        log: Instantiated logger
     """
     fmt = fmt = '%(name)s %(levelname)s %(message)s'
     if ext_logger is None:
