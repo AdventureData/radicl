@@ -6,8 +6,9 @@ Welcome to radicl
 .. image:: https://img.shields.io/pypi/v/radicl.svg
         :target: https://pypi.python.org/pypi/radicl
 
-.. image:: https://github.com/AdventureData/radicl/actions/workflows/main.yml/badge.svg
-        :target: https://github.com/AdventureData/radicl/actions/workflows/main.yml
+.. image:: https://github.com/AdventureData/radicl/actions/workflows/build.yml/badge.svg
+        :target: https://github.com/AdventureData/radicl/actions/workflows/build.yml
+
 
 .. image:: https://readthedocs.org/projects/radicl/badge/?version=latest
         :target: https://radicl.readthedocs.io/en/latest/?badge=latest
