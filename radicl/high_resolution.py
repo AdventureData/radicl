@@ -14,20 +14,16 @@ Usage:  1. plug in the probe.
 import argparse
 from argparse import RawTextHelpFormatter
 
-# from radicl.plotting import plot_hi_res
 import matplotlib.pyplot as plt
-# import a number crunching library
 import numpy as np
 
 from radicl import __version__
-# Import the radicl probe class
 from radicl.radicl import RADICL
-# Import the colored logging from radicl to report more human readable info
 from radicl.ui_tools import get_logger
 from radicl.plotting import plot_hi_res
 
 def pad_with_nans(ts, match_ts):
-    '''
+    """
     Resamples a dataframe to match another dataframe
 
     Args:
@@ -35,7 +31,7 @@ def pad_with_nans(ts, match_ts):
         match_ts: numpy array time series that the is to be matched in size
     Returns:
 
-    '''
+    """
     # Grab the ratio of indicies between the two datasets
     ratio = len(match_ts) / len(ts)
 
@@ -55,9 +51,58 @@ def pad_with_nans(ts, match_ts):
 
     return new_data
 
+def build_high_resolution_data(cli, log):
+    """
+    Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
+    and pads with nans to fit into the same dataframe
+
+    Args:
+        cli: Instantiated Radicl() class
+
+    Returns:
+        ts: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
+    """
+    # Grab the calibrated data
+    ts = cli.grab_data('rawsensor')[
+        ['Sensor1', 'Sensor2', 'Sensor3']]
+
+    # rts = cli.grab_data('rawsensor')
+    depth = cli.grab_data('filtereddepth')['filtereddepth']
+
+    # Grab accelerometer data
+    acc = cli.grab_data('rawacceleration')['Y-Axis']
+
+    log.info('Processing the depth data...')
+    # Set the 0 point of depth to the Starting point or the snow Surface
+    depth = depth - depth.values.min()
+
+    # Invert Depth so bottom is negative max depth
+    depth = depth - depth.values.max()
+
+    log.info("Depth achieved: {} cm".format(abs(depth.max() - depth.min())))
+    log.info("Depth Samples: {}".format(len(depth)))
+    log.info("Acceleration Samples: {}".format(acc))
+
+    supplemental_data = {'acceleration': acc,
+                         'depth': depth
+                         }
+
+    # Reshape the supplemental_data and pad with Nans
+    for name, data in supplemental_data.items():
+        log.info("Padding {} data with Nans...".format(name))
+
+        # Pad with nans
+        new_data = pad_with_nans(data.values, ts['Sensor1'].values)
+
+        # Assign the data
+        ts[name] = new_data.copy()
+    log.info("Interpolating between nan's...")
+    ts = ts.interpolate()
+    return ts
+
 
 def main():
-    # Parge command line arguments
+    # Parse command line arguments
     hdr = 'Lyte Probe High Resolution DAQ Script v{}'.format(__version__)
     underline = '=' * len(hdr)
     hdr = '\n'.join([hdr, underline, ''])
@@ -110,48 +155,12 @@ def main():
     # Loop through each sensor and retrieve the calibration data
     while not finished:
 
-        # take a measurment
+        # take a measurement
         input("\nPress enter to start listening for the probe to start...\n")
         print("Press probe button to start...")
         cli.listen_for_a_reading()
 
-        # Grab the calibrated data
-        ts = cli.grab_data('calibratedsensor')[
-            ['Sensor1', 'Sensor2', 'Sensor3']]
-
-        #rts = cli.grab_data('rawsensor')
-        depth = cli.grab_data('filtereddepth')['filtereddepth']
-
-        # Grab accelerometer data
-        acc = cli.grab_data('rawacceleration')['Y-Axis']
-
-        log.info('Processing the depth data...')
-        # Set the 0 point of depth to the Starting point or the snow Surface
-        depth = depth - depth.values.min()
-
-        # Invert Depth so bottom is negative max depth
-        depth = depth - depth.values.max()
-
-
-        log.info("Depth achieved: {} cm".format(abs(depth.max() - depth.min())))
-        log.info("Depth Samples: {}".format(len(depth)))
-        log.info("Acceleration Samples: {}".format(acc))
-
-        supplemental_data = {'acceleration': acc,
-                             'depth': depth
-                             }
-
-        # Reshape the supplemental_data and pad with Nans
-        for name, data in supplemental_data.items():
-            log.info("Padding {} data with Nans...".format(name))
-
-            # Pad with nans
-            new_data = pad_with_nans(data.values, ts['Sensor1'].values)
-
-            # Assign the data
-            ts[name] = new_data.copy()
-        log.info("Interpolating between nan's...")
-        ts = ts.interpolate()
+        ts = build_high_resolution_data(cli, log)
 
         plot_hi_res(df=ts)
 
