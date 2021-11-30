@@ -18,7 +18,7 @@ def plot_hi_res(fname=None, df=None):
     """
     names = {'Sensor1': 'Hardness', 'Sensor2': 'Ambient NIR', 'Sensor3': 'Active NIR'}
 
-    if fname != None:
+    if fname is not None:
         df = pd.read_csv(fname, header=5)
 
     f, axes = plt.subplots(1, 3)
@@ -207,6 +207,7 @@ def main():
     args = parser.parse_args()
 
     # Provide a opportunity to look at lots
+    filenames = []
     if args.file is not None and not isinstance(args.file, list):
         if os.path.isdir(args.file):
             filenames = os.listdir(args.file)

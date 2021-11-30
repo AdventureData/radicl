@@ -7,6 +7,7 @@ import time
 from .ui_tools import get_logger
 import progressbar
 
+
 class FW_Update:
 
     # *********************
@@ -122,19 +123,19 @@ class FW_Update:
             (binascii.crc32(
                 app_bytes,
                 0x4C11DB7),
-                (0x100000000 -
-                 binascii.crc32(
-                     app_bytes,
-                     0x4C11DB7))))
+             (0x100000000 -
+              binascii.crc32(
+                  app_bytes,
+                  0x4C11DB7))))
         self.log.debug(
             "CRC swapped =\t0x%.08X, 0x%.08X" %
             (binascii.crc32(
                 self.__swapBytesInArray(app_bytes),
                 0x4C11DB7),
-                (0x100000000 -
-                 binascii.crc32(
-                     self.__swapBytesInArray(app_bytes),
-                     0x4C11DB7))))
+             (0x100000000 -
+              binascii.crc32(
+                  self.__swapBytesInArray(app_bytes),
+                  0x4C11DB7))))
 
         # return sum(app_bytes)
         return binascii.crc32(app_bytes)
@@ -390,7 +391,7 @@ class FW_Update:
                         pct = (100 * ii) / self.num_packets
                         if pct >= (last_pct + 1):
                             last_pct = pct
-                            #self.log.info("\rProgress = %d%%    " % pct, end=" ")
+                            # self.log.info("\rProgress = %d%%    " % pct, end=" ")
                             # self.log.info("Progress = %d%%" % pct)
                             bar.update(int(pct))
 

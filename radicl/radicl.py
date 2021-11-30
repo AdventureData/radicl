@@ -31,6 +31,7 @@ class RADICL(object):
 
     def __init__(self, **kwargs):
 
+        self.state = 0
         for k, v in self.defaults.items():
             if k not in kwargs.keys():
                 kwargs[k] = v
@@ -87,16 +88,7 @@ class RADICL(object):
         """
         Main running loop for the command line Interface
         """
-
-        self.state = 0
-        plot = False
-        write = False
-        both = False
-        filename_used = False
-        data_attempts = 1
-
         # Create the probe command with an arbitrary command to have access to
-        # help
         while self.running:
 
             pstate = self.probe.getProbeMeasState()
@@ -236,6 +228,7 @@ class RADICL(object):
 
         attempts = 0
         success = False
+        data = None
 
         while attempts < retries and not success:
             self.log.debug(
