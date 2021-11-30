@@ -40,7 +40,7 @@ Overhaul (2017-10-17)
 
 0.4.0 (2020-02-29)
 ------------------
-* Fixes for #6_
+* Fix for issue 6_
 * Added in a high resolution daq script.
 * Added linting with autopep8 and isort
 * Resilience improvements to grabbing data
@@ -50,7 +50,7 @@ Overhaul (2017-10-17)
 
 0.5.0 (2021-11-30)
 ------------------
-* Fixes for #4_, #8_, #9_, #15_, #16_, #18_, #19_
+* Fixes for issues 4_, 8_, 9_, 15_, 16_, 18_, 19_
 * Migrated towards Github Actions
 * Added broader build tests
 * Improved data downloading/logging and integrity checks
@@ -59,7 +59,7 @@ Overhaul (2017-10-17)
 
 .. _4: https://github.com/AdventureData/radicl/issues/4
 .. _8: https://github.com/AdventureData/radicl/issues/8
-.. _:9 https://github.com/AdventureData/radicl/issues/9
+.. _9: https://github.com/AdventureData/radicl/issues/9
 .. _15: https://github.com/AdventureData/radicl/issues/15
 .. _16: https://github.com/AdventureData/radicl/issues/16
 .. _18: https://github.com/AdventureData/radicl/issues/18
