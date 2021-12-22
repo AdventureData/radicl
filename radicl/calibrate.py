@@ -2,7 +2,6 @@
 
 import os
 import time
-
 import numpy as np
 
 from radicl.ui_tools import get_logger

@@ -3,13 +3,36 @@
 import argparse
 import os
 import sys
-
+import platform
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib
 
+if 'Linux' in platform.platform():
+    matplotlib.use('TkAgg')
+
+
 matplotlib.rcParams['agg.path.chunksize'] = 100000
+
+def find_header(fname):
+    """
+    Find the header of any length
+    Args:
+        fname:
+
+    Returns:
+    """
+    with open(fname) as fp:
+        lines = fp.readlines()
+        result = None
+
+        for i, line in enumerate(lines):
+            if ',' in line:
+                result = i
+                break
+
+        return result
 
 
 def plot_hi_res(fname=None, df=None):
@@ -19,7 +42,9 @@ def plot_hi_res(fname=None, df=None):
     names = {'Sensor1': 'Hardness', 'Sensor2': 'Ambient NIR', 'Sensor3': 'Active NIR'}
 
     if fname is not None:
-        df = pd.read_csv(fname, header=5)
+        header = find_header(fname)
+        print(header)
+        df = pd.read_csv(fname, header=header)
 
     f, axes = plt.subplots(1, 3)
     # fig = matplotlib.pyplot.gcf()

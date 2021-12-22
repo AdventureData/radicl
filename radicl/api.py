@@ -3,7 +3,6 @@
 import binascii
 import sys
 import time
-
 import serial
 
 from radicl import serial as rs

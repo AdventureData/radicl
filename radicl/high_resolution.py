@@ -13,8 +13,6 @@ Usage:  1. plug in the probe.
 
 import argparse
 from argparse import RawTextHelpFormatter
-
-import matplotlib.pyplot as plt
 import numpy as np
 
 from radicl import __version__
