@@ -9,10 +9,6 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib
 
-if 'Linux' in platform.platform():
-    matplotlib.use('TkAgg')
-
-
 matplotlib.rcParams['agg.path.chunksize'] = 100000
 
 def find_header(fname):
@@ -39,6 +35,9 @@ def plot_hi_res(fname=None, df=None):
     """
     Plots the timeseries, the depth corrected, and the depth data
     """
+    if 'Linux' in platform.platform():
+        matplotlib.use('TkAgg')
+        
     names = {'Sensor1': 'Hardness', 'Sensor2': 'Ambient NIR', 'Sensor3': 'Active NIR'}
 
     if fname is not None:
