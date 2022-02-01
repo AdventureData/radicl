@@ -7,6 +7,7 @@ import sys
 import time
 
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
 from termcolor import colored
 
@@ -237,7 +238,22 @@ class RADICL(object):
 
             try:
                 data = fn()
+                sr_ts = self.probe.getSetting(setting_name='samplingrate')
                 data = self.dataframe_this(data, data_request)
+                n_samples = data.index.size
+                # Default to using the sensor data sample rate
+                sr = sr_ts
+                # Decimation ratio for periphal sensors
+                ratio = sr_ts / 16000
+
+                if 'acceleration' in data_request:
+                    sr = int(100 * ratio)
+                elif data_request in ['filtereddepth','rawdepth', 'rawpressure']:
+                    sr = int(75 * ratio)
+
+                time = np.linspace(0, n_samples / sr, n_samples)
+                data['time'] = time
+                data.set_index('time', inplace=True)
                 success = True
 
             except Exception as e:

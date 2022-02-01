@@ -8,8 +8,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib
+from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
+
 
 def find_header(fname):
     """
@@ -31,69 +33,122 @@ def find_header(fname):
         return result
 
 
+def plot_events(ax, start=None, surface=None, stop=None, plot_type='normal'):
+    """
+    Plots the hline or vline for each event on a plot
+    Args:
+        ax:
+        start:
+        surface:
+        stop:
+        plot_type:
+    """
+    event_alpha = 0.6
+    if plot_type == 'vertical':
+        line_fn = ax.axhline
+    elif plot_type == 'normal':
+        line_fn = ax.axvline
+    else:
+        raise ValueError(f'Unrecognized plot type {plot_type}, options are vertical or normal!')
+    if start is not None:
+        line_fn(start, linestyle='dashed', color='lime', label='Start', alpha=event_alpha)
+    if surface is not None:
+        line_fn(surface, linestyle='dashdot', color='cornflowerblue', label='Surface', alpha=event_alpha)
+    if stop is not None:
+        line_fn(stop, linestyle='dashed',  color='red', label='Stop', alpha=event_alpha)
+
+
 def plot_hi_res(fname=None, df=None):
     """
     Plots the timeseries, the depth corrected, and the depth data
     """
     if 'Linux' in platform.platform():
         matplotlib.use('TkAgg')
-        
-    names = {'Sensor1': 'Hardness', 'Sensor2': 'Ambient NIR', 'Sensor3': 'Active NIR'}
 
     if fname is not None:
         header = find_header(fname)
-        print(header)
         df = pd.read_csv(fname, header=header)
+        print(f"Filename: {fname}")
 
-    f, axes = plt.subplots(1, 3)
-    # fig = matplotlib.pyplot.gcf()
-    f.set_size_inches(8, 10)
-    pseudo_depth = np.arange(0, len(df.index))
+    # Setup a panel of plots
+    fig = plt.figure(constrained_layout=True)
+    gs = fig.add_gridspec(2, 5)
 
-    print("Number of samples: {}".format(len(df.index)))
-    print("Max depth achieved: {} cm".format(df['depth'].min()))
+    # Grab all the estimates on the typical events of interest
+    start = get_acceleration_start(df['acceleration'])
+    stop = get_acceleration_stop(df['acceleration'])
+    cropped = df.iloc[start:stop]
+    surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'])
 
-    ambient_shift = 6
-    active_shift = 4.5
+    # Calculate some travel distances
+    travel_delta = df['depth'].iloc[start] - df['depth'].iloc[stop]
+    snow_travel_delta = cropped['depth'].iloc[surface] - df['depth'].iloc[stop]
 
-    for k, v in names.items():
-        # Build the timeseries plot
-        if 'Ambient' in v:
-            d = df.index + ambient_shift
-        elif "Active" in v:
-            d = df.index + active_shift
-        else:
-            d = df.index
+    # print out some handy numbers
+    print(f"* Number of samples: {len(df.index)}")
+    print(f"* Max depth achieved: {df['depth'].min():0.1f} cm")
+    print(f"* Distance traveled between start/stop: {travel_delta:0.1f} cm")
+    print(f"* Distance traveled in the snow surface/stop: {snow_travel_delta:0.1f} cm")
 
-        # build time series plot oriented vertically
-        axes[0].plot(df[k], pseudo_depth, label=v)
+    # Provide depth shifts
+    ambient_shift = 6 # cm
+    active_shift = 4.5 # cm
 
-        # Build depth corrected
-        axes[1].plot(df[k], df['depth'], label=v)
+    event_alpha = 0.6
 
-    # plot data as timeseries
-    axes[0].set_title("Timeseries")
-    axes[0].set_ylim(len(df.index), 0)
-    axes[0].legend()
-    axes[0].set_xlim((0, 4096))
-    axes[0].set_ylabel('Time index')
+    # Plot time series data force data
+    ax = fig.add_subplot(gs[:, 0])
+    plot_events(ax, start=start, surface=start + surface, stop=stop, plot_type='vertical')
+    ax.plot(df['Sensor1'], df.index, color='k')
+    ax.set_title("Raw Force Timeseries")
+    ax.legend()
+    ax.set_ylabel('Time [s]')
+    ax.set_xlim(0, 4096)
+    ax.invert_yaxis()
 
-    # plot data with depth
-    axes[1].set_title("Depth Corrected")
-    axes[1].legend()
-    axes[1].set_xlim((0, 4096))
-    axes[1].set_ylabel('Depth from max height [cm]')
+    # plot time series NIR data
+    ax = fig.add_subplot(gs[:, 1])
+    plot_events(ax, start=start, surface=start + surface, stop=stop, plot_type='vertical')
+    ax.plot(df['Sensor2'], df.index, color='darkorange', label='Ambient')
+    ax.plot(df['Sensor3'], df.index, color='crimson', label='Active')
+    ax.set_title("NIR Timeseries")
+    ax.legend()
+    ax.invert_yaxis()
 
-    # plot the depth and accel
-    axes[2].plot(pseudo_depth, df['acceleration'], 'g')
-    axes[2].set_ylabel('Accelerometer [g]')
-    axes[2].set_xlabel('time index')
-    axes[2].set_title('Depth + Accelerometer')
-    twin = axes[2].twinx()
-    twin.plot(df['depth'], 'm')
-    twin.set_ylabel('Depth from Max Height [cm]')
+    # plot the depth correct Force
+    ax = fig.add_subplot(gs[:, 2])
+    plot_events(ax, surface=cropped['depth'].iloc[surface], plot_type='vertical')
+    ax.plot(cropped['Sensor1'], cropped['depth'], color='k', label='Inverted Force (RAW)')
+    ax.set_title("Depth Corrected")
+    ax.legend()
+    ax.set_xlim((0, 4096))
+    ax.set_ylabel('Force Depth [cm]')
 
-    plt.tight_layout()
+    # plot depth corrected NIR data
+    ax = fig.add_subplot(gs[:, 3])
+    plot_events(ax, surface=cropped['depth'].iloc[surface] + active_shift, plot_type='vertical')
+    ax.plot(cropped['Sensor2'], cropped['depth'] + ambient_shift, color='darkorange', label='Ambient')
+    ax.plot(cropped['Sensor3'], cropped['depth'] + active_shift, color='crimson', label='Active')
+    ax.set_title("NIR Depth Corrected")
+    ax.set_ylabel('Depth [cm]')
+    ax.legend()
+
+    # plot the acceleration as a sub-panel with events
+    ax = fig.add_subplot(gs[0, 4])
+    plot_events(ax, start, start + surface, stop, plot_type='normal')
+    ax.plot(df.index, df['acceleration'], color='darkslategrey')
+    ax.set_ylabel("Acceleration [g's]")
+    ax.set_xlabel('Time [s]')
+    ax.set_title('Accelerometer')
+
+    # plot the depth as a sub-panel with events
+    ax = fig.add_subplot(gs[1, 4])
+    ax.set_title('Depth')
+    plot_events(ax, start, start + surface, stop, plot_type='normal')
+    ax.plot(df['depth'], color='navy')
+    ax.set_ylabel('Depth from Max Height [cm]')
+    manager = plt.get_current_fig_manager()
+    manager.full_screen_toggle()
     plt.show()
 
 
@@ -136,74 +191,6 @@ def open_adjust_profile(fname):
     return df, data_type
 
 
-def shift_ambient_sensor(df):
-    """
-    Shift the ambient data
-    """
-    new_df = df.copy()
-
-    S4 = new_df['SENSOR 4'].copy()
-    S4 = S4.to_frame()
-
-    S4 = S4.sub(np.min(S4['SENSOR 4']), axis=1)
-
-    # Account for physical location of the sensor, offset by 1.2cm
-    S4.index = S4.index + 3
-
-    # Rejoin it back in
-    new_df = pd.concat(
-        [new_df[['SENSOR {0}'.format(i) for i in range(1, 4)]], S4], axis=1)
-
-    # Interpolate
-    # Due to mismatch index interpolate
-    new_df = new_df.interpolate(method='cubic')
-    return new_df
-
-
-def enough_ambient(df):
-    """
-    Check to see if there is enough ambient to remove
-    """
-
-    S4 = df['SENSOR 4']
-    value = (S4.max() - S4.min()) / S4.mean()
-    print("Ambient Sensor Change: %s" % value)
-    if value > 1.0:
-        return True
-    else:
-        print("Ambient threshhold is not met by this measurement!")
-        return False
-
-
-def ambient_removed(df):
-    columns = ['SENSOR 1', 'SENSOR 2', 'SENSOR 3', 'SENSOR 4']
-    profiles = columns[0:-1]
-    new_df = df.copy()
-    max_values = new_df[columns].max()
-    min_values = new_df[columns].min()
-    norm_values = max_values - min_values
-
-    # normalize
-    new_df[columns] = new_df[columns].subtract(min_values, axis=1)
-    new_df[columns] = new_df[columns].div(norm_values, axis=1)
-    new_df.plot()
-    plt.show()
-
-    # Remove the ambient from the normalized signal
-    new_df[profiles] = new_df[profiles].subtract(new_df['SENSOR 4'], axis=0)
-
-    # bring back from the norm
-    new_df = new_df.mul(norm_values, axis=1)
-    new_df = new_df.add(min_values, axis=1)
-
-    series = new_df.idxmin(axis=0)
-    in_snow = np.max(series.values)  # Find where were in the snow
-    # Trim off negative values
-    new_df = (new_df[new_df.loc[:in_snow] > 0]).dropna()
-    new_df.index = new_df.index - new_df.index.max()
-    return new_df
-
-
 def plot_hi_res_cli():
     files = sys.argv[1:]
 
@@ -215,8 +202,6 @@ def main():
     parser = argparse.ArgumentParser(
         description='Plot various versions of probe data.')
     parser.add_argument('file', help='path to measurement', nargs='+')
-    parser.add_argument('--ambient', '-ab', dest='ambient', action='store_true',
-                        help='Use ambient to adjust signals')
 
     parser.add_argument('--smooth''-sm', dest='smooth',
                         help='Provide a integer to describing number of windows to smooth over')
@@ -299,8 +284,6 @@ def main():
                         col = 'SENSOR %s' % i
                         new_col = 'Orig. %s' % col
                         data[new_col] = df_o[col]
-
-            fig = plt.figure(figsize=(6, 10))
 
             # Parse the datetime
             for k, d in data.items():

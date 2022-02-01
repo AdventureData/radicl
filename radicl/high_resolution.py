@@ -14,41 +14,11 @@ Usage:  1. plug in the probe.
 import argparse
 from argparse import RawTextHelpFormatter
 import numpy as np
-
+import pandas as pd
 from radicl import __version__
 from radicl.radicl import RADICL
 from radicl.ui_tools import get_logger
 from radicl.plotting import plot_hi_res
-
-
-def pad_with_nans(ts, match_ts):
-    """
-    Resamples a dataframe to match another dataframe
-
-    Args:
-        ts: numpy array of time series thats not the same size as the timeseries to match
-        match_ts: numpy array time series that the is to be matched in size
-    Returns:
-
-    """
-    # Grab the ratio of indicies between the two datasets
-    ratio = len(match_ts) / len(ts)
-
-    # Create an empty array of nans
-    new_data = np.zeros_like(match_ts).astype(np.float64)
-    new_data[new_data == 0] = np.NaN
-
-    # New data set index
-    iz = 0
-
-    # Repopulate around the nans where we have values
-    for ii in np.arange(len(ts)):
-        if ii != 0:
-            iz = int(ii * ratio)
-
-        new_data[iz] = ts[ii]
-
-    return new_data
 
 
 def build_high_resolution_data(cli, log):
@@ -61,45 +31,35 @@ def build_high_resolution_data(cli, log):
         log: Instantiated logger object
 
     Returns:
-        ts: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
+        result: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
     """
-    # Grab the calibrated data
+    # Grab the Raw data
     ts = cli.grab_data('rawsensor')[
         ['Sensor1', 'Sensor2', 'Sensor3']]
 
-    # rts = cli.grab_data('rawsensor')
-    depth = cli.grab_data('filtereddepth')['filtereddepth']
+    # Grab Depth data
+    depth = cli.grab_data('filtereddepth')
 
     # Grab accelerometer data
-    acc = cli.grab_data('rawacceleration')['Y-Axis']
-
-    log.info('Processing the depth data...')
+    acc = cli.grab_data('rawacceleration')
+    acc = acc.rename(columns={'Y-Axis':'acceleration'})
     # Set the 0 point of depth to the Starting point or the snow Surface
-    depth = depth - depth.values.min()
+    depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].min()
 
     # Invert Depth so bottom is negative max depth
-    depth = depth - depth.values.max()
+    depth['depth'] = depth['depth'] - depth['depth'].max()
+    depth = depth.drop(columns=['filtereddepth'])
 
-    log.info("Depth achieved: {} cm".format(abs(depth.max() - depth.min())))
-    log.info("Depth Samples: {}".format(len(depth)))
-    log.info("Acceleration Samples: {}".format(acc))
+    log.info("Depth achieved: {} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
+    log.info("Depth Samples: {}".format(len(depth.index)))
+    log.info("Acceleration Samples: {}".format(len(acc.index)))
+    log.info("Sensor Samples: {}".format(len(ts)))
+    result = pd.merge_ordered(ts, depth, on='time')
+    result = pd.merge_ordered(result, acc['acceleration'], on='time')
 
-    supplemental_data = {'acceleration': acc,
-                         'depth': depth
-                         }
-
-    # Reshape the supplemental_data and pad with Nans
-    for name, data in supplemental_data.items():
-        log.info("Padding {} data with Nans...".format(name))
-
-        # Pad with nans
-        new_data = pad_with_nans(data.values, ts['Sensor1'].values)
-
-        # Assign the data
-        ts[name] = new_data.copy()
     log.info("Interpolating between nan's...")
-    ts = ts.interpolate()
-    return ts
+    result = result.interpolate(method='index')
+    return result
 
 
 def main():
@@ -135,7 +95,6 @@ def main():
                    version=('%(prog)s v{version}').format(version=__version__))
     args = p.parse_args()
 
-    print(hdr)
     # Manage logging
     # Start this scripts logging
     log = get_logger("RAD Hi-Res Script", debug=args.debug)
@@ -152,6 +111,10 @@ def main():
 
     # Reset the probe in the event the probe was closed out without reset
     response = cli.probe.resetMeasurement()
+
+    # Grab the probe sample rate
+    SR = cli.probe.getSetting(setting_name='samplingrate')
+    zpfo = cli.probe.getSetting(setting_name='zpfo')
 
     # Loop through each sensor and retrieve the calibration data
     while not finished:
