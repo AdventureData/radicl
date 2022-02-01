@@ -66,7 +66,7 @@ def plot_hi_res(fname=None, df=None):
     start = get_acceleration_start(df['acceleration'])
     stop = get_acceleration_stop(df['acceleration'])
     cropped = df.iloc[start:stop].copy()
-    print(start,stop)
+
     surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'])
     # Re-zero the depth
     cropped['depth'] = cropped['depth'] - cropped['depth'].iloc[0]
