@@ -10,28 +10,10 @@ import time
 from matplotlib import pyplot as plt
 import matplotlib
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
+from study_lyte.io import read_csv
+
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
-
-
-def find_header(fname):
-    """
-    Find the header of any length
-    Args:
-        fname:
-
-    Returns:
-    """
-    with open(fname) as fp:
-        lines = fp.readlines()
-        result = None
-
-        for i, line in enumerate(lines):
-            if ',' in line:
-                result = i
-                break
-
-        return result
 
 
 def plot_events(ax, start=None, surface=None, stop=None, plot_type='normal'):
@@ -73,8 +55,7 @@ def plot_hi_res(fname=None, df=None):
         matplotlib.use('TkAgg')
 
     if fname is not None:
-        header = find_header(fname)
-        df = pd.read_csv(fname, header=header)
+        df, meta = read_csv(fname)
         print(f"Filename: {fname}")
 
     # Setup a panel of plots
@@ -85,6 +66,7 @@ def plot_hi_res(fname=None, df=None):
     start = get_acceleration_start(df['acceleration'])
     stop = get_acceleration_stop(df['acceleration'])
     cropped = df.iloc[start:stop].copy()
+    print(start,stop)
     surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'])
     # Re-zero the depth
     cropped['depth'] = cropped['depth'] - cropped['depth'].iloc[0]
@@ -161,45 +143,6 @@ def plot_hi_res(fname=None, df=None):
     plt.show()
 
 
-def open_adjust_profile(fname):
-    """
-    Open a profile and make a dataframe for plotting
-    """
-
-    # Collect the header
-    header_info = {}
-
-    with open(fname) as fp:
-        for i, line in enumerate(fp):
-            if '=' in line:
-                k, v = line.split('=')
-                k, v = (c.lower().strip() for c in [k, v])
-                header_info[k] = v
-            else:
-                header = i
-                break
-
-        fp.close()
-
-    if 'radicl version' in header_info.keys():
-        data_type = 'radicl'
-        columns = ['depth', 'sensor_1', 'sensor_2', 'sensor_3']
-
-    else:
-        data_type = 'rad_app'
-        columns = [
-            'sample',
-            'depth',
-            'sensor_1',
-            'sensor_2',
-            'sensor_3',
-            'sensor_4']
-
-    df = pd.read_csv(fname, header=header, names=columns)
-
-    return df, data_type
-
-
 def plot_hi_res_cli():
     files = sys.argv[1:]
 
@@ -244,7 +187,7 @@ def main():
             print('\n' + os.path.basename(f))
             print('=' * len(f))
             # Open the file and set the index to depth
-            df_o, data_type = open_adjust_profile(f)
+            df_o, meta = read_csv(f)
             df = df_o.copy()
 
             if args.smooth is not None:
