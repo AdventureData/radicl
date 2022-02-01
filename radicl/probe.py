@@ -915,21 +915,12 @@ class RAD_Probe:
         fstr = "{0}-{1:02d}-{2:02d}--{3:02d}:{4:02d}:{5:02d}"
         time_stamp = fstr.format(t.year, t.month, t.day,
                                  t.hour, t.minute, t.second)
-
-        header = "RECORDED={0}\n"
-        header += "radicl VERSION={1}\n"
-        header += "FIRMWARE REVISION={2}\n"
-        header += "HARDWARE REVISION={3}\n"
-        header += "MODEL NUMBER={4}\n"
-        # header += "SERIAL NUMBER={5}\n"
-
-        final = header.format(time_stamp,
-                              __version__,
-                              self.api.fw_rev,
-                              self.api.hw_rev,
-                              self.api.hw_id,
-                              )
-        return final
+        header = {"RECORDED": time_stamp,
+                  "radicl VERSION": __version__,
+                  "FIRMWARE REVISION": self.api.fw_rev,
+                  "HARDWARE REVISION": self.api.hw_rev,
+                  "MODEL NUMBER": self.api.hw_id}
+        return header
 
     def getSetting(self, **kwargs):
         """

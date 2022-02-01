@@ -20,7 +20,6 @@ from radicl.radicl import RADICL
 from radicl.ui_tools import get_logger
 from radicl.plotting import plot_hi_res
 
-
 def build_high_resolution_data(cli, log):
     """
     Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
@@ -128,7 +127,7 @@ def main():
         plot_hi_res(df=ts)
 
         # ouptut the data to a datetime file
-        cli.write_probe_data(ts, filename='')
+        cli.write_probe_data(ts, extra_meta={"SAMPLE RATE":str(SR), "ZPFO":str(zpfo)})
         response = cli.probe.resetMeasurement()
 
         i += 1

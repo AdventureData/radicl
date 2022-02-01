@@ -6,6 +6,7 @@ import sys
 import platform
 import numpy as np
 import pandas as pd
+import time
 from matplotlib import pyplot as plt
 import matplotlib
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
@@ -37,11 +38,11 @@ def plot_events(ax, start=None, surface=None, stop=None, plot_type='normal'):
     """
     Plots the hline or vline for each event on a plot
     Args:
-        ax:
-        start:
-        surface:
-        stop:
-        plot_type:
+        ax: matplotlib.Axes to add horizontal or vertical lines to
+        start: Array indicie to represent start of motion
+        surface: Array index to reprsent snow surface
+        stop: Array index to represent stop of motion
+        plot_type: string indicating whether the index is on the y (vertical) or the x (normal)
     """
     event_alpha = 0.6
     if plot_type == 'vertical':
@@ -60,7 +61,13 @@ def plot_events(ax, start=None, surface=None, stop=None, plot_type='normal'):
 
 def plot_hi_res(fname=None, df=None):
     """
-    Plots the timeseries, the depth corrected, and the depth data
+    Plots the timeseries, the depth corrected, accelerometer and depth data.
+    Plot from a dataframe or from an file. Use auto close to auto close the figure
+    after an some amount of time.
+
+    Args:
+        fname: Path to csv containing hi resolution data
+        df: Optional pandas dataframe instead of a file
     """
     if 'Linux' in platform.platform():
         matplotlib.use('TkAgg')
@@ -77,12 +84,14 @@ def plot_hi_res(fname=None, df=None):
     # Grab all the estimates on the typical events of interest
     start = get_acceleration_start(df['acceleration'])
     stop = get_acceleration_stop(df['acceleration'])
-    cropped = df.iloc[start:stop]
+    cropped = df.iloc[start:stop].copy()
     surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'])
+    # Re-zero the depth
+    cropped['depth'] = cropped['depth'] - cropped['depth'].iloc[0]
 
     # Calculate some travel distances
     travel_delta = df['depth'].iloc[start] - df['depth'].iloc[stop]
-    snow_travel_delta = cropped['depth'].iloc[surface] - df['depth'].iloc[stop]
+    snow_travel_delta = cropped['depth'].iloc[surface] - cropped['depth'].iloc[-1]
 
     # print out some handy numbers
     print(f"* Number of samples: {len(df.index)}")
@@ -93,8 +102,6 @@ def plot_hi_res(fname=None, df=None):
     # Provide depth shifts
     ambient_shift = 6 # cm
     active_shift = 4.5 # cm
-
-    event_alpha = 0.6
 
     # Plot time series data force data
     ax = fig.add_subplot(gs[:, 0])
@@ -145,8 +152,10 @@ def plot_hi_res(fname=None, df=None):
     ax = fig.add_subplot(gs[1, 4])
     ax.set_title('Depth')
     plot_events(ax, start, start + surface, stop, plot_type='normal')
-    ax.plot(df['depth'], color='navy')
+    ax.plot(df.index, df['depth'], color='navy')
     ax.set_ylabel('Depth from Max Height [cm]')
+
+    # Make the figure full screen
     manager = plt.get_current_fig_manager()
     manager.full_screen_toggle()
     plt.show()

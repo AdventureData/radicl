@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from termcolor import colored
+from study_lyte.io import write_csv
 
 import radicl
 from radicl import api, probe, serial
@@ -322,7 +323,7 @@ class RADICL(object):
                     fname = self.get_default_filename()
                     out.msg("Enter in a filepath for the data to be saved:")
                     filename = input("\nPress enter to use default:"
-                                     "\n(Default: ./{0}.csv)".format(fname))
+                                     "\n(Default: {0})".format(fname))
 
                     # Assign a default path
                     if filename == '':
@@ -344,13 +345,7 @@ class RADICL(object):
                                 self.filename))
 
                         if not self.data.empty:
-                            # Write the header so we knwo things about this
-                            with open(self.filename, 'w') as fp:
-                                final = self.probe.getProbeHeader()
-                                fp.writelines(final)
-                                fp.close()
-                            # Write data
-                            self.data.to_csv(self.filename, mode='a')
+                            self.write_probe_data(self.data, filename=filename)
                             self.state = 5
 
             if self.output_preference in ['plot', 'both'] and self.state == 4:
@@ -532,12 +527,13 @@ class RADICL(object):
 
         return filename
 
-    def write_probe_data(self, df, filename=''):
+    def write_probe_data(self, df, filename='', extra_meta={}):
         """
         Writes out a dataframe with a probe header to csv
         Args:
             df: pandas dataframe containing data
             filename: valid path to output to, if empty uses datetime
+            extra_meta: Dictionary of extra notes to add to the file header
         """
 
         # Recieve a default request
@@ -551,12 +547,9 @@ class RADICL(object):
 
         if not df.empty:
             # Write the header so we know things about this
-            with open(filename, 'w') as fp:
-                final = self.probe.getProbeHeader()
-                fp.writelines(final)
-                fp.close()
-            # Write data
-            df.to_csv(filename, mode='a')
+            meta = self.probe.getProbeHeader()
+            meta.update(extra_meta)
+            write_csv(df, meta, filename)
 
     def ask_user(self, question_str, answer_lst=None, helpme=None,
                  next_state=True, default_answer=None):
