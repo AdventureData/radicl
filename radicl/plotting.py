@@ -59,7 +59,7 @@ def plot_hi_res(fname=None, df=None):
         print(f"Filename: {fname}")
 
     # Setup a panel of plots
-    fig = plt.figure(constrained_layout=True)
+    fig = plt.figure(figsize=(10, 6), constrained_layout=True)
     gs = fig.add_gridspec(2, 5)
 
     # Grab all the estimates on the typical events of interest
