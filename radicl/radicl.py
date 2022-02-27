@@ -249,7 +249,7 @@ class RADICL(object):
 
                 if 'acceleration' in data_request:
                     sr = int(100 * ratio)
-                elif data_request in ['filtereddepth','rawdepth', 'rawpressure']:
+                elif data_request in ['filtereddepth', 'rawdepth', 'rawpressure']:
                     sr = int(75 * ratio)
 
                 time = np.linspace(0, n_samples / sr, n_samples)
@@ -303,7 +303,11 @@ class RADICL(object):
         # Take Measurements
         elif self.state == 3:
             self.take_a_reading()
+
             self.data = self.grab_data(self.daq)
+            # acc_cols = [c for c in self.data.columns if 'Axis' in c]
+            # self.data[acc_cols] = self.data[acc_cols].mul(2)
+
             self.state = 4
 
             if self.data is None:
@@ -315,7 +319,7 @@ class RADICL(object):
 
         # Data output and options
         elif self.state == 4:
-            if self.output_preference == 'write' or self.output_preference == 'both':
+            if self.output_preference in ['write', 'both']:
                 valid = False
 
                 #  Wait for real path
@@ -348,7 +352,7 @@ class RADICL(object):
                             self.write_probe_data(self.data, filename=filename)
                             self.state = 5
 
-            if self.output_preference in ['plot', 'both'] and self.state == 4:
+            if self.output_preference in ['plot', 'both']:
                 self.data.plot()
                 plt.show()
                 self.state = 5
