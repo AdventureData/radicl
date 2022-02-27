@@ -41,7 +41,9 @@ def build_high_resolution_data(cli, log):
 
     # Grab accelerometer data
     acc = cli.grab_data('rawacceleration')
-    acc = acc.rename(columns={'Y-Axis':'acceleration'})
+
+    # TODO: Once the FW is finalized. Remove this.
+    acc = acc.mul(2)
     # Set the 0 point of depth to the Starting point or the snow Surface
     depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].min()
 
@@ -54,7 +56,7 @@ def build_high_resolution_data(cli, log):
     log.info("Acceleration Samples: {}".format(len(acc.index)))
     log.info("Sensor Samples: {}".format(len(ts)))
     result = pd.merge_ordered(ts, depth, on='time')
-    result = pd.merge_ordered(result, acc['acceleration'], on='time')
+    result = pd.merge_ordered(result, acc, on='time')
 
     log.info("Interpolating between nan's...")
     result = result.interpolate(method='index')
@@ -74,27 +76,34 @@ def main():
         '* The user to press the probe button for start and stop\n\n'
         'To accurately take High resolution measurements this script automatically'
         ' downloads the following timeseries from the probe per measurement:\n'
-        '* Hardness\n'
+        '* Force\n'
         '* Active NIR\n'
         '* Passive NIR\n'
         '* Depth\n'
         '* Acceleration in the line of pole\n\n'
         'NOTE: The depth and accelerometer timeseries are all recorded at a lower'
         ' sampling rate than the sensors in the tip so they are interpolated to'
-        ' match the Hardness and NIR timeseries')
+        ' match the Force and NIR timeseries'
+        'Provide calibration coefficients via the calibration.json file to plot'
+        ' data calibrated (Note data is still stored raw)'
+    )
 
     p = argparse.ArgumentParser(description='\n'.join([hdr, help_string]),
                                 formatter_class=RawTextHelpFormatter)
     p.add_argument('-d', '--debug', dest='debug', action='store_true',
                    help="Debug flag will print out much more info")
-    p.add_argument('-a', '--plot_all', dest='all', action='store_true',
-                   help="When used will plot all datasets, otherwise it will "
-                        " just plot the depth corrected data.")
+    p.add_argument('-c', '--calibration', dest='calibration',
+                   help='Path to a json containing any calibration coefficients for any of the sensors')
     p.add_argument('--version', action='version',
-                   version=('%(prog)s v{version}').format(version=__version__))
+                   version='%(prog)s v{version}'.format(version=__version__))
+
     args = p.parse_args()
 
-    # Manage logging
+    if args.calibration is not None:
+        with open(args.calibration, 'r') as fp:
+            calibration = json.load(fp)
+    else:
+        calibration = {'Sensor1': [1, 0], 'Sensor2': [1, 0], 'Sensor3': [1, 0], 'Sensor4': [1, 0]}
     # Start this scripts logging
     log = get_logger("RAD Hi-Res Script", debug=args.debug)
 
@@ -124,10 +133,10 @@ def main():
 
         ts = build_high_resolution_data(cli, log)
 
-        plot_hi_res(df=ts)
+        plot_hi_res(df=ts, calibration_dict=calibration)
 
         # ouptut the data to a datetime file
-        cli.write_probe_data(ts, extra_meta={"SAMPLE RATE":str(SR), "ZPFO":str(zpfo)})
+        cli.write_probe_data(ts, extra_meta={"SAMPLE RATE": str(SR), "ZPFO": str(zpfo)})
         response = cli.probe.resetMeasurement()
 
         i += 1
