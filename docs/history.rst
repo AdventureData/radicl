@@ -64,3 +64,10 @@ Overhaul (2017-10-17)
 .. _16: https://github.com/AdventureData/radicl/issues/16
 .. _18: https://github.com/AdventureData/radicl/issues/18
 .. _19: https://github.com/AdventureData/radicl/issues/19
+
+0.6.0 (TBD)
+------------------
+* Fixes for issues 26_,
+* Loosen requirements for packages
+
+.. _26: https://github.com/AdventureData/radicl/issues/26
