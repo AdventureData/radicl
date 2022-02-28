@@ -20,6 +20,7 @@ from radicl.radicl import RADICL
 from radicl.ui_tools import get_logger
 from radicl.plotting import plot_hi_res
 
+
 def build_high_resolution_data(cli, log):
     """
     Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
@@ -104,6 +105,7 @@ def main():
             calibration = json.load(fp)
     else:
         calibration = {'Sensor1': [1, 0], 'Sensor2': [1, 0], 'Sensor3': [1, 0], 'Sensor4': [1, 0]}
+
     # Start this scripts logging
     log = get_logger("RAD Hi-Res Script", debug=args.debug)
 

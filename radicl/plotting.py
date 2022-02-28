@@ -10,8 +10,9 @@ import time
 from matplotlib import pyplot as plt
 import matplotlib
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface, get_nir_stop
-from study_lyte.io import read_csv
+from study_lyte.depth import get_depth_from_acceleration
 
+from study_lyte.io import read_csv
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
 
@@ -38,9 +39,10 @@ def plot_events(ax, start=None, surface=None, stop=None, nir_stop=None, plot_typ
     if surface is not None:
         line_fn(surface, linestyle='dashdot', color='cornflowerblue', label='Surface', alpha=event_alpha)
     if stop is not None:
-        line_fn(stop, linestyle='dashed',  color='red', label='Stop', alpha=event_alpha)
+        line_fn(stop, linestyle='dashed', color='red', label='Stop', alpha=event_alpha)
     if nir_stop is not None:
-        line_fn(nir_stop, linestyle='dashed',  color='magenta', label='NIR Stop', alpha=event_alpha)
+        line_fn(nir_stop, linestyle='dashed', color='magenta', label='NIR Stop', alpha=event_alpha)
+
 
 def plot_hi_res(fname=None, df=None, calibration_dict={}):
     """
@@ -66,38 +68,71 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     fig = plt.figure(figsize=(10, 6), constrained_layout=True)
     gs = fig.add_gridspec(2, 5)
 
-    # Grab all the estimates on the typical events of interest
-    detect_col = '
-    start = get_acceleration_start(df['acceleration'], threshold=0.1)
-    stop = get_acceleration_stop(df['acceleration'], threshold=0.30)
-    nir_stop = get_nir_stop(df['Sensor3'])
-    cropped = df.iloc[start:stop].copy()
+    # # Use time when possible
+    if 'time' in df.columns:
+        time_series = df['time']
+    else:
+        time_series = df.index
 
+    # Grab all the estimates on the typical events of interest
+    if 'Y-Axis' in df.columns:
+        detect_col = 'Y-Axis'
+        acc_cols = [c for c in df.columns if 'Axis' in c]
+
+    elif 'acceleration' in df.columns:
+        detect_col = 'acceleration'
+        acc_cols = ['acceleration']
+    else:
+        raise ValueError('No acceleration was found in the file!')
+
+    # Estimate events
+    start = get_acceleration_start(df[detect_col], threshold=0.1)
+    stop = get_acceleration_stop(df[detect_col], threshold=0.70)
+    nir_stop = get_nir_stop(df['Sensor3'])
+
+    # Calculate depth from acceleration
+    acc_depth = get_depth_from_acceleration(df[acc_cols+['time']]).mul(-100)
+    df['acc_depth'] = acc_depth[detect_col]
+    df['avg_depth'] = df[['acc_depth', 'depth']].mean(axis=1)
+
+    # Crop data to
+    cropped = df.iloc[start:stop].copy()
     surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'], threshold=0.05)
 
     # Re-zero the depth
     cropped['depth'] = cropped['depth'] - cropped['depth'].iloc[surface]
+    cropped['acc_depth'] = cropped['acc_depth'] - cropped['acc_depth'].iloc[surface]
+    cropped['avg_depth'] = cropped[['acc_depth', 'depth']].mean(axis=1)
 
     # Calculate some travel distances
     travel_delta = df['depth'].iloc[start] - df['depth'].iloc[stop]
-    snow_travel_delta =df['depth'].iloc[surface] - df['depth'].iloc[stop]
-    nir_travel_delta =df['depth'].iloc[surface] - df['depth'].iloc[nir_stop]
+    acc_depth_travel_delta = df['acc_depth'].iloc[start] - df['acc_depth'].iloc[stop]
+    snow_travel_delta = df['depth'].iloc[surface] - df['depth'].iloc[stop]
+    nir_travel_delta = df['depth'].iloc[surface] - df['depth'].iloc[nir_stop]
+    avg_distance = df['avg_depth'].iloc[surface] - df['avg_depth'].iloc[stop]
 
     # print out some handy numbers
     print(f"* Number of samples: {len(df.index)}")
-    print(f"* Max depth achieved: {df['depth'].min():0.1f} cm")
+    print(f"* Max baro depth achieved: {df['depth'].min():0.1f} cm")
     print(f"* Distance traveled between start/stop: {travel_delta:0.1f} cm")
+    print(f"* Acc. Distance traveled between start/stop: {acc_depth_travel_delta:0.1f} cm")
     print(f"* Distance between NIR surface/NIR Stop: {nir_travel_delta:0.1f} cm")
     print(f"* Distance traveled in the snow surface/stop: {snow_travel_delta:0.1f} cm")
+    print(f"* Avg. Distance traveled in the snow surface/stop: {avg_distance:0.1f} cm")
 
     # Provide depth shifts
-    ambient_shift = 6 # cm
-    active_shift = 4.5 # cm
+    ambient_shift = 6  # cm
+    active_shift = 4.5  # cm
+    time_series_events = dict(start=time_series[start],
+                              surface=time_series[start + surface],
+                              stop=time_series[stop],
+                              nir_stop=time_series[nir_stop],
+                              plot_type='vertical')
 
     # Plot time series data force data
     ax = fig.add_subplot(gs[:, 0])
-    plot_events(ax, start=start, surface=start + surface, stop=stop, nir_stop=nir_stop,  plot_type='vertical')
-    ax.plot(df['Sensor1'], df.index, color='k')
+    plot_events(ax, **time_series_events)
+    ax.plot(df['Sensor1'], time_series, color='k')
     ax.set_title("Raw Force Timeseries")
     ax.legend()
     ax.set_ylabel('Time [s]')
@@ -106,17 +141,17 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
 
     # plot time series NIR data
     ax = fig.add_subplot(gs[:, 1])
-    plot_events(ax, start=start, surface=start + surface, stop=stop, nir_stop=nir_stop, plot_type='vertical')
-    ax.plot(df['Sensor2'], df.index, color='darkorange', label='Ambient')
-    ax.plot(df['Sensor3'], df.index, color='crimson', label='Active')
+    plot_events(ax, **time_series_events)
+    ax.plot(df['Sensor2'], time_series, color='darkorange', label='Ambient')
+    ax.plot(df['Sensor3'], time_series, color='crimson', label='Active')
     ax.set_title("NIR Timeseries")
     ax.legend()
     ax.invert_yaxis()
 
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
-    plot_events(ax, surface=cropped['depth'].iloc[surface], plot_type='vertical')
-    ax.plot(cropped['Sensor1'], cropped['depth']-active_shift, color='k', label='Inverted Force (RAW)')
+    plot_events(ax, surface=cropped['acc_depth'].iloc[surface], plot_type='vertical')
+    ax.plot(cropped['Sensor1'], cropped['acc_depth'] - active_shift, color='k', label='Inverted Force (RAW)')
     ax.set_title("Depth Corrected")
     ax.legend()
     ax.set_xlim((0, 4096))
@@ -125,16 +160,20 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # plot depth corrected NIR data
     ax = fig.add_subplot(gs[:, 3])
     plot_events(ax, surface=cropped['depth'].iloc[surface], plot_type='vertical')
-    ax.plot(cropped['Sensor2'], cropped['depth'] + 2.0, color='darkorange', label='Ambient')
-    ax.plot(cropped['Sensor3'], cropped['depth'], color='crimson', label='Active')
+    ax.plot(cropped['Sensor2'], cropped['acc_depth'] + 2.0, color='darkorange', label='Ambient')
+    ax.plot(cropped['Sensor3'], cropped['acc_depth'], color='crimson', label='Active')
     ax.set_title("NIR Depth Corrected")
     ax.set_ylabel('Depth [cm]')
     ax.legend()
 
-    # plot the acceleration as a sub-panel with events
+    # plot the acceleration as a sub-panel with events, handle acceleration or all 3 axis
     ax = fig.add_subplot(gs[0, 4])
-    plot_events(ax, start, start + surface, stop,  nir_stop=nir_stop, plot_type='normal')
-    ax.plot(df.index, df['acceleration'], color='darkslategrey')
+    # Switch event direction plotting for horz. time series
+    time_series_events["plot_type"] = 'normal'
+    plot_events(ax, **time_series_events)
+    acc_colors = ['darkslategrey', 'pink', 'peachpuff']
+    for aidx, c in enumerate(acc_cols):
+        ax.plot(time_series, df[c], color=acc_colors[aidx], label=c)
     ax.set_ylabel("Acceleration [g's]")
     ax.set_xlabel('Time [s]')
     ax.set_title('Accelerometer')
@@ -142,8 +181,11 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # plot the depth as a sub-panel with events
     ax = fig.add_subplot(gs[1, 4])
     ax.set_title('Depth')
-    plot_events(ax, start, start + surface, stop, nir_stop=nir_stop, plot_type='normal')
-    ax.plot(df.index, df['depth'], color='navy')
+    plot_events(ax, **time_series_events)
+    ax.plot(time_series, df['depth'], color='navy')
+    ax.plot(time_series, df['acc_depth'], color='mediumseagreen')
+    ax.plot(time_series, df['avg_depth'], color='tomato')
+
     ax.set_ylabel('Depth from Max Height [cm]')
 
     # Make the figure full screen

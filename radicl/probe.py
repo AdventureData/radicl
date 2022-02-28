@@ -623,7 +623,7 @@ class RAD_Probe:
                     # Unpck bytes originally a 32 bit long and save
                     value = struct.unpack('<h', byte_object)[0]
 
-                    # Whats going on here?
+                    # Whats going on here? milli-g's?
                     value /= 1000
 
                     # Convert to G's, 2G's range
