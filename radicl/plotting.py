@@ -91,7 +91,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     nir_stop = get_nir_stop(df['Sensor3'])
 
     # Calculate depth from acceleration
-    acc_depth = get_depth_from_acceleration(df[acc_cols+['time']]).mul(-100)
+    acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(-100)
     df['acc_depth'] = acc_depth[detect_col]
     df['avg_depth'] = df[['acc_depth', 'depth']].mean(axis=1)
 
@@ -105,20 +105,23 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     cropped['avg_depth'] = cropped[['acc_depth', 'depth']].mean(axis=1)
 
     # Calculate some travel distances
-    travel_delta = df['depth'].iloc[start] - df['depth'].iloc[stop]
-    acc_depth_travel_delta = df['acc_depth'].iloc[start] - df['acc_depth'].iloc[stop]
-    snow_travel_delta = df['depth'].iloc[surface] - df['depth'].iloc[stop]
-    nir_travel_delta = df['depth'].iloc[surface] - df['depth'].iloc[nir_stop]
-    avg_distance = df['avg_depth'].iloc[surface] - df['avg_depth'].iloc[stop]
+    depth_cols = ['depth', 'acc_depth', 'avg_depth']
+    max_distance = df[depth_cols].max() - df['depth'].min()
+    mv_distance = df[depth_cols].iloc[start] - df['depth'].iloc[stop]
+    snow_distance = df[depth_cols].iloc[surface] - df[depth_cols].iloc[stop]
 
     # print out some handy numbers
-    print(f"* Number of samples: {len(df.index)}")
-    print(f"* Max baro depth achieved: {df['depth'].min():0.1f} cm")
-    print(f"* Distance traveled between start/stop: {travel_delta:0.1f} cm")
-    print(f"* Acc. Distance traveled between start/stop: {acc_depth_travel_delta:0.1f} cm")
-    print(f"* Distance between NIR surface/NIR Stop: {nir_travel_delta:0.1f} cm")
-    print(f"* Distance traveled in the snow surface/stop: {snow_travel_delta:0.1f} cm")
-    print(f"* Avg. Distance traveled in the snow surface/stop: {avg_distance:0.1f} cm")
+    print(f"* Number of samples: {len(df.index)}\n")
+    msg = '{:<25}{:<10}{:<10}{:<10}'
+    header = msg.format('Distance', 'Baro.', 'Accel.', 'Avg')
+    print(header)
+    print('-' * len(header))
+    msg = '{:<25}{:<10.1f}{:<10.1f}{:<10.1f}'
+    distances = {"Maximum Measured": max_distance,
+                 'During Motion': mv_distance,
+                 'Snow Only': snow_distance}
+    for desc, distance in distances.items():
+        print(msg.format(desc, distance['depth'], distance['acc_depth'], distance['avg_depth']))
 
     # Provide depth shifts
     ambient_shift = 6  # cm

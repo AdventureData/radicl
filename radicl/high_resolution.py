@@ -44,7 +44,7 @@ def build_high_resolution_data(cli, log):
     acc = cli.grab_data('rawacceleration')
 
     # TODO: Once the FW is finalized. Remove this.
-    acc = acc.mul(2)
+    acc = acc.mul(3)
     # Set the 0 point of depth to the Starting point or the snow Surface
     depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].min()
 
@@ -52,7 +52,7 @@ def build_high_resolution_data(cli, log):
     depth['depth'] = depth['depth'] - depth['depth'].max()
     depth = depth.drop(columns=['filtereddepth'])
 
-    log.info("Depth achieved: {} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
+    log.info("Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
     log.info("Depth Samples: {}".format(len(depth.index)))
     log.info("Acceleration Samples: {}".format(len(acc.index)))
     log.info("Sensor Samples: {}".format(len(ts)))
