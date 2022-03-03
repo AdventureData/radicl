@@ -193,7 +193,8 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
 
     # Make the figure full screen
     manager = plt.get_current_fig_manager()
-    manager.full_screen_toggle()
+    if 'Windows' not in platform.platform():
+        manager.full_screen_toggle()
     plt.show()
 
 
