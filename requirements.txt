@@ -5,4 +5,4 @@ argparse==1.4.0
 coloredlogs==14.0
 matplotlib>=3.3.4,<3.5.0
 progressbar2==3.53.1
-git+https://github.com/AdventureData/study_lyte@main
+study_lyte>=0.3.0
