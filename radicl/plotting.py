@@ -98,8 +98,8 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # Crop data to
     cropped = df.iloc[start:stop].copy()
     surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'], threshold=0.05)
-    surface = surface + start
-    
+    full_surface = surface + start
+
     # Re-zero the depth
     cropped['depth'] = cropped['depth'] - cropped['depth'].iloc[surface]
     cropped['acc_depth'] = cropped['acc_depth'] - cropped['acc_depth'].iloc[surface]
@@ -109,7 +109,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     depth_cols = ['depth', 'acc_depth', 'avg_depth']
     max_distance = df[depth_cols].max() - df['depth'].min()
     mv_distance = df[depth_cols].iloc[start] - df['depth'].iloc[stop]
-    snow_distance = df[depth_cols].iloc[surface] - df[depth_cols].iloc[stop]
+    snow_distance = df[depth_cols].iloc[full_surface] - df[depth_cols].iloc[stop]
 
     # print out some handy numbers
     print(f"* Number of samples: {len(df.index)}\n")
@@ -128,7 +128,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     ambient_shift = 6  # cm
     active_shift = 4.5  # cm
     time_series_events = dict(start=time_series[start],
-                              surface=time_series[start + surface],
+                              surface=time_series[full_surface],
                               stop=time_series[stop],
                               nir_stop=time_series[nir_stop],
                               plot_type='vertical')
