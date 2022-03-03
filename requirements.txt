@@ -1,9 +1,8 @@
 pyserial==3.4
-pandas==1.2.0
 colorama==0.4.3
 termcolor==1.1.0
 argparse==1.4.0
 coloredlogs==14.0
 matplotlib>=3.3.4,<3.5.0
 progressbar2==3.53.1
-study_lyte>0.2.0
+git+https://github.com/AdventureData/study_lyte.git@hi_res_work
