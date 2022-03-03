@@ -98,7 +98,8 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # Crop data to
     cropped = df.iloc[start:stop].copy()
     surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'], threshold=0.05)
-
+    surface = surface + start
+    
     # Re-zero the depth
     cropped['depth'] = cropped['depth'] - cropped['depth'].iloc[surface]
     cropped['acc_depth'] = cropped['acc_depth'] - cropped['acc_depth'].iloc[surface]
