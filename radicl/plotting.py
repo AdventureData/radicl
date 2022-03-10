@@ -88,16 +88,16 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # Estimate events
     start = get_acceleration_start(df[detect_col], threshold=0.1)
     stop = get_acceleration_stop(df[detect_col], threshold=0.70)
-    nir_stop = get_nir_stop(df['Sensor3'])
+    nir_stop = get_nir_stop(df['Sensor3'], threshold=0.07)
 
     # Calculate depth from acceleration
     acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(-100)
     df['acc_depth'] = acc_depth[detect_col]
     df['avg_depth'] = df[['acc_depth', 'depth']].mean(axis=1)
 
-    # Crop data to
+    # Crop data to motion
     cropped = df.iloc[start:stop].copy()
-    surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'], threshold=0.05)
+    surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'], threshold=0.02)
     full_surface = surface + start
 
     # Re-zero the depth
@@ -107,8 +107,8 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
 
     # Calculate some travel distances
     depth_cols = ['depth', 'acc_depth', 'avg_depth']
-    max_distance = df[depth_cols].max() - df['depth'].min()
-    mv_distance = df[depth_cols].iloc[start] - df['depth'].iloc[stop]
+    max_distance = df[depth_cols].max() - df[depth_cols].min()
+    mv_distance = df[depth_cols].iloc[start] - df[depth_cols].iloc[stop]
     snow_distance = df[depth_cols].iloc[full_surface] - df[depth_cols].iloc[stop]
 
     # print out some handy numbers
@@ -155,7 +155,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
     plot_events(ax, surface=cropped['acc_depth'].iloc[surface], plot_type='vertical')
-    ax.plot(cropped['Sensor1'], cropped['acc_depth'] - active_shift, color='k', label='Inverted Force (RAW)')
+    ax.plot(cropped['Sensor1'], cropped['acc_depth'], color='k', label='Inverted Force (RAW)')
     ax.set_title("Depth Corrected")
     ax.legend()
     ax.set_xlim((0, 4096))
@@ -175,20 +175,22 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # Switch event direction plotting for horz. time series
     time_series_events["plot_type"] = 'normal'
     plot_events(ax, **time_series_events)
-    acc_colors = ['darkslategrey', 'pink', 'peachpuff']
+    acc_colors = ['darkslategrey', 'darkgreen', 'darkorange']
     for aidx, c in enumerate(acc_cols):
         ax.plot(time_series, df[c], color=acc_colors[aidx], label=c)
     ax.set_ylabel("Acceleration [g's]")
     ax.set_xlabel('Time [s]')
     ax.set_title('Accelerometer')
+    ax.legend()
 
     # plot the depth as a sub-panel with events
     ax = fig.add_subplot(gs[1, 4])
     ax.set_title('Depth')
     plot_events(ax, **time_series_events)
-    ax.plot(time_series, df['depth'], color='navy')
-    ax.plot(time_series, df['acc_depth'], color='mediumseagreen')
-    ax.plot(time_series, df['avg_depth'], color='tomato')
+    ax.plot(time_series, df['depth'], color='navy', label='Baro.')
+    ax.plot(time_series, df['acc_depth'], color='mediumseagreen', label='Acc.')
+    ax.plot(time_series, df['avg_depth'], color='tomato', label='Avg.')
+    ax.legend()
 
     ax.set_ylabel('Depth from Max Height [cm]')
 
@@ -203,7 +205,11 @@ def plot_hi_res_cli():
     files = sys.argv[1:]
 
     for f in files:
-        plot_hi_res(fname=f)
+        try:
+            plot_hi_res(fname=f)
+        except Exception as e:
+            print(f'Encountered error while processing {f}')
+            print(e)
 
 
 def main():
