@@ -810,7 +810,7 @@ class RAD_API:
 
         """
         message = [0x9F, 0x52, 0x01, 0x00, 0x04]
-        message.extend(abs_range_gs.to_bytes(1, byteorder='little'))
+        message.extend(abs_range_gs.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
         return self.__EvaluateAndReturn(response, 0x52, 0)
 
