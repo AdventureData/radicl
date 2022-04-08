@@ -71,7 +71,7 @@ class RAD_API:
         Generic send/receive function
         Returns the response if successfull, empty result otherwise
         """
-        # Dynamic delay variabl, increases with each failed loop
+        # Dynamic delay variable, increases with each failed loop
         delay_counter = 0.001
 
         # Make sure that the read delay is at least 1ms (i.e. it cannot be 0)
@@ -435,7 +435,7 @@ class RAD_API:
         if ret_val['status'] == 1:
             value = ret_val['data']
             rev_string = str(value[0]) + "." + str(value[1]) + \
-                "." + str(value[2]) + "." + str(value[3])
+                         "." + str(value[2]) + "." + str(value[3])
             ret_val['data'] = rev_string
         return ret_val
 
@@ -513,7 +513,7 @@ class RAD_API:
         """
 
         message = [0x9F, 0x45, 0x00, 0x00, 0x05]
-        message .extend(buffer_id.to_bytes(1, byteorder='little'))
+        message.extend(buffer_id.to_bytes(1, byteorder='little'))
         message.extend(numPacket.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
 
@@ -693,7 +693,7 @@ class RAD_API:
         return self.__EvaluateAndReturn(response, 0x4E, 4)
 
     def MeasSetCalibData(
-            self, num_sensor, calibration_value_low, calibration_value_high):
+        self, num_sensor, calibration_value_low, calibration_value_high):
         """
         Sets the probes calibration values. A high and low are set where the
         low. This is applied linearly and thus the low value should be the
@@ -772,26 +772,6 @@ class RAD_API:
         response = self.__send_receive(message)
         return self.__EvaluateAndReturn(response, 0x51, 0)
 
-    def MeasGetAccThreshold(self):
-        """
-        Reads the accelerometer threshold setting (an unsigned 32-bit integer in mG)
-        Returns status=1 if successfull, status=0 otherwise
-        """
-        response = self.__send_receive([0x9F, 0x50, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, 0x50, 4)
-
-    def MeasSetAccThreshold(self, threshold):
-        """
-        Sets the accelerometer threshold setting (accelerometer thresholding algorithm)
-        The parameter 'threshold' is an unsigned 32-bit (4-bytes) absolute value indicating the threshold in mG
-        A value of 0 turns the accelerometer thresholding algorithm off
-        Returns status=1 if successfull, status=0 otherwise
-        """
-        message = [0x9F, 0x50, 0x01, 0x00, 0x04]
-        message.extend(threshold.to_bytes(4, byteorder='little'))
-        response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, 0x50, 0)
-
     def MeasGetAccZPFO(self):
         """
         Reads the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
@@ -811,6 +791,28 @@ class RAD_API:
         message.extend(zpfo.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
         return self.__EvaluateAndReturn(response, 0x51, 0)
+
+    def MeasGetAccRange(self):
+        """
+        gets the accelerometer range
+        """
+        response = self.__send_receive([0x9F, 0x52, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, 0x52, 1)
+
+    def MeasSetAccRange(self, abs_range_gs):
+        """
+        Sets the accelerometer range
+
+        Args:
+            abs_range_gs: integer value for range e.g. 2 == +/-2g's
+
+        Returns:
+
+        """
+        message = [0x9F, 0x52, 0x01, 0x00, 0x04]
+        message.extend(abs_range_gs.to_bytes(1, byteorder='little'))
+        response = self.__send_receive(message)
+        return self.__EvaluateAndReturn(response, 0x52, 0)
 
     # ******************************
     # ***** FW UPDATE COMMANDS *****

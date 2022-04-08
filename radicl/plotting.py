@@ -256,13 +256,6 @@ def main():
                 df = df.rolling(window=int(args.smooth)).mean()
                 post_processed = True
 
-            # Remove the ambient signal
-            if args.ambient:
-                if enough_ambient(df):
-                    df = shift_ambient_sensor(df)
-                    df = ambient_removed(df)
-                post_processed = True
-
             print("Pre-processed profile:")
             print("\tNum of samples: {0}".format(len(df_o.index)))
             print("\tDepth achieved: {0:.1f}".format(min(df_o.index)[-1]))

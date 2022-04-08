@@ -15,6 +15,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import numpy as np
 import pandas as pd
+import json
 from radicl import __version__
 from radicl.radicl import RADICL
 from radicl.ui_tools import get_logger
@@ -134,11 +135,11 @@ def main():
         cli.listen_for_a_reading()
 
         ts = build_high_resolution_data(cli, log)
-
-        plot_hi_res(df=ts, calibration_dict=calibration)
-
-        # ouptut the data to a datetime file
+        # Output the data to a datetime file
         cli.write_probe_data(ts, extra_meta={"SAMPLE RATE": str(SR), "ZPFO": str(zpfo)})
+
+        # Plot the data
+        plot_hi_res(df=ts, calibration_dict=calibration)
         response = cli.probe.resetMeasurement()
 
         i += 1
