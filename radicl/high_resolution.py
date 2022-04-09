@@ -45,7 +45,8 @@ def build_high_resolution_data(cli, log):
     acc = cli.grab_data('rawacceleration')
 
     # TODO: Once the FW is finalized. Remove this.
-    acc = acc.mul(3)
+    a = cli.probe.getSetting(setting_name='accrange')
+    acc = acc.mul(a/2)
     # Set the 0 point of depth to the Starting point or the snow Surface
     depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].min()
 
