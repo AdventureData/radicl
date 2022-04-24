@@ -1,21 +1,15 @@
 # coding: utf-8
 
-import binascii
 import datetime
 import inspect
-import os
 import struct
 import sys
 import time
 
-import numpy as np
-import serial
-
 from radicl import __version__
 from radicl import serial as rs
 from radicl.api import RAD_API
-from radicl.ui_tools import (
-    Messages, get_logger, parse_func_list, parse_help, print_helpme)
+from radicl.ui_tools import get_logger, parse_func_list
 
 error_codes = {2049: "The probe measurement/sensor is not running",
                2048: 'Generic Measurement error',
@@ -25,6 +19,12 @@ error_codes = {2049: "The probe measurement/sensor is not running",
                2053: "Invalid buffer was addressed",
                2054: "Reading data failed"}
 
+# From Data sheet for accelerometer in REV C
+acc_sensitivity = {2: 0.06,
+                   4: 0.12,
+                   6: 0.18,
+                   8: 0.24,
+                   16: 0.73}
 
 class RAD_Probe:
     """
@@ -604,6 +604,10 @@ class RAD_Probe:
             final = {name_str.format(a): [] for a in acc_axes}
             offset = 0
 
+            # Grab the range to scale the incoming data
+            a_r = self.getSetting(setting_name='accrange')
+            sensitivity = acc_sensitivity[a_r]
+
             # Loop over all the samples
             for ii in range(0, samples):
                 # Loop over the sample and extract each axis
@@ -623,11 +627,10 @@ class RAD_Probe:
                     # Unpck bytes originally a 32 bit long and save
                     value = struct.unpack('<h', byte_object)[0]
 
-                    # Whats going on here? milli-g's?
+                    # Convert to milli-gs while accounting for acc. range
+                    value *= sensitivity
+                    # Convert to Gs.
                     value /= 1000
-
-                    # Convert to G's, 2G's range
-                    value *= 0.06
 
                     final[name].append(value)
 
