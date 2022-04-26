@@ -13,7 +13,6 @@ Usage:  1. plug in the probe.
 
 import argparse
 from argparse import RawTextHelpFormatter
-import numpy as np
 import pandas as pd
 import json
 from radicl import __version__
@@ -36,12 +35,12 @@ def build_high_resolution_data(cli, log):
     """
     # Grab the Raw data
     ts = cli.grab_data('rawsensor')[
-        ['time', 'Sensor1', 'Sensor2', 'Sensor3']]
+        ['Sensor1', 'Sensor2', 'Sensor3']]
 
-    # Grab Depth data
+    # Grab relative, filtered barometer data
     depth = cli.grab_data('filtereddepth')
 
-    # Grab accelerometer data
+    # Grab Acceleration
     acc = cli.grab_data('rawacceleration')
 
     # Set the 0 point of depth to the Starting point or the snow Surface
@@ -51,14 +50,14 @@ def build_high_resolution_data(cli, log):
     depth['depth'] = depth['depth'] - depth['depth'].max()
     depth = depth.drop(columns=['filtereddepth'])
 
-    log.info("Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
+    log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
     log.info("Depth Samples: {}".format(len(depth.index)))
     log.info("Acceleration Samples: {}".format(len(acc.index)))
     log.info("Sensor Samples: {}".format(len(ts)))
+
+    log.info("Infilling and interpolating dataset...")
     result = pd.merge_ordered(ts, depth, on='time')
     result = pd.merge_ordered(result, acc, on='time')
-
-    log.info("Interpolating between nan's...")
     result = result.interpolate(method='index')
     return result
 
@@ -124,6 +123,7 @@ def main():
     # Grab the probe sample rate
     SR = cli.probe.getSetting(setting_name='samplingrate')
     zpfo = cli.probe.getSetting(setting_name='zpfo')
+    acc_range = cli.probe.getSetting(setting_name='accrange')
 
     # Loop through each sensor and retrieve the calibration data
     while not finished:
@@ -132,13 +132,19 @@ def main():
         print("Press probe button to start...")
         cli.listen_for_a_reading()
 
+        # Collect and build the data
         ts = build_high_resolution_data(cli, log)
+
         # Output the data to a datetime file
-        cli.write_probe_data(ts, extra_meta={"SAMPLE RATE": str(SR), "ZPFO": str(zpfo)})
+        cli.write_probe_data(ts, extra_meta={"SAMPLE RATE": str(SR),
+                                             "ZPFO": str(zpfo),
+                                             "ACC. Range": str(acc_range)})
 
         # Plot the data
         plot_hi_res(df=ts, calibration_dict=calibration)
-        response = cli.probe.resetMeasurement()
+
+        # Reset the probe / clear out the data
+        cli.probe.resetMeasurement()
 
         i += 1
         log.info("{} measurements taken this session".format(i))

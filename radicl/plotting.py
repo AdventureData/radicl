@@ -4,14 +4,12 @@ import argparse
 import os
 import sys
 import platform
-import numpy as np
-import pandas as pd
-import time
 from matplotlib import pyplot as plt
 import matplotlib
+from radicl.ui_tools import get_logger
+
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface, get_nir_stop
 from study_lyte.depth import get_depth_from_acceleration
-
 from study_lyte.io import read_csv
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
@@ -56,13 +54,14 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
         calibration_dict: Dictionary to offer calibration coefficients for any of the sensors
 
     """
+    log = get_logger('Hi Res Plot')
     if 'Linux' in platform.platform():
         matplotlib.use('TkAgg')
 
     print('')
     if fname is not None:
         df, meta = read_csv(fname)
-        print(f"Filename: {fname}")
+        log.info(f"Filename: {fname}")
 
     # Setup a panel of plots
     fig = plt.figure(figsize=(10, 6), constrained_layout=True)
@@ -86,8 +85,8 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
         raise ValueError('No acceleration was found in the file!')
 
     # Estimate events
-    start = get_acceleration_start(df[detect_col], threshold=0.1)
-    stop = get_acceleration_stop(df[detect_col], threshold=0.70)
+    start = get_acceleration_start(df[detect_col], threshold=0.15)
+    stop = get_acceleration_stop(df[detect_col], threshold=0.45)
     nir_stop = get_nir_stop(df['Sensor3'], threshold=0.07)
 
     # Calculate depth from acceleration
@@ -112,17 +111,18 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     snow_distance = df[depth_cols].iloc[full_surface] - df[depth_cols].iloc[stop]
 
     # print out some handy numbers
-    print(f"* Number of samples: {len(df.index)}\n")
+    log.info(f"* Number of samples: {len(df.index)}\n")
     msg = '{:<25}{:<10}{:<10}{:<10}'
     header = msg.format('Distance', 'Baro.', 'Accel.', 'Avg')
-    print(header)
-    print('-' * len(header))
+    log.info(header)
+    log.info('-' * len(header))
     msg = '{:<25}{:<10.1f}{:<10.1f}{:<10.1f}'
     distances = {"Maximum Measured": max_distance,
                  'During Motion': mv_distance,
                  'Snow Only': snow_distance}
     for desc, distance in distances.items():
-        print(msg.format(desc, distance['depth'], distance['acc_depth'], distance['avg_depth']))
+        log.info(msg.format(desc, distance['depth'], distance['acc_depth'],
+                            distance['avg_depth']))
 
     # Provide depth shifts
     ambient_shift = 6  # cm
@@ -181,7 +181,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     ax.set_ylabel("Acceleration [g's]")
     ax.set_xlabel('Time [s]')
     ax.set_title('Accelerometer')
-    ax.legend()
+    ax.legend(loc=2)
 
     # plot the depth as a sub-panel with events
     ax = fig.add_subplot(gs[1, 4])
