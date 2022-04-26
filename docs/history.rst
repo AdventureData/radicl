@@ -65,9 +65,15 @@ Overhaul (2017-10-17)
 .. _18: https://github.com/AdventureData/radicl/issues/18
 .. _19: https://github.com/AdventureData/radicl/issues/19
 
-0.6.0 (TBD)
+0.6.0 (2022-04-25)
 ------------------
-* Fixes for issues 26_,
+* Fixes for issue 26_
+* Working toward most of 25_
 * Loosen requirements for packages
+* Incorporating Study Lyte package
+* Improved plotting interface for hi res measurement
+* Fixed major bug in interpolation scheme in high res
+* Added tests mocking high res ops
 
+.. _25: https://github.com/AdventureData/radicl/issues/25
 .. _26: https://github.com/AdventureData/radicl/issues/26
