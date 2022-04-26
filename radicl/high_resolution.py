@@ -34,8 +34,7 @@ def build_high_resolution_data(cli, log):
         result: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
     """
     # Grab the Raw data
-    ts = cli.grab_data('rawsensor')[
-        ['Sensor1', 'Sensor2', 'Sensor3']]
+    ts = cli.grab_data('rawsensor')
 
     # Grab relative, filtered barometer data
     depth = cli.grab_data('filtereddepth')
