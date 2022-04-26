@@ -27,8 +27,10 @@ def test_set_setting(probe, setting_name, value):
     Test setting a parameter in the probes settings
     """
     a = probe.setSetting(setting_name=setting_name, value=value)
+    sleep(0.25)
     a = probe.getSetting(setting_name=setting_name)
     assert (a == value)
+    sleep(0.25)
 
 
 @pytest.mark.skipif(not_connected, reason='probe not connected')
