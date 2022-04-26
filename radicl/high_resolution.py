@@ -36,7 +36,7 @@ def build_high_resolution_data(cli, log):
     """
     # Grab the Raw data
     ts = cli.grab_data('rawsensor')[
-        ['Sensor1', 'Sensor2', 'Sensor3']]
+        ['time', 'Sensor1', 'Sensor2', 'Sensor3']]
 
     # Grab Depth data
     depth = cli.grab_data('filtereddepth')
@@ -44,9 +44,6 @@ def build_high_resolution_data(cli, log):
     # Grab accelerometer data
     acc = cli.grab_data('rawacceleration')
 
-    # TODO: Once the FW is finalized. Remove this.
-    a = cli.probe.getSetting(setting_name='accrange')
-    acc = acc.mul(a/2)
     # Set the 0 point of depth to the Starting point or the snow Surface
     depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].min()
 

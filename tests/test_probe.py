@@ -1,25 +1,37 @@
 import pytest
 from time import sleep
 import numpy as np
+from . import not_connected
 
 
+@pytest.mark.skipif(not_connected, reason='probe not connected')
 @pytest.mark.parametrize("setting_name", [
     'accrange'
 ])
 def test_get_setting(probe, setting_name):
+    """
+    Functionality test ensuring a setting runs
+    """
     a = probe.getSetting(setting_name=setting_name)
-    print(a)
+    assert True
 
 
+@pytest.mark.skipif(not_connected, reason='probe not connected')
 @pytest.mark.parametrize("setting_name, value", [
-    ('accrange', 2)
+    ('accrange', 2),
+    ('samplingrate', 5000),
+    ('zpfo', 80)
 ])
 def test_set_setting(probe, setting_name, value):
+    """
+    Test setting a parameter in the probes settings
+    """
     a = probe.setSetting(setting_name=setting_name, value=value)
     a = probe.getSetting(setting_name=setting_name)
     assert (a == value)
 
 
+@pytest.mark.skipif(not_connected, reason='probe not connected')
 @pytest.mark.parametrize('scale', [2, 16])
 def test_rawacceleration_scaling(meas_probe, scale):
     """
