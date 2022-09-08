@@ -1,6 +1,5 @@
 # coding: utf-8
 
-import sys
 import serial
 from serial.tools import list_ports
 

@@ -1,11 +1,6 @@
 # coding: utf-8
 
-import binascii
-import sys
 import time
-import serial
-
-from radicl import serial as rs
 from radicl.ui_tools import get_logger
 
 pca_id_list = ["UNKNOWN", "PB1", "PB2", "PB3"]

@@ -142,9 +142,12 @@ class RAD_Probe:
                 elif dtype == str:
                     value = data.decode('utf-8')
 
+                elif dtype == 'hex':
+                    value = data.hex()
+
                 else:
                     raise ValueError(
-                        "No types other than str and int are implemented")
+                        "No types other than str, hex, and int are implemented")
 
                 result.append(value)
 
@@ -269,7 +272,13 @@ class RAD_Probe:
         """
 
         ret = self.api.getSerialNumber()
-        return self.manage_data_return(ret, dtype=str)
+        if ret['data'] is not None:
+            # Flip the byte array since it comes in backwards
+            ret['data'] = ret['data'][::-1]
+            # upper case to match the store serial number lists
+            return self.manage_data_return(ret, dtype='hex').upper()
+        else:
+            return self.manage_data_return(ret, dtype='hex')
 
     def getProbeSystemStatus(self):
         """
@@ -481,7 +490,7 @@ class RAD_Probe:
                 final['samples'] = samples
 
                 # Final reporting
-                self.log.info('Retrieving {} samples of {} data...'
+                self.log.info('Retrieving {:,} samples of {} data...'
                               ''.format(ret_dict['samples'], buffer_name))
 
             self.log.debug("Segment Retrieved {:d}/{:d}."

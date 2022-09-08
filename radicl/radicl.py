@@ -12,8 +12,7 @@ from matplotlib import pyplot as plt
 from termcolor import colored
 from study_lyte.io import write_csv
 
-import radicl
-from radicl import api, probe, serial
+from radicl import probe
 from radicl.calibrate import get_avg_sensor
 from radicl.ui_tools import (Messages, get_logger, parse_func_list, parse_help,
                              print_helpme)
