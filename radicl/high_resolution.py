@@ -50,9 +50,9 @@ def build_high_resolution_data(cli, log):
     depth = depth.drop(columns=['filtereddepth'])
 
     log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
-    log.info("Depth Samples: {}".format(len(depth.index)))
-    log.info("Acceleration Samples: {}".format(len(acc.index)))
-    log.info("Sensor Samples: {}".format(len(ts)))
+    log.info("Depth Samples: {:,}".format(len(depth.index)))
+    log.info("Acceleration Samples: {:,}".format(len(acc.index)))
+    log.info("Sensor Samples: {:,}".format(len(ts)))
 
     log.info("Infilling and interpolating dataset...")
     result = pd.merge_ordered(ts, depth, on='time')

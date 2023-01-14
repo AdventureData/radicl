@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 import matplotlib
 from radicl.ui_tools import get_logger
 
-from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface, get_nir_stop
+from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
 from study_lyte.depth import get_depth_from_acceleration
 from study_lyte.io import read_csv
 
@@ -20,8 +20,8 @@ def plot_events(ax, start=None, surface=None, stop=None, nir_stop=None, plot_typ
     Plots the hline or vline for each event on a plot
     Args:
         ax: matplotlib.Axes to add horizontal or vertical lines to
-        start: Array indicie to represent start of motion
-        surface: Array index to reprsent snow surface
+        start: Array index to represent start of motion
+        surface: Array index to represent snow surface
         stop: Array index to represent stop of motion
         plot_type: string indicating whether the index is on the y (vertical) or the x (normal)
     """
@@ -45,8 +45,8 @@ def plot_events(ax, start=None, surface=None, stop=None, nir_stop=None, plot_typ
 def plot_hi_res(fname=None, df=None, calibration_dict={}):
     """
     Plots the timeseries, the depth corrected, accelerometer and depth data.
-    Plot from a dataframe or from an file. Use auto close to auto close the figure
-    after an some amount of time.
+    Plot from a dataframe or from a file. Use auto close to auto close the figure
+    after a some amount of time.
 
     Args:
         fname: Path to csv containing hi resolution data
@@ -87,7 +87,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # Estimate events
     start = get_acceleration_start(df[detect_col], threshold=0.15)
     stop = get_acceleration_stop(df[detect_col], threshold=0.45)
-    nir_stop = get_nir_stop(df['Sensor3'], threshold=0.07)
+
 
     # Calculate depth from acceleration
     acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(-100)
@@ -111,7 +111,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     snow_distance = df[depth_cols].iloc[full_surface] - df[depth_cols].iloc[stop]
 
     # print out some handy numbers
-    log.info(f"* Number of samples: {len(df.index)}\n")
+    log.info(f"* Number of samples: {len(df.index):,}\n")
     msg = '{:<25}{:<10}{:<10}{:<10}'
     header = msg.format('Distance', 'Baro.', 'Accel.', 'Avg')
     log.info(header)
@@ -130,7 +130,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     time_series_events = dict(start=time_series[start],
                               surface=time_series[full_surface],
                               stop=time_series[stop],
-                              nir_stop=time_series[nir_stop],
+                              nir_stop=None,
                               plot_type='vertical')
 
     # Plot time series data force data
@@ -138,7 +138,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     plot_events(ax, **time_series_events)
     ax.plot(df['Sensor1'], time_series, color='k')
     ax.set_title("Raw Force Timeseries")
-    ax.legend()
+    ax.legend(loc='lower left')
     ax.set_ylabel('Time [s]')
     ax.set_xlim(0, 4096)
     ax.invert_yaxis()
@@ -149,7 +149,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     ax.plot(df['Sensor2'], time_series, color='darkorange', label='Ambient')
     ax.plot(df['Sensor3'], time_series, color='crimson', label='Active')
     ax.set_title("NIR Timeseries")
-    ax.legend()
+    ax.legend(loc='lower left')
     ax.invert_yaxis()
 
     # plot the depth corrected Force
@@ -168,11 +168,11 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     ax.plot(cropped['Sensor3'], cropped['acc_depth'], color='crimson', label='Active')
     ax.set_title("NIR Depth Corrected")
     ax.set_ylabel('Depth [cm]')
-    ax.legend()
+    ax.legend(loc='lower left')
 
     # plot the acceleration as a sub-panel with events, handle acceleration or all 3 axis
     ax = fig.add_subplot(gs[0, 4])
-    # Switch event direction plotting for horz. time series
+    # Switch event direction plotting for horiz. time series
     time_series_events["plot_type"] = 'normal'
     plot_events(ax, **time_series_events)
     acc_colors = ['darkslategrey', 'darkgreen', 'darkorange']
@@ -181,7 +181,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     ax.set_ylabel("Acceleration [g's]")
     ax.set_xlabel('Time [s]')
     ax.set_title('Accelerometer')
-    ax.legend(loc=2)
+    ax.legend(loc='lower left')
 
     # plot the depth as a sub-panel with events
     ax = fig.add_subplot(gs[1, 4])
@@ -190,7 +190,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     ax.plot(time_series, df['depth'], color='navy', label='Baro.')
     ax.plot(time_series, df['acc_depth'], color='mediumseagreen', label='Acc.')
     ax.plot(time_series, df['avg_depth'], color='tomato', label='Avg.')
-    ax.legend()
+    ax.legend(loc='lower left')
 
     ax.set_ylabel('Depth from Max Height [cm]')
 
@@ -257,14 +257,14 @@ def main():
                 post_processed = True
 
             print("Pre-processed profile:")
-            print("\tNum of samples: {0}".format(len(df_o.index)))
+            print("\tNum of samples: {0:,}".format(len(df_o.index)))
             print("\tDepth achieved: {0:.1f}".format(min(df_o.index)[-1]))
             print("\tResolution: {0:.1f} pts/cm".format(
                 abs(len(df_o.index) / min(df_o.index)[1] - max(df_o.index)[1])))
 
             if post_processed:
                 print("\nPost-processed profile:")
-                print("\tNum of samples: {0}".format(len(df.index)))
+                print("\tNum of samples: {0:,}".format(len(df.index)))
                 print("\tDepth achieved: {0:.1f}".format(min(df.index)))
                 print(
                     "\tResolution: {0:.1f} pts/cm".format(abs(len(df.index) / min(df.index) - max(df.index))))

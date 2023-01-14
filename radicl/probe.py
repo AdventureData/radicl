@@ -185,7 +185,7 @@ class RAD_Probe:
 
         if ret['status'] == 1:
             num_segments = int.from_bytes(ret['data'], byteorder='little')
-            self.log.debug('Retrieving {} segments of {} data...'.format(num_segments, buffer_name.lower()))
+            self.log.debug('Retrieving {:,} segments of {} data...'.format(num_segments, buffer_name.lower()))
 
         # No data returned
         else:
@@ -322,7 +322,7 @@ class RAD_Probe:
         """
 
         ret = self.api.MeasStart()
-        self.log.debug("Start measurement Reqested.")
+        self.log.debug("Start measurement requested.")
 
         if ret['status'] == 1:
             self.wait_for_state(1)
@@ -341,7 +341,7 @@ class RAD_Probe:
         """
 
         ret = self.api.MeasStop()
-        self.log.debug("Stop measurement reqested.")
+        self.log.debug("Stop measurement requested.")
 
         if ret['status'] == 1:
             self.wait_for_state(3)
@@ -446,7 +446,7 @@ class RAD_Probe:
         ret_dict = self.__readData(buffer_id)
         final = None
 
-        # Sucessfully read data
+        # Successfully read data
         if ret_dict['status'] != 1:
             self.log.error('Read {} error: No data available!'
                            ''.format(buffer_name))
@@ -470,14 +470,14 @@ class RAD_Probe:
 
                 # Check we read all bytes:
                 complete_bytes = expected_bytes == ret_dict['BytesRead']
-                self.log.debug('Downloaded {:0.2f}/{:0.2f} Kb.'.format(
+                self.log.debug('Downloaded {:0,.2f}/{:0,.2f} Kb.'.format(
                     ret_dict['BytesRead'] / 1000,
                     expected_bytes / 1000))
             # From chip memory
             else:
                 # We can have incomplete segments, so check for even numbers
                 complete_bytes = ret_dict['BytesRead'] % int_multiple == 0
-                self.log.debug('Byte Multiples: {:0.2f}'.format(ret_dict['BytesRead'] / int_multiple))
+                self.log.debug('Byte Multiples: {:0,.2f}'.format(ret_dict['BytesRead'] / int_multiple))
 
             # Check the data integrity
             if not all_segments or not complete_bytes:
@@ -493,8 +493,8 @@ class RAD_Probe:
                 self.log.info('Retrieving {:,} samples of {} data...'
                               ''.format(ret_dict['samples'], buffer_name))
 
-            self.log.debug("Segment Retrieved {:d}/{:d}."
-                           " Bytes Retrieved {:0.2f} Kb"
+            self.log.debug("Segment Retrieved {:,d}/{:,d}."
+                           " Bytes Retrieved {:0,.2f} Kb"
                            "".format(ret_dict['SegmentsRead'],
                                      ret_dict['SegmentsAvailable'],
                                      ret_dict['BytesRead'] / 1000))
@@ -658,7 +658,7 @@ class RAD_Probe:
 
         ret = self.__readData(5)
         if ret['status'] == 1:
-            # Sucessfully read data
+            # Successfully read data
             # ***** DATA INTEGRITY CHECK *****
             # Data integrity error (not all segments read)
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
@@ -698,7 +698,7 @@ class RAD_Probe:
 
         ret = self.__readData(2)
 
-        # Sucessfully read data
+        # Successfully read data
         if ret['status'] == 1:
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
@@ -743,7 +743,7 @@ class RAD_Probe:
         """
         ret = self.__readData(3)
         if ret['status'] == 1:
-            # Sucessfully read data
+            # Successfully read data
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)
@@ -826,7 +826,7 @@ class RAD_Probe:
 
         ret = self.__readData(6)
         if ret['status'] == 1:
-            # Sucessfully read data
+            # Successfully read data
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)
