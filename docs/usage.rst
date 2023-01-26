@@ -40,8 +40,8 @@ following timeseries per measurement:
 * Hardness
 * Active NIR
 * Passive NIR
-* Depth
-* Acceleration in the action of the pole.
+* Depth from Barometer
+* Acceleration in 3 Axes.
 
 This script will auto-resize the data sets so they are the same size in the
 number of samples. This is achieved using linear interpolation. All datsets are
@@ -54,6 +54,8 @@ Each file is stamped with a header containing
 * Recording time to the second.
 * radicl version
 * Probe firmware, hardware, and model information.
+
+The file will be saved in the same directory that the script was executed in.
 
 
 Python Scripting

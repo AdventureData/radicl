@@ -7,7 +7,7 @@ Installation
 Windows Prerequisites
 ---------------------
 
-You will need to install python 3.6+ and the RAD Drivers for your probe to
+You will need to install python 3.7+ and the RAD Drivers for your probe to
 work on Windows 10.
 
 Python installation
@@ -16,18 +16,14 @@ Python installation
 It is preferable to use your Windows Store to install your python. You can
 search by python.
 
-1. Go to you Windows App Store and search `python`, pick the version you want.
+1. Go to you Windows App Store and search `python`, pick the version greater than 3.6 you want.
 2. Run the installer, making sure to enable the `Add Python 3.X to path`
    this option shows up when you first start the installer see below:
 
    .. image:: images/windows_python_installer.png
         :width: 400px
         :align: center
-        :alt: Enable python path on windows
 
-  **Warning:** If you don't enable this option the radicl cli tool will not be available.
-  If you miss enabling it you can always rerun the install and select repair to
-  get the option to enable it again.
 
 3. Check the install by opening up powershell and running:
 
@@ -39,22 +35,10 @@ search by python.
 
    .. code-block:: powershell
 
-      >> Python 3.8.10
+      >> Python 3.11.1
 
-4. Check that you have the correct `pip` associated by running:
 
-   If this is version number is 3.6+ Then you are set to continue on to the
-   driver install portion of this guide.
-
-   .. code-block:: powershell
-
-     pip --version
-
-   This should also print which python version it is using. This should exactly
-   match the version installed above. If it does not, you will have to use `pip3.X`
-   to install the python packages later.
-
-5. If everything works as expected, continue on to the drivers installation guide
+4. If everything works as expected, continue on to the drivers installation guide
 
 
 RAD Drivers Install
@@ -83,7 +67,7 @@ below.
 Linux -Ubuntu Prerequisites
 ---------------------------
 
-* Python 3.6+
+* Python 3.7+
 * TKinter
 
 Installing TKinter on Ubuntu:
