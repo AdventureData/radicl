@@ -18,7 +18,7 @@ class RAD_API:
     def __sendCommand(self, data):
         """
         Generic send function
-        Returns 1 of successfull, 0 otherwise
+        Returns 1 of successful, 0 otherwise
         """
 
         success = 0
@@ -38,7 +38,7 @@ class RAD_API:
     def __getResponse(self):
         """
         Generic read function
-        Returns 1 if successfull, 0 otherwise
+        Returns 1 if successful, 0 otherwise
         """
 
         success = 0
@@ -64,7 +64,7 @@ class RAD_API:
     def __send_receive(self, data, read_delay=0.05):
         """
         Generic send/receive function
-        Returns the response if successfull, empty result otherwise
+        Returns the response if successful, empty result otherwise
         """
         # Dynamic delay variable, increases with each failed loop
         delay_counter = 0.001

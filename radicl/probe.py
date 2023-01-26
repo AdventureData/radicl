@@ -6,10 +6,10 @@ import struct
 import sys
 import time
 
-from radicl import __version__
-from radicl import serial as rs
-from radicl.api import RAD_API
-from radicl.ui_tools import get_logger, parse_func_list
+from . import __version__
+from .com import RAD_Serial
+from .api import RAD_API
+from .ui_tools import get_logger, parse_func_list
 
 error_codes = {2049: "The probe measurement/sensor is not running",
                2048: 'Generic Measurement error',
@@ -25,6 +25,7 @@ acc_sensitivity = {2: 0.06,
                    6: 0.18,
                    8: 0.24,
                    16: 0.73}
+
 
 class RAD_Probe:
     """
@@ -52,9 +53,9 @@ class RAD_Probe:
             # enable procedure has already taken place
             self.api = ext_api
         else:
-            # No external API oject was provided. Create new serial and API
+            # No external API object was provided. Create new serial and API
             # objects for internal use
-            port = rs.RAD_Serial(debug=debug)
+            port = RAD_Serial(debug=debug)
             port.openPort()
 
             if not port:

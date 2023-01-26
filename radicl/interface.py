@@ -12,10 +12,10 @@ from matplotlib import pyplot as plt
 from termcolor import colored
 from study_lyte.io import write_csv
 
-from radicl import probe
-from radicl.calibrate import get_avg_sensor
-from radicl.ui_tools import (Messages, get_logger, parse_func_list, parse_help,
-                             print_helpme)
+from .probe import RAD_Probe
+from .calibrate import get_avg_sensor
+from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
+                       print_helpme)
 
 out = Messages()
 
@@ -44,7 +44,7 @@ class RADICL(object):
                           'settings': 'Interface for modifying the behavior of the probe',
                           'update': 'Firmware update dialog for the probe.'}
 
-        self.probe = probe.RAD_Probe(debug=kwargs['debug'])
+        self.probe = RAD_Probe(debug=kwargs['debug'])
         self.running = True
 
         self.settings = dir(self.probe)

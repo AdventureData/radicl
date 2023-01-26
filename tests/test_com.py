@@ -1,4 +1,4 @@
-from radicl.serial import *
+from radicl.com import *
 import pytest
 from unittest.mock import patch
 
