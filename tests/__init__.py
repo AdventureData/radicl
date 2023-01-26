@@ -28,7 +28,7 @@ class MockSerialPort:
 
 
 class MockRADPort:
-    def __init__(self, payload=None, ):
+    def __init__(self, payload):
         self.payload = payload
 
     def openPort(self):
@@ -41,16 +41,16 @@ class MockRADPort:
         pass
 
     def writePort(self, data):
-        pass
+        return 1
 
     def writePortClean(self):
-        pass
+        return 1
 
-    def readPort(self):
+    def readPort(self, nbytes):
         return self.payload
 
     def numBytesInBuffer(self):
-        pass
+        return len(self.payload)
 
 
 class MOCKCLI:
