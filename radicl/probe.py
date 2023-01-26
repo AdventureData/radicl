@@ -163,7 +163,7 @@ class RAD_Probe:
 
     def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
         """
-        Prive function to retrieve data from the probe.
+        Private function to retrieve data from the probe.
          Args:
             buffer_id: Integer specifying location in the probe buffer
             max_retry: Integer number of attempts before exiting with a fail
