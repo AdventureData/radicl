@@ -3,6 +3,19 @@ import pandas as pd
 import numpy as np
 
 
+def probe_not_connected():
+
+    # Create a bool to use for skipping tests
+    try:
+        RAD_Probe()
+        not_connected = False
+
+    except:
+       not_connected = False
+
+    return not_connected
+
+
 class MockSerialPort:
     def __init__(self, **kwargs):
         # Add a byte array to be returned from read
@@ -81,12 +94,3 @@ class MOCKCLI:
         result = pd.DataFrame(data)
 
         return result
-
-
-# Create a bool to use for skipping tests
-try:
-    RAD_Probe()
-    not_connected = False
-
-except:
-    not_connected = True

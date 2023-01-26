@@ -1,19 +1,19 @@
 import pytest
 from time import sleep
-import numpy as np
 from . import not_connected
+import numpy as np
 
 
 @pytest.mark.skipif(not_connected, reason='probe not connected')
-@pytest.mark.parametrize("setting_name", [
-    'accrange'
+@pytest.mark.parametrize("setting_name, expected_type", [
+    ('accrange', int)
 ])
-def test_get_setting(probe, setting_name):
+def test_get_setting(meas_probe, setting_name, expected_type):
     """
     Functionality test ensuring a setting runs
     """
-    a = probe.getSetting(setting_name=setting_name)
-    assert True
+    a = meas_probe.getSetting(setting_name=setting_name)
+    assert type(a) is expected_type
 
 
 @pytest.mark.skipif(not_connected, reason='probe not connected')
@@ -22,15 +22,15 @@ def test_get_setting(probe, setting_name):
     ('samplingrate', 5000),
     ('zpfo', 80)
 ])
-def test_set_setting(probe, setting_name, value):
+def test_set_setting(meas_probe, setting_name, value):
     """
     Test setting a parameter in the probes settings
     """
-    a = probe.setSetting(setting_name=setting_name, value=value)
-    sleep(0.25)
-    a = probe.getSetting(setting_name=setting_name)
+    a = meas_probe.setSetting(setting_name=setting_name, value=value)
+    sleep(0.1)
+    a = meas_probe.getSetting(setting_name=setting_name)
     assert (a == value)
-    sleep(0.25)
+    sleep(0.1)
 
 
 @pytest.mark.skipif(not_connected, reason='probe not connected')
@@ -44,7 +44,7 @@ def test_rawacceleration_scaling(meas_probe, scale):
     a = meas_probe.setSetting(setting_name='accrange', value=scale)
 
     meas_probe.startMeasurement()
-    sleep(1)
+    sleep(0.5)
     meas_probe.stopMeasurement()
     data = meas_probe.readRawAccelerationData()
 
@@ -52,4 +52,5 @@ def test_rawacceleration_scaling(meas_probe, scale):
                                 np.power(data['Y-Axis'], 2) +
                                 np.power(data['Z-Axis'], 2))
     result = np.mean(data['magnitude'])
+    meas_probe.resetMeasurement()
     assert pytest.approx(result, abs=2e-2) == 1

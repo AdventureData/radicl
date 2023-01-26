@@ -16,7 +16,7 @@ from argparse import RawTextHelpFormatter
 import pandas as pd
 import json
 from radicl import __version__
-from radicl.radicl import RADICL
+from radicl.interface import RADICL
 from radicl.ui_tools import get_logger
 from radicl.plotting import plot_hi_res
 

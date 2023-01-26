@@ -1,7 +1,6 @@
 import inspect
 import unittest
 
-import radicl
 from radicl.probe import RAD_Probe
 from radicl.ui_tools import *
 

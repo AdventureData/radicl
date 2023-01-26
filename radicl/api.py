@@ -2,9 +2,8 @@
 
 import time
 
-import cmd
 from .ui_tools import get_logger
-from .cmd import *
+from .commands import MeasCMD, SystemCMD, SettingsCMD, FWUpdateCMD, AttributeCMD
 
 PCA_ID_LIST = ["UNKNOWN", "PB1", "PB2", "PB3"]
 
@@ -416,17 +415,17 @@ class RAD_API:
         """
         Queries the board's serial number
         """
-        cmd = AttributeCMD.SERIAL.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 8)
+        code = AttributeCMD.SERIAL.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 8)
 
     def getHWID(self):
         """
         Queries the board's HW ID
         """
-        cmd = AttributeCMD.HW_ID.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        ret_val = self.__EvaluateAndReturn(response, cmd, 1)
+        code = AttributeCMD.HW_ID.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        ret_val = self.__EvaluateAndReturn(response, code, 1)
 
         if ret_val['status'] == 1:
             data = int.from_bytes(ret_val['data'], byteorder='little')
@@ -438,9 +437,9 @@ class RAD_API:
         """
         Queries the board's HW revision
         """
-        cmd = AttributeCMD.HW_REV.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        ret_val = self.__EvaluateAndReturn(response, cmd, 1)
+        code = AttributeCMD.HW_REV.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        ret_val = self.__EvaluateAndReturn(response, code, 1)
         if ret_val['status'] == 1:
             byte_arr = ret_val['data']
             data = int.from_bytes(ret_val['data'], byteorder='little')
@@ -452,9 +451,9 @@ class RAD_API:
         """
         Queries the board's FW revision in MAJOR.MINOR format
         """
-        cmd = AttributeCMD.FW_REV.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        ret_val = self.__EvaluateAndReturn(response, cmd, 2)
+        code = AttributeCMD.FW_REV.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        ret_val = self.__EvaluateAndReturn(response, code, 2)
         if ret_val['status'] == 1:
             major = ret_val['data'][0]  # value[-2]
             minor = ret_val['data'][1]  # value[-1]
@@ -466,10 +465,9 @@ class RAD_API:
         """
         Queries the board's FW revision in the full A.B.C.D format
         """
-        cmd = AttributeCMD.FULL_FW_REV.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00,
-                                        0x00])
-        ret_val = self.__EvaluateAndReturn(response, cmd, 4)
+        code = AttributeCMD.FULL_FW_REV.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        ret_val = self.__EvaluateAndReturn(response, code, 4)
         if ret_val['status'] == 1:
             value = ret_val['data']
             rev_string = str(value[0]) + "." + str(value[1]) + \
@@ -481,20 +479,22 @@ class RAD_API:
         """
         Starts the bootloader
         """
-        response = self.__send_receive([0x9F, SystemCMD.START_BOOTLOADER, 0x01, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, SystemCMD.START_BOOTLOADER, 0)
+        code = SystemCMD.START_BOOTLOADER.cmd
+        response = self.__send_receive([0x9F, code, 0x01, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def getSystemStatus(self):
         """
         Queries the system status
         """
-
-        response = self.__send_receive([0x9F, SystemCMD.STATUS, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, SystemCMD.STATUS, 4)
+        code = SettingsCMD.STATUS.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def getRunState(self):
-        response = self.__send_receive([0x9F, SystemCMD.STATE, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, SystemCMD.STATE, 1)
+        code = SystemCMD.STATE.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     # ***************************************
     # ***** SENSOR/MEASUREMENT COMMANDS *****
@@ -504,67 +504,67 @@ class RAD_API:
         """
         Queries the state of the measurement state machine
         """
-        cmd = MeasCMD.STATE.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = MeasCMD.STATE.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def MeasReset(self):
         """
         Resets the measurement state machine
         Returns 1 if successful
         """
-        cmd = MeasCMD.RESET.cmd
-        response = self.__send_receive([0x9F, cmd, 0x01, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        code = MeasCMD.RESET.cmd
+        response = self.__send_receive([0x9F, code, 0x01, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasStart(self):
         """
         Starts a measurement
         Returns 1 if successful
         """
-        cmd = MeasCMD.START.cmd
-        response = self.__send_receive([0x9F, cmd, 0x01, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        code = MeasCMD.START.cmd
+        response = self.__send_receive([0x9F, code, 0x01, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasStop(self):
         """
         Stops a measurement
         Returns 1 if successful
         """
-        cmd = MeasCMD.STOP.cmd
-        response = self.__send_receive([0x9F, cmd, 0x01, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        code = MeasCMD.STOP.cmd
+        response = self.__send_receive([0x9F, code, 0x01, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetNumSegments(self, buffer_id):
         """
         Queries the number of data segments for a particular data buffer
         """
-        cmd = MeasCMD.NUM_SEGMENTS.cmd
-        message = [0x9F, cmd, 0x00, 0x00, 0x01]
+        code = MeasCMD.NUM_SEGMENTS.cmd
+        message = [0x9F, code, 0x00, 0x00, 0x01]
         message.extend(buffer_id.to_bytes(1, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 4)
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasReadDataSegment(self, buffer_id, numPacket):
         """
         Reads a specific data segment of a specific data buffer
         """
-        cmd = MeasCMD.DATA_SEGMENT.cmd
-        message = [0x9F, cmd, 0x00, 0x00, 0x05]
+        code = MeasCMD.DATA_SEGMENT.cmd
+        message = [0x9F, code, 0x00, 0x00, 0x05]
         message.extend(buffer_id.to_bytes(1, byteorder='little'))
         message.extend(numPacket.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
 
         # Check if only the command matches. The length may be variable
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetSamplingRate(self):
         """
         Reads/Returns the IR sampling rate
         """
-        cmd = SettingsCMD.SAMPLING_RATE.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 4)
+        code = SettingsCMD.SAMPLING_RATE.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasSetSamplingRate(self, sampling_rate):
         """
@@ -572,19 +572,19 @@ class RAD_API:
 
         helpme - Sets the sensor sampling rate
         """
-        cmd = SettingsCMD.SAMPLING_RATE.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x04]
+        code = SettingsCMD.SAMPLING_RATE.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x04]
         message.extend(sampling_rate.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetZPFO(self):
         """
         Reads/returns the Zero Phase Filter Order used on the depth data.
         """
-        cmd = SettingsCMD.ZPFO.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 4)
+        code = SettingsCMD.ZPFO.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasSetZPFO(self, zpfo):
         """
@@ -592,38 +592,38 @@ class RAD_API:
 
         helpme - Set the Zero Phase Filter Order used on the depth data.
         """
-        cmd = SettingsCMD.ZPFO.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x04]
+        code = SettingsCMD.ZPFO.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x04]
         message.extend(zpfo.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetPPMM(self):
         """
         Reads/returns the Points per millimeter parameter
         """
-        cmd = SettingsCMD.PPMM.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = SettingsCMD.PPMM.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def MeasSetPPMM(self, ppmm):
         """
         helpme - Sets the Points per millimeter parameter
         """
-        cmd = SettingsCMD.PPMM.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x01]
+        code = SettingsCMD.PPMM.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x01]
         message.extend(ppmm.to_bytes(1, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetALG(self):
         """
         Reads/Returns the algorithm (1 - depth corrected, 2 for timeseries only)
         parameter
         """
-        cmd = SettingsCMD.ALG.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = SettingsCMD.ALG.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def MeasSetALG(self, alg):
         """
@@ -631,38 +631,38 @@ class RAD_API:
 
         helpme - Sets the algorithm (1 - depth corrected, 2 for timeseries only)
         """
-        cmd = SettingsCMD.ALG.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x01]
+        code = SettingsCMD.ALG.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x01]
         message.extend(alg.to_bytes(1, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetAPPP(self):
         """
         Reads the APPP parameter
         """
-        cmd = SettingsCMD.APPP.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = SettingsCMD.APPP.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def MeasSetAPPP(self, appp):
         """
         Returns status=1 if successful, status=0 otherwise
         helpme - Sets the APPP parameter which smooths the timeseries data
         """
-        cmd = SettingsCMD.APPP.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x01]
+        code = SettingsCMD.APPP.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x01]
         message.extend(appp.to_bytes(1, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetTCM(self):
         """
         Reads the TCM parameter
         """
-        cmd = SettingsCMD.TCM.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = SettingsCMD.TCM.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def MeasSetTCM(self, tcm):
         """
@@ -671,20 +671,20 @@ class RAD_API:
         helpme - Sets the Temperature correction method for the barometer data
 
         """
-        cmd = SettingsCMD.TCM.cmd
+        code = SettingsCMD.TCM.cmd
 
-        message = [0x9F, cmd, 0x01, 0x00, 0x01]
+        message = [0x9F, code, 0x01, 0x00, 0x01]
         message.extend(tcm.to_bytes(1, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetUserTemp(self):
         """
         Reads the user set temperature
         """
-        cmd = SettingsCMD.USERTEMP.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 4)
+        code = SettingsCMD.USERTEMP.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasSetUserTemp(self, user_temp):
         """
@@ -692,21 +692,21 @@ class RAD_API:
 
         helpme - Set the user specified temperature for TCM=3
         """
-        cmd = SettingsCMD.USERTEMP.cmd
+        code = SettingsCMD.USERTEMP.cmd
 
-        message = [0x9F, cmd, 0x01, 0x00, 0x04]
+        message = [0x9F, code, 0x01, 0x00, 0x04]
         message.extend(user_temp.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetIR(self):
         """
         Reads the IR parameter
 
         """
-        cmd = SettingsCMD.IR.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = SettingsCMD.IR.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def MeasSetIR(self, ir):
         """
@@ -714,24 +714,24 @@ class RAD_API:
 
         helpme - Turns on the IR emitter
         """
-        cmd = SettingsCMD.IR.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x01]
+        code = SettingsCMD.IR.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x01]
         message.extend(ir.to_bytes(1, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetCalibData(self, num_sensor):
         """
         Reads a sensor's calibration value
         """
-        cmd = SettingsCMD.CALIBDATA.cmd
-        message = [0x9F, cmd, 0x00, 0x00, 0x01]
+        code = SettingsCMD.CALIBDATA.cmd
+        message = [0x9F, code, 0x00, 0x00, 0x01]
         message.extend(num_sensor.to_bytes(1, byteorder='little'))
 
         response = self.__send_receive(message)
 
         # Expect 4 bytes back two for the low value and 2 for the high value
-        return self.__EvaluateAndReturn(response, cmd, 4)
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasSetCalibData(
         self, num_sensor, calibration_value_low, calibration_value_high):
@@ -754,33 +754,33 @@ class RAD_API:
 
         helpme - Sets the calibration data for the specified sensor
         """
-        cmd = SettingsCMD.CALIBDATA.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x05]
+        code = SettingsCMD.CALIBDATA.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x05]
 
         # Convert values each into a 1 and 2 bytes
         message.extend(num_sensor.to_bytes(1, byteorder='little'))
         message.extend(calibration_value_low.to_bytes(2, byteorder='little'))
         message.extend(calibration_value_high.to_bytes(2, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetMeasTemp(self):
         """
         Reads the current temperature reading (from last measurement)
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = MeasCMD.TEMP.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        code = MeasCMD.TEMP.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetAccThreshold(self):
         """
         Reads the accelerometer threshold setting (an unsigned 32-bit integer in mG)
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = SettingsCMD.ACCTHRESH.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 4)
+        code = SettingsCMD.ACCTHRESH.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasSetAccThreshold(self, threshold):
         """
@@ -789,20 +789,20 @@ class RAD_API:
         A value of 0 turns the accelerometer thresholding algorithm off
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = SettingsCMD.ACCTHRESH.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x04]
+        code = SettingsCMD.ACCTHRESH.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x04]
         message.extend(threshold.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetAccZPFO(self):
         """
         Reads the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = SettingsCMD.ACCZPFO.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 4)
+        code = SettingsCMD.ACCZPFO.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasSetAccZPFO(self, zpfo):
         """
@@ -812,19 +812,19 @@ class RAD_API:
         turns the filtering off (filter is bypassed) Returns status=1 if successful,
         status=0 otherwise
         """
-        cmd = SettingsCMD.ACCZPFO.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x04]
+        code = SettingsCMD.ACCZPFO.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x04]
         message.extend(zpfo.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def MeasGetAccRange(self):
         """
         gets the accelerometer range
         """
-        cmd = SettingsCMD.ACCRANGE.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = SettingsCMD.ACCRANGE.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def MeasSetAccRange(self, abs_range_gs):
         """
@@ -835,11 +835,11 @@ class RAD_API:
 
         Returns:
         """
-        cmd = SettingsCMD.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x04]
+        code = SettingsCMD.ACCRANGE.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x04]
         message.extend(abs_range_gs.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     # ******************************
     # ***** FW UPDATE COMMANDS *****
@@ -850,82 +850,82 @@ class RAD_API:
         Enters the FW Update FSM
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = FWUpdateCMD.ENTER.cmd
-        response = self.__send_receive([0x9F, cmd, 0x01, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        code = FWUpdateCMD.ENTER.cmd
+        response = self.__send_receive([0x9F, code, 0x01, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def UpdateGetState(self):
         """
         Gets the FW update FSM state
         """
-        cmd = FWUpdateCMD.STATE.cmd
-        response = self.__send_receive([0x9F, cmd, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        code = FWUpdateCMD.STATE.cmd
+        response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def UpdateWaitForStateChange(self, wait_time):
         """
         Waits for the state change message
         """
-        cmd = FWUpdateCMD.STATE.cmd
+        code = FWUpdateCMD.STATE.cmd
         response = self.__waitForMessage(wait_time, 6)
-        return self.__EvaluateAndReturn(response, cmd, 1)
+        return self.__EvaluateAndReturn(response, code, 1)
 
     def UpdateSetSize(self, num_packets, packet_size):
         """
         Sets the update size
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = FWUpdateCMD.SIZE.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x06]
+        code = FWUpdateCMD.SIZE.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x06]
         message.extend(num_packets.to_bytes(4, byteorder='little'))
         message.extend(packet_size.to_bytes(2, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def UpdateDownload_Short(self, data, crc8, packet_id):
         """
         Downloads a 16-byte chunk of data
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = FWUpdateCMD.DOWNLOAD.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x00]
+        code = FWUpdateCMD.DOWNLOAD.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x00]
         message[3] = crc8
         message[4] = len(data)
         message.extend(data)
         self.__sendCommand(message)
         response = self.__waitForMessage(20)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def UpdateDownload_Long(self, data, crc8, packet_id):
         """
         Downloads a 256-byte chunck of data
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = FWUpdateCMD.DOWNLOAD.cmd
-        message = [0x9F, cmd, 0x07, 0x00, 0x00]
+        code = FWUpdateCMD.DOWNLOAD.cmd
+        message = [0x9F, code, 0x07, 0x00, 0x00]
         message[3] = crc8
         message[4] = 0
         message.extend(data)
         self.__sendCommand(message)
         response = self.__waitForMessage(20)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def UpdateSetCRC(self, crc32):
         """
         Sets the CRC32 of the FW image
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = FWUpdateCMD.CRC.cmd
-        message = [0x9F, cmd, 0x01, 0x00, 0x04]
+        code = FWUpdateCMD.CRC.cmd
+        message = [0x9F, code, 0x01, 0x00, 0x04]
         message.extend(crc32.to_bytes(4, byteorder='little'))
         response = self.__send_receive(message)
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        return self.__EvaluateAndReturn(response, code, 0)
 
     def UpdateClose(self):
         """
         Closes the FW update FSM
         Returns status=1 if successful, status=0 otherwise
         """
-        cmd = FWUpdateCMD.CLOSE.cmd
-        response = self.__send_receive([0x9F, cmd, 0x01, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, cmd, 0)
+        code = FWUpdateCMD.CLOSE.cmd
+        response = self.__send_receive([0x9F, code, 0x01, 0x00, 0x00])
+        return self.__EvaluateAndReturn(response, code, 0)

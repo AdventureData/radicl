@@ -66,10 +66,10 @@ The following is a simple data acquisition script:
 
 .. code-block:: python
 
-    from radicl.radicl import RADICL
+    from radicl.interface import RADICL
 
     # Instantiate the CLI
-    cli = radicl.radicl.RADICL()
+    cli = RADICL()
 
     # Isolate the probe for ease of use
     probe = cli.probe
