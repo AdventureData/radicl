@@ -43,6 +43,58 @@ def dataframe_this(data, name=None):
     return df
 
 
+def is_numbered(filename):
+    """
+    Checks if the filename has been numbered. Denoted by any file ending in
+    somefname_<#>.csv Returns true or false.
+    Args:
+        filename: Path with potential some appended number scheme denoted by _
+    Returns:
+        bool: True if a separator and all numbers are found towards the end
+    """
+    info = filename.split('.')[0]
+    sep = False
+    numbered = False
+
+    if '_' in info:
+        numbers = info.split('_')[-1]
+        sep = True
+        numbered = all([c.isnumeric() for c in numbers])
+    return sep and numbered
+
+
+def add_ext(filename):
+    """
+    Check to see if the user provided the .csv ext in the filename
+    and add it
+    """
+    if filename[-4:] != '.csv':
+        f = filename.split('.')
+        # Did the user try to add an ext
+        if len(f) == 2:
+            filename = f[0] + '.csv'
+        else:
+            filename += '.csv'
+
+    return filename
+
+
+def get_default_filename():
+    """
+    Creates a datetime path for writing to
+
+    Returns:
+        filename: csv path named by the datetime
+    """
+
+    t = datetime.datetime.now()
+    fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
+    fname = fstr.format(t.year, t.month, t.day, t.hour, t.minute, t.second)
+    filename = os.path.expanduser('./{0}.csv'.format(fname))
+
+    return filename
+
+
 class RADICL(object):
     """
     This is the main interface for end users to interact with the API and the
@@ -245,11 +297,11 @@ class RADICL(object):
             try:
                 data = fn()
                 sr_ts = self.probe.getSetting(setting_name='samplingrate')
-                data = dataframe_this(data, data_request)
+                data = dataframe_this(data, name=data_request)
                 n_samples = data.index.size
                 # Default to using the sensor data sample rate
                 sr = sr_ts
-                # Decimation ratio for periphal sensors
+                # Decimation ratio for peripheral sensors
                 ratio = sr_ts / 16000
 
                 if 'acceleration' in data_request:
@@ -329,7 +381,7 @@ class RADICL(object):
 
                 #  Wait for real path
                 while not valid:
-                    fname = self.get_default_filename()
+                    fname = get_default_filename()
                     out.msg("Enter in a filepath for the data to be saved:")
                     filename = input("\nPress enter to use default:"
                                      "\n(Default: {0})".format(fname))
@@ -483,7 +535,7 @@ class RADICL(object):
         """
         Check for a file numbering. Increment if there is one. Otherwise add one
         """
-        if self.is_numbered(filename):
+        if is_numbered(filename):
             fcount = int(filename[-1]) + 1
 
         else:
@@ -491,48 +543,6 @@ class RADICL(object):
 
         s = -1 * len(str(fcount)) + pos_num
         filename = filename[0:s] + str(fcount)
-
-        return filename
-
-    def is_numbered(self, filename):
-        """
-        Checks if the filename is numbered. Returns true or false.
-        """
-        if filename[-4] in [str(i) for i in range(0, 9)]:
-            result = True
-
-        else:
-            result = False
-
-        return result
-
-    def check_ext(self, filename):
-        """
-        Check to see if the user provided the .csv ext in the filename
-        and add it
-        """
-        if filename[-4:] != '.csv':
-            f = filename.split('.')
-            # Did the user try to add an ext
-            if len(f) == 2:
-                filename = f[0] + '.csv'
-            else:
-                filename += '.csv'
-
-        return filename
-
-    def get_default_filename(self):
-        """
-        Creates a datetime path for writing to
-
-        Returns:
-            filename: csv path named by the datetime
-        """
-
-        t = datetime.datetime.now()
-        fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
-        fname = fstr.format(t.year, t.month, t.day, t.hour, t.minute, t.second)
-        filename = os.path.expanduser('./{0}.csv'.format(fname))
 
         return filename
 
@@ -547,7 +557,7 @@ class RADICL(object):
 
         # Receive a default request
         if filename == '':
-            filename = self.get_default_filename()
+            filename = get_default_filename()
 
         else:
             filename = os.path.expanduser(filename)
