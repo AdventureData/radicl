@@ -4,6 +4,8 @@ import argparse
 import os
 import sys
 import platform
+import time
+
 from matplotlib import pyplot as plt
 import matplotlib
 from radicl.ui_tools import get_logger
@@ -66,6 +68,8 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
 
     # Setup a panel of plots
     fig = plt.figure(figsize=(10, 6), constrained_layout=True)
+    timer = fig.canvas.new_timer(interval=20000)
+    timer.add_callback(plt.close)
     gs = fig.add_gridspec(2, 5)
 
     # # Use time when possible
@@ -198,8 +202,8 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     manager = plt.get_current_fig_manager()
     if 'Windows' not in platform.platform():
         manager.full_screen_toggle()
-    plt.show()
-
+    timer.start()
+    plt.show(block=False)
 
 def plot_hi_res_cli():
     files = sys.argv[1:]
