@@ -187,7 +187,7 @@ def get_logger(name, debug=False, ext_logger=None):
 
 def exit_requested():
     ans = input('\nPress enter to begin listening for probe (type exit to quit): ')
-    if ans.strip().lower() == 'exit':
+    if ans.strip().lower() in ['exit', 'quit']:
         return True
     else:
         return False
