@@ -199,7 +199,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     # Make the figure full screen
     manager = plt.get_current_fig_manager()
-    if 'Windows' not in platform.platform():
+    if 'Linux' in platform.platform():
         manager.full_screen_toggle()
     if timed_plot == 0:
         pass
