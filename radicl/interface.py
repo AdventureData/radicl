@@ -20,6 +20,29 @@ from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
 out = Messages()
 
 
+def dataframe_this(data, name=None):
+    """
+    Takes the data returned from a function and converts it into a DataFrame
+    There appears to be two scenarios.
+    Args:
+        data: list or dictionary of data to dataframe
+        name: Name to use in the event the data is a list
+    Returns:
+        df: pd.Dataframe of the provided data
+    """
+    t = type(data)
+    if t == dict:
+        df = pd.DataFrame.from_dict(data)
+
+    elif t == list:
+        if isinstance(data[0], tuple):
+            data = [d[0] for d in data]
+
+        df = pd.DataFrame(data, columns=[name])
+
+    return df
+
+
 class RADICL(object):
     """
     This is the main interface for end users to interact with the API and the
@@ -196,23 +219,6 @@ class RADICL(object):
         self.probe.wait_for_state(3, retry=1000, delay=0.3)
         out.respond("Measurement ended...")
 
-    def dataframe_this(self, data, name):
-        """
-        Takes the data returned from a function and converts it into a DataFrame
-        There appears to be two scenarios so we cover it here.
-        """
-        t = type(data)
-        if t == dict:
-            data = pd.DataFrame(data, columns=data.keys())
-
-        elif t == list:
-            if isinstance(data[0], tuple):
-                data = [d[0] for d in data]
-
-            data = pd.DataFrame(data, columns=[name])
-
-        return data
-
     def grab_data(self, data_request, retries=3):
         """
         Grabs data from the probe and puts it into a dataframe
@@ -239,7 +245,7 @@ class RADICL(object):
             try:
                 data = fn()
                 sr_ts = self.probe.getSetting(setting_name='samplingrate')
-                data = self.dataframe_this(data, data_request)
+                data = dataframe_this(data, data_request)
                 n_samples = data.index.size
                 # Default to using the sensor data sample rate
                 sr = sr_ts
