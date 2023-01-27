@@ -16,14 +16,17 @@ Python installation
 It is preferable to use your Windows Store to install your python. You can
 search by python.
 
-1. Go to you Windows App Store and search `python`, pick the version greater than 3.6 you want.
+1. Go to you `python downloads page`_ and at least python 3.7 or later.
+
+.. _python downloads page: https://www.python.org/downloads/
+
 2. Run the installer, making sure to enable the `Add Python 3.X to path`
-   this option shows up when you first start the installer see below:
+   this option shows up when you first start the installer see below.
+   This will ensure you have the scripts installed on your local path
 
    .. image:: images/windows_python_installer.png
         :width: 400px
         :align: center
-
 
 3. Check the install by opening up powershell and running:
 
