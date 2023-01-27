@@ -733,8 +733,8 @@ class RAD_API:
         # Expect 4 bytes back two for the low value and 2 for the high value
         return self.__EvaluateAndReturn(response, code, 4)
 
-    def MeasSetCalibData(
-        self, num_sensor, calibration_value_low, calibration_value_high):
+    def MeasSetCalibData(self, num_sensor, calibration_value_low,
+                         calibration_value_high):
         """
         Sets the probes calibration values. A high and low are set where the
         low. This is applied linearly and thus the low value should be the
@@ -745,9 +745,9 @@ class RAD_API:
 
         Args:
                 num_sensor: Integer indicating sensors 1,2,3, or 4.
-                low_value: 12-bit integer indicating the y intercept of a linear
+                calibration_value_low: 12-bit integer indicating the y intercept of a linear
                                    calibration
-                hi_value: 12-bit integer for the
+                calibration_value_high: 12-bit integer for the
 
         Returns:
                 status: 1 if successful, 0 otherwise
@@ -785,8 +785,8 @@ class RAD_API:
     def MeasSetAccThreshold(self, threshold):
         """
         Sets the accelerometer threshold setting (accelerometer thresholding algorithm)
-        The parameter 'threshold' is an unsigned 32-bit (4-bytes) absolute value indicating the threshold in mG
-        A value of 0 turns the accelerometer thresholding algorithm off
+        The parameter 'threshold' is an unsigned 32-bit (4-bytes) absolute value indicating the
+        threshold in mG A value of 0 turns the accelerometer thresholding algorithm off
         Returns status=1 if successful, status=0 otherwise
         """
         code = SettingsCMD.ACCTHRESH.cmd
@@ -797,8 +797,9 @@ class RAD_API:
 
     def MeasGetAccZPFO(self):
         """
-        Reads the accelerometer zero-phase filter order setting (post-processing filter for accelerometer thresholding algorithm)
-        Returns status=1 if successful, status=0 otherwise
+        Reads the accelerometer zero-phase filter order setting (post-processing filter
+        for accelerometer thresholding algorithm) Returns status=1 if successful,
+        status=0 otherwise
         """
         code = SettingsCMD.ACCZPFO.cmd
         response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])

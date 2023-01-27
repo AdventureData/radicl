@@ -8,6 +8,7 @@ def test_getHWID(real_api):
     a = real_api.getHWID()
     assert type(a['data']) == int
 
+
 @pytest.mark.skipif(not_connected, reason='probe not connected')
 def test_MeasGetAccRange(real_api):
     a = real_api.MeasGetAccRange()

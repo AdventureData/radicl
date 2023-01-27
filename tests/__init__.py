@@ -11,7 +11,7 @@ def probe_not_connected():
         not_connected = False
 
     except:
-       not_connected = False
+        not_connected = True
 
     return not_connected
 

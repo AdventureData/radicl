@@ -251,8 +251,8 @@ class RADICL(object):
                 elif data_request in ['filtereddepth', 'rawdepth', 'rawpressure']:
                     sr = int(75 * ratio)
 
-                time = np.linspace(0, n_samples / sr, n_samples)
-                data['time'] = time
+                seconds = np.linspace(0, n_samples / sr, n_samples)
+                data['time'] = seconds
                 data.set_index('time', inplace=True)
                 success = True
 
@@ -539,7 +539,7 @@ class RADICL(object):
             extra_meta: Dictionary of extra notes to add to the file header
         """
 
-        # Recieve a default request
+        # Receive a default request
         if filename == '':
             filename = self.get_default_filename()
 

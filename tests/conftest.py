@@ -5,6 +5,7 @@ from radicl.api import RAD_API
 from radicl.probe import RAD_Probe
 from . import MOCKCLI
 
+
 @pytest.fixture(scope='session')
 def real_port():
     port = RAD_Serial(debug=True)
@@ -26,6 +27,7 @@ def meas_probe():
     prb = RAD_Probe(debug=True)
     yield prb
     prb.resetMeasurement()
+
 
 @pytest.fixture()
 def mock_cli():

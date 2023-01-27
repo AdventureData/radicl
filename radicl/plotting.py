@@ -23,6 +23,7 @@ def plot_events(ax, start=None, surface=None, stop=None, nir_stop=None, plot_typ
         start: Array index to represent start of motion
         surface: Array index to represent snow surface
         stop: Array index to represent stop of motion
+        nir_stop: Array index to represent stop estimated by nir
         plot_type: string indicating whether the index is on the y (vertical) or the x (normal)
     """
     event_alpha = 0.6
@@ -87,7 +88,6 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # Estimate events
     start = get_acceleration_start(df[detect_col], threshold=0.15)
     stop = get_acceleration_stop(df[detect_col], threshold=0.45)
-
 
     # Calculate depth from acceleration
     acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(-100)

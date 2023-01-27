@@ -13,7 +13,7 @@ def test_find_kw_port(kw, com_list, expected):
         assert find_kw_port(kw) == expected
 
 
-class MockSerialPort():
+class MockSerialPort:
     def __init__(self, **kwargs):
         self.port = kwargs['port']
 
@@ -36,7 +36,7 @@ class MockSerialPort():
         pass
 
 
-class TestRAD_Serial():
+class TestRAD_Serial:
 
     @pytest.fixture(scope='function')
     def rs(self):
