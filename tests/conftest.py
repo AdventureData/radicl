@@ -20,7 +20,7 @@ def real_api(real_port):
 
 
 @pytest.fixture(scope='session')
-def meas_probe():
+def real_probe():
     """
     Probe object with a reset at the end
     """

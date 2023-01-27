@@ -155,9 +155,9 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
     plot_events(ax, surface=cropped['acc_depth'].iloc[surface], plot_type='vertical')
-    ax.plot(cropped['Sensor1'], cropped['acc_depth'], color='k', label='Inverted Force (RAW)')
+    ax.plot(cropped['Sensor1'], cropped['acc_depth'], color='k', label='Raw Force')
     ax.set_title("Depth Corrected")
-    ax.legend()
+    ax.legend(loc='lower left')
     ax.set_xlim((0, 4096))
     ax.set_ylabel('Force Depth [cm]')
 
@@ -190,7 +190,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     ax.plot(time_series, df['depth'], color='navy', label='Baro.')
     ax.plot(time_series, df['acc_depth'], color='mediumseagreen', label='Acc.')
     ax.plot(time_series, df['avg_depth'], color='tomato', label='Avg.')
-    ax.legend(loc='lower left')
+    ax.legend(loc='upper right')
 
     ax.set_ylabel('Depth from Max Height [cm]')
 

@@ -78,7 +78,7 @@ class RAD_Probe:
                     self.log.error("Unable to connect to the probe. Unplug and"
                                    " power cycle it.")
                     sys.exit()
-                time.sleep(0.5)
+                time.sleep(0.1)
 
                 # Manages the settings
                 settings_funcs = inspect.getmembers(self.api,

@@ -12,6 +12,7 @@ Usage:  1. plug in the probe.
 """
 
 import argparse
+import sys
 from argparse import RawTextHelpFormatter
 import pandas as pd
 import json
@@ -127,7 +128,12 @@ def main():
     # Loop through each sensor and retrieve the calibration data
     while not finished:
         # take a measurement
-        input("\nPress enter to start listening for the probe to start...\n")
+        ans = input("\nPress enter to start listening for the probe to start (or type exit to quit)...\n")
+        if ans.lower() == 'exit':
+            log.info(f"{i} measurements taken this session")
+            log.info("Exiting High Resolution DAQ Script")
+            sys.exit()
+
         print("Press probe button to start...")
         cli.listen_for_a_reading()
 
@@ -146,7 +152,7 @@ def main():
         cli.probe.resetMeasurement()
 
         i += 1
-        log.info("{} measurements taken this session".format(i))
+        log.info(f"{i} measurements taken this session")
 
 
 if __name__ == '__main__':
