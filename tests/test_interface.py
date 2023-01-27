@@ -1,8 +1,9 @@
-from radicl.interface import RADICL, dataframe_this, is_numbered, get_default_filename, add_ext
+from radicl.interface import RADICL, dataframe_this, is_numbered, get_default_filename, add_ext, increment_fnumber
 import pytest
 import pandas as pd
 from unittest.mock import patch
 import datetime
+from . import MockProbe
 
 
 @pytest.mark.parametrize('data, name, expected', [
@@ -41,3 +42,10 @@ def test_get_default_filename():
     assert filename == './2023-01-01--010203.csv'
 
 
+@pytest.mark.parametrize('filename, expected', [
+    ('test.csv', 'test_1.csv'),
+    ('test_test_10.csv', 'test_test_11.csv'),
+])
+def test_increment_fnumber(filename, expected):
+    result = increment_fnumber(filename)
+    assert result == expected

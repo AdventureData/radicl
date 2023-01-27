@@ -95,6 +95,27 @@ def get_default_filename():
     return filename
 
 
+def increment_fnumber(filename):
+    """
+    Check for a file numbering. Increment if there is one. Otherwise add one
+    """
+    no_ext = filename.split('.')[0]
+
+    if is_numbered(filename):
+        info = no_ext.split('_')
+        base_file = '_'.join(info[0:-1])
+        count = int(info[-1])
+        fcount = count + 1
+
+    else:
+        base_file = no_ext
+        fcount = 1
+
+    filename = f"{base_file}_{fcount}.csv"
+
+    return filename
+
+
 class RADICL(object):
     """
     This is the main interface for end users to interact with the API and the
@@ -128,7 +149,7 @@ class RADICL(object):
         probe_funcs = inspect.getmembers(
             self.probe, predicate=inspect.ismethod)
 
-        self.options = {}
+        self.options = dict()
 
         # Assign all data functions with keywords to auto gather data packages
         self.options['data'] = parse_func_list(probe_funcs,
@@ -531,21 +552,6 @@ class RADICL(object):
         out.msg(msg)
         time.sleep(2)
 
-    def increment_fnumber(self, filename):
-        """
-        Check for a file numbering. Increment if there is one. Otherwise add one
-        """
-        if is_numbered(filename):
-            fcount = int(filename[-1]) + 1
-
-        else:
-            fcount = 1
-
-        s = -1 * len(str(fcount)) + pos_num
-        filename = filename[0:s] + str(fcount)
-
-        return filename
-
     def write_probe_data(self, df, filename='', extra_meta={}):
         """
         Writes out a dataframe with a probe header to csv
@@ -634,7 +640,7 @@ class RADICL(object):
 
         acceptable_answer = False
 
-        while acceptable_answer == False:
+        while not acceptable_answer:
             user_answer = input('\n')
             response = user_answer.lower().strip()
 

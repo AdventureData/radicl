@@ -634,7 +634,7 @@ class RAD_Probe:
                     # Form a byte object
                     byte_object = bytes(byte_list)
 
-                    # Unpck bytes originally a 32 bit long and save
+                    # Unpack bytes originally a 32 bit long and save
                     value = struct.unpack('<h', byte_object)[0]
 
                     # Convert to milli-gs while accounting for acc. range
@@ -659,7 +659,7 @@ class RAD_Probe:
 
         ret = self.__readData(5)
         if ret['status'] == 1:
-            # successfuly read data
+            # successfully read data
             # ***** DATA INTEGRITY CHECK *****
             # Data integrity error (not all segments read)
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
@@ -699,7 +699,7 @@ class RAD_Probe:
 
         ret = self.__readData(2)
 
-        # successfuly read data
+        # successfully read data
         if ret['status'] == 1:
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
@@ -827,7 +827,7 @@ class RAD_Probe:
 
         ret = self.__readData(6)
         if ret['status'] == 1:
-            # successfuly read data
+            # successfully read data
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)

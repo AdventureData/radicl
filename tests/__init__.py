@@ -65,6 +65,8 @@ class MockRADPort:
     def numBytesInBuffer(self):
         return len(self.payload)
 
+class MockProbe():
+    pass
 
 class MOCKCLI:
     def grab_data(self, data_name):
