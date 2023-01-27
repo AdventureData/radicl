@@ -208,6 +208,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         timer.add_callback(plt.close)
         timer.start()
         plt.show(block=True)
+
     else:
         plt.show()
 
