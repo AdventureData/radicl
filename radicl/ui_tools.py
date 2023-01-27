@@ -3,10 +3,10 @@
 import logging
 import sys
 import textwrap
-
 import coloredlogs
 from colorama import init
 from termcolor import colored
+from threading import Timer
 
 
 class Messages:
@@ -183,3 +183,12 @@ def get_logger(name, debug=False, ext_logger=None):
 
     coloredlogs.install(fmt=fmt, level=level, logger=log)
     return log
+
+
+def exit_requested():
+    ans = input('\nPress enter to begin listening for probe (type exit to quit): ')
+    if ans.lower() == 'exit':
+        return True
+    else:
+        return False
+

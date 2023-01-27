@@ -284,11 +284,11 @@ class RADICL(object):
         triggering the start and stop on the probe.
         """
 
-        out.msg("Press the probe button to start the measurement:")
+        out.msg(">> Press the probe button to start the measurement:")
         self.probe.wait_for_state(1, retry=1000, delay=0.3)
         out.respond("Measurement Started...")
 
-        out.msg("Press the probe button to end the measurement:")
+        out.msg(">> Press the probe button to end the measurement:")
         self.probe.wait_for_state(3, retry=1000, delay=0.3)
         out.respond("Measurement ended...")
 

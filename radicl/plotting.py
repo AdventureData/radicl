@@ -45,7 +45,7 @@ def plot_events(ax, start=None, surface=None, stop=None, nir_stop=None, plot_typ
         line_fn(nir_stop, linestyle='dashed', color='magenta', label='NIR Stop', alpha=event_alpha)
 
 
-def plot_hi_res(fname=None, df=None, calibration_dict={}):
+def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     """
     Plots the timeseries, the depth corrected, accelerometer and depth data.
     Plot from a dataframe or from a file. Use auto close to auto close the figure
@@ -54,6 +54,7 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     Args:
         fname: Path to csv containing hi resolution data
         df: Optional pandas dataframe instead of a file
+        timed_plot: Amount of time to show the plot, if none user has to close it
         calibration_dict: Dictionary to offer calibration coefficients for any of the sensors
 
     """
@@ -68,8 +69,6 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
 
     # Setup a panel of plots
     fig = plt.figure(figsize=(10, 6), constrained_layout=True)
-    timer = fig.canvas.new_timer(interval=20000)
-    timer.add_callback(plt.close)
     gs = fig.add_gridspec(2, 5)
 
     # # Use time when possible
@@ -202,8 +201,15 @@ def plot_hi_res(fname=None, df=None, calibration_dict={}):
     manager = plt.get_current_fig_manager()
     if 'Windows' not in platform.platform():
         manager.full_screen_toggle()
-    timer.start()
-    plt.show(block=False)
+    if timed_plot == 0:
+        pass
+    elif timed_plot is not None:
+        timer = fig.canvas.new_timer(interval=timed_plot*1000)
+        timer.add_callback(plt.close)
+        timer.start()
+        plt.show(block=True)
+    else:
+        plt.show()
 
 def plot_hi_res_cli():
     files = sys.argv[1:]
