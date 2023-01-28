@@ -40,8 +40,8 @@ following timeseries per measurement:
 * Hardness
 * Active NIR
 * Passive NIR
-* Depth
-* Acceleration in the action of the pole.
+* Depth from Barometer
+* Acceleration in 3 Axes.
 
 This script will auto-resize the data sets so they are the same size in the
 number of samples. This is achieved using linear interpolation. All datsets are
@@ -55,6 +55,8 @@ Each file is stamped with a header containing
 * radicl version
 * Probe firmware, hardware, and model information.
 
+The file will be saved in the same directory that the script was executed in.
+
 
 Python Scripting
 ----------------
@@ -66,10 +68,10 @@ The following is a simple data acquisition script:
 
 .. code-block:: python
 
-    from radicl.radicl import RADICL
+    from radicl.interface import RADICL
 
     # Instantiate the CLI
-    cli = radicl.radicl.RADICL()
+    cli = RADICL()
 
     # Isolate the probe for ease of use
     probe = cli.probe

@@ -15,9 +15,11 @@ import argparse
 from argparse import RawTextHelpFormatter
 import pandas as pd
 import json
+import sys
+
 from radicl import __version__
-from radicl.radicl import RADICL
-from radicl.ui_tools import get_logger
+from radicl.interface import RADICL
+from radicl.ui_tools import get_logger, exit_requested
 from radicl.plotting import plot_hi_res
 
 
@@ -50,9 +52,9 @@ def build_high_resolution_data(cli, log):
     depth = depth.drop(columns=['filtereddepth'])
 
     log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
-    log.info("Depth Samples: {}".format(len(depth.index)))
-    log.info("Acceleration Samples: {}".format(len(acc.index)))
-    log.info("Sensor Samples: {}".format(len(ts)))
+    log.info("Depth Samples: {:,}".format(len(depth.index)))
+    log.info("Acceleration Samples: {:,}".format(len(acc.index)))
+    log.info("Sensor Samples: {:,}".format(len(ts)))
 
     log.info("Infilling and interpolating dataset...")
     result = pd.merge_ordered(ts, depth, on='time')
@@ -94,7 +96,9 @@ def main():
                    help='Path to a json containing any calibration coefficients for any of the sensors')
     p.add_argument('--version', action='version',
                    version='%(prog)s v{version}'.format(version=__version__))
+    p.add_argument('--plot_time', default=10, type=int, help='Automatically close a plot after number of seconds')
 
+    p.add_argument('--n_measurements', default=0, type=int, help='Number of measurements to take without asking to exit')
     args = p.parse_args()
 
     if args.calibration is not None:
@@ -105,8 +109,6 @@ def main():
 
     # Start this scripts logging
     log = get_logger("RAD Hi-Res Script", debug=args.debug)
-
-    finished = False
 
     log.info("Starting High Resolution DAQ Script")
 
@@ -124,11 +126,12 @@ def main():
     zpfo = cli.probe.getSetting(setting_name='zpfo')
     acc_range = cli.probe.getSetting(setting_name='accrange')
 
+    finished = exit_requested()
+
     # Loop through each sensor and retrieve the calibration data
     while not finished:
+
         # take a measurement
-        input("\nPress enter to start listening for the probe to start...\n")
-        print("Press probe button to start...")
         cli.listen_for_a_reading()
 
         # Collect and build the data
@@ -140,13 +143,19 @@ def main():
                                              "ACC. Range": str(acc_range)})
 
         # Plot the data
-        plot_hi_res(df=ts, calibration_dict=calibration)
+        plot_hi_res(df=ts, calibration_dict=calibration, timed_plot=args.plot_time)
 
         # Reset the probe / clear out the data
         cli.probe.resetMeasurement()
 
         i += 1
-        log.info("{} measurements taken this session".format(i))
+        log.info(f"{i} measurements taken this session")
+        if i >= args.n_measurements:
+            finished = exit_requested()
+
+    log.info(f"{i} measurements taken this session")
+    log.info("Exiting High Resolution DAQ Script")
+    sys.exit()
 
 
 if __name__ == '__main__':

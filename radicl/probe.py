@@ -6,10 +6,10 @@ import struct
 import sys
 import time
 
-from radicl import __version__
-from radicl import serial as rs
-from radicl.api import RAD_API
-from radicl.ui_tools import get_logger, parse_func_list
+from . import __version__
+from .com import RAD_Serial
+from .api import RAD_API
+from .ui_tools import get_logger, parse_func_list
 
 error_codes = {2049: "The probe measurement/sensor is not running",
                2048: 'Generic Measurement error',
@@ -25,6 +25,7 @@ acc_sensitivity = {2: 0.06,
                    6: 0.18,
                    8: 0.24,
                    16: 0.73}
+
 
 class RAD_Probe:
     """
@@ -52,9 +53,9 @@ class RAD_Probe:
             # enable procedure has already taken place
             self.api = ext_api
         else:
-            # No external API oject was provided. Create new serial and API
+            # No external API object was provided. Create new serial and API
             # objects for internal use
-            port = rs.RAD_Serial(debug=debug)
+            port = RAD_Serial(debug=debug)
             port.openPort()
 
             if not port:
@@ -77,7 +78,7 @@ class RAD_Probe:
                     self.log.error("Unable to connect to the probe. Unplug and"
                                    " power cycle it.")
                     sys.exit()
-                time.sleep(0.5)
+                time.sleep(0.1)
 
                 # Manages the settings
                 settings_funcs = inspect.getmembers(self.api,
@@ -162,7 +163,7 @@ class RAD_Probe:
 
     def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
         """
-        Prive function to retrieve data from the probe.
+        Private function to retrieve data from the probe.
          Args:
             buffer_id: Integer specifying location in the probe buffer
             max_retry: Integer number of attempts before exiting with a fail
@@ -185,7 +186,7 @@ class RAD_Probe:
 
         if ret['status'] == 1:
             num_segments = int.from_bytes(ret['data'], byteorder='little')
-            self.log.debug('Retrieving {} segments of {} data...'.format(num_segments, buffer_name.lower()))
+            self.log.debug('Retrieving {:,} segments of {} data...'.format(num_segments, buffer_name.lower()))
 
         # No data returned
         else:
@@ -318,11 +319,11 @@ class RAD_Probe:
 
     def startMeasurement(self):
         """
-        Starts a new measurement. Returns 1 if successfull, 0 otherwsie
+        Starts a new measurement. Returns 1 if successful, 0 otherwise
         """
 
         ret = self.api.MeasStart()
-        self.log.debug("Start measurement Reqested.")
+        self.log.debug("Start measurement requested.")
 
         if ret['status'] == 1:
             self.wait_for_state(1)
@@ -337,11 +338,11 @@ class RAD_Probe:
 
     def stopMeasurement(self):
         """
-        Stops an ongoing measurement. Returns 1 if successfull, 0 otherwise
+        Stops an ongoing measurement. Returns 1 if successful, 0 otherwise
         """
 
         ret = self.api.MeasStop()
-        self.log.debug("Stop measurement reqested.")
+        self.log.debug("Stop measurement requested.")
 
         if ret['status'] == 1:
             self.wait_for_state(3)
@@ -356,7 +357,7 @@ class RAD_Probe:
     def resetMeasurement(self):
         """
         Resets the measurement FSM to prepare for a new measurement.
-        Returns 1 if successfull, 0 otherwise
+        Returns 1 if successful, 0 otherwise
         """
 
         ret = self.api.MeasReset()
@@ -375,7 +376,7 @@ class RAD_Probe:
 
     def wait_for_state(self, state, retry=500, delay=0.2):
         """
-        Waits for the specifed state to occur. This is particularly useful when
+        Waits for the specified state to occur. This is particularly useful when
         a command is requested.
 
         Args:
@@ -425,9 +426,9 @@ class RAD_Probe:
     def read_check_data_integrity(self, buffer_id, nbytes_per_value=None,
                                   nvalues=None, from_spi=False):
         """
-        Recieves a data function and  performs the data integrity check
+        Receives a data function and  performs the data integrity check
         If the data is from _spi then we know how long the segments are.
-        If the are not, then it is possible we receive an incomplete segement
+        If there are not, then it is possible we receive an incomplete segment
         so we check for integer_multiples of that data
 
         Args:
@@ -446,7 +447,7 @@ class RAD_Probe:
         ret_dict = self.__readData(buffer_id)
         final = None
 
-        # Sucessfully read data
+        # successfully read data
         if ret_dict['status'] != 1:
             self.log.error('Read {} error: No data available!'
                            ''.format(buffer_name))
@@ -470,14 +471,14 @@ class RAD_Probe:
 
                 # Check we read all bytes:
                 complete_bytes = expected_bytes == ret_dict['BytesRead']
-                self.log.debug('Downloaded {:0.2f}/{:0.2f} Kb.'.format(
+                self.log.debug('Downloaded {:0,.2f}/{:0,.2f} Kb.'.format(
                     ret_dict['BytesRead'] / 1000,
                     expected_bytes / 1000))
             # From chip memory
             else:
                 # We can have incomplete segments, so check for even numbers
                 complete_bytes = ret_dict['BytesRead'] % int_multiple == 0
-                self.log.debug('Byte Multiples: {:0.2f}'.format(ret_dict['BytesRead'] / int_multiple))
+                self.log.debug('Byte Multiples: {:0,.2f}'.format(ret_dict['BytesRead'] / int_multiple))
 
             # Check the data integrity
             if not all_segments or not complete_bytes:
@@ -493,8 +494,8 @@ class RAD_Probe:
                 self.log.info('Retrieving {:,} samples of {} data...'
                               ''.format(ret_dict['samples'], buffer_name))
 
-            self.log.debug("Segment Retrieved {:d}/{:d}."
-                           " Bytes Retrieved {:0.2f} Kb"
+            self.log.debug("Segment Retrieved {:,d}/{:,d}."
+                           " Bytes Retrieved {:0,.2f} Kb"
                            "".format(ret_dict['SegmentsRead'],
                                      ret_dict['SegmentsAvailable'],
                                      ret_dict['BytesRead'] / 1000))
@@ -633,7 +634,7 @@ class RAD_Probe:
                     # Form a byte object
                     byte_object = bytes(byte_list)
 
-                    # Unpck bytes originally a 32 bit long and save
+                    # Unpack bytes originally a 32 bit long and save
                     value = struct.unpack('<h', byte_object)[0]
 
                     # Convert to milli-gs while accounting for acc. range
@@ -653,12 +654,12 @@ class RAD_Probe:
 
     def readAccelerationCorrelationData(self):
         """
-        Reads the acceleration correllation data
+        Reads the acceleration correlation data
         """
 
         ret = self.__readData(5)
         if ret['status'] == 1:
-            # Sucessfully read data
+            # successfully read data
             # ***** DATA INTEGRITY CHECK *****
             # Data integrity error (not all segments read)
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
@@ -698,7 +699,7 @@ class RAD_Probe:
 
         ret = self.__readData(2)
 
-        # Sucessfully read data
+        # successfully read data
         if ret['status'] == 1:
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
@@ -743,7 +744,7 @@ class RAD_Probe:
         """
         ret = self.__readData(3)
         if ret['status'] == 1:
-            # Sucessfully read data
+            # successfully read data
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)
@@ -754,7 +755,7 @@ class RAD_Probe:
             total_bytes = ret['BytesRead']
             if (total_bytes % 4) != 0:
                 # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Floatingpoint
+                # The data set is not an integer multiple of 4 (Floating point)
                 # values are 32-bit long => 4 bytes)
                 self.log.error("readDepthData error: Data integrity error "
                                "(incomplete data set)")
@@ -821,12 +822,12 @@ class RAD_Probe:
 
     def readPressureDepthCorrelationData(self):
         """
-        Reads the pressure/depth correllation data
+        Reads the pressure/depth correlation data
         """
 
         ret = self.__readData(6)
         if ret['status'] == 1:
-            # Sucessfully read data
+            # successfully read data
             # ***** DATA INTEGRITY CHECK *****
             if ret['SegmentsAvailable'] != ret['SegmentsRead']:
                 # Data integrity error (not all segments read)
@@ -934,7 +935,7 @@ class RAD_Probe:
                   "MODEL NUMBER": self.api.hw_id}
         return header
 
-    def getSetting(self, **kwargs):
+    def getSetting(self, setting_name=None, sensor=None):
         """
         Reads the probes setting from the dictionary of functions. Calls the
         function and manages the data.
@@ -946,9 +947,8 @@ class RAD_Probe:
         Returns:
             int: from the function getting the probe setting, or list of 2 for calibration data
         """
-        setting_name = kwargs['setting_name']
         if setting_name == 'calibdata':
-            ret = self.getters[setting_name](kwargs['sensor'])
+            ret = self.getters[setting_name](sensor)
             num_values = 2
         else:
             ret = self.getters[setting_name]()
@@ -956,19 +956,17 @@ class RAD_Probe:
 
         return self.manage_data_return(ret, num_values=num_values, dtype=int)
 
-    def setSetting(self, **kwargs):
+    def setSetting(self, setting_name=None, sensor=None, value=None, low_value=None,
+                   hi_value=None):
         """
         sets the probe's setting
         """
-        setting_name = kwargs['setting_name']
 
         if setting_name == 'calibdata':
-            ret = self.settings[setting_name](kwargs['sensor'],
-                                              kwargs['low_value'],
-                                              kwargs['hi_value'])
+            ret = self.settings[setting_name](sensor, low_value, hi_value)
 
         else:
-            ret = self.settings[setting_name](kwargs['value'])
+            ret = self.settings[setting_name](value)
 
         if ret['status'] == 1:
             return True

@@ -12,12 +12,108 @@ from matplotlib import pyplot as plt
 from termcolor import colored
 from study_lyte.io import write_csv
 
-from radicl import probe
-from radicl.calibrate import get_avg_sensor
-from radicl.ui_tools import (Messages, get_logger, parse_func_list, parse_help,
-                             print_helpme)
+from .probe import RAD_Probe
+from .calibrate import get_avg_sensor
+from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
+                       print_helpme)
 
 out = Messages()
+
+
+def dataframe_this(data, name=None):
+    """
+    Takes the data returned from a function and converts it into a DataFrame
+    There appears to be two scenarios.
+    Args:
+        data: list or dictionary of data to dataframe
+        name: Name to use in the event the data is a list
+    Returns:
+        df: pd.Dataframe of the provided data
+    """
+    t = type(data)
+    if t == dict:
+        df = pd.DataFrame.from_dict(data)
+
+    elif t == list:
+        if isinstance(data[0], tuple):
+            data = [d[0] for d in data]
+
+        df = pd.DataFrame(data, columns=[name])
+
+    return df
+
+
+def is_numbered(filename):
+    """
+    Checks if the filename has been numbered. Denoted by any file ending in
+    somefname_<#>.csv Returns true or false.
+    Args:
+        filename: Path with potential some appended number scheme denoted by _
+    Returns:
+        bool: True if a separator and all numbers are found towards the end
+    """
+    info = filename.split('.')[0]
+    sep = False
+    numbered = False
+
+    if '_' in info:
+        numbers = info.split('_')[-1]
+        sep = True
+        numbered = all([c.isnumeric() for c in numbers])
+    return sep and numbered
+
+
+def add_ext(filename):
+    """
+    Check to see if the user provided the .csv ext in the filename
+    and add it
+    """
+    if filename[-4:] != '.csv':
+        f = filename.split('.')
+        # Did the user try to add an ext
+        if len(f) == 2:
+            filename = f[0] + '.csv'
+        else:
+            filename += '.csv'
+
+    return filename
+
+
+def get_default_filename():
+    """
+    Creates a datetime path for writing to
+
+    Returns:
+        filename: csv path named by the datetime
+    """
+
+    t = datetime.datetime.now()
+    fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
+    fname = fstr.format(t.year, t.month, t.day, t.hour, t.minute, t.second)
+    filename = os.path.expanduser('./{0}.csv'.format(fname))
+
+    return filename
+
+
+def increment_fnumber(filename):
+    """
+    Check for a file numbering. Increment if there is one. Otherwise add one
+    """
+    no_ext = filename.split('.')[0]
+
+    if is_numbered(filename):
+        info = no_ext.split('_')
+        base_file = '_'.join(info[0:-1])
+        count = int(info[-1])
+        fcount = count + 1
+
+    else:
+        base_file = no_ext
+        fcount = 1
+
+    filename = f"{base_file}_{fcount}.csv"
+
+    return filename
 
 
 class RADICL(object):
@@ -44,7 +140,7 @@ class RADICL(object):
                           'settings': 'Interface for modifying the behavior of the probe',
                           'update': 'Firmware update dialog for the probe.'}
 
-        self.probe = probe.RAD_Probe(debug=kwargs['debug'])
+        self.probe = RAD_Probe(debug=kwargs['debug'])
         self.running = True
 
         self.settings = dir(self.probe)
@@ -53,7 +149,7 @@ class RADICL(object):
         probe_funcs = inspect.getmembers(
             self.probe, predicate=inspect.ismethod)
 
-        self.options = {}
+        self.options = dict()
 
         # Assign all data functions with keywords to auto gather data packages
         self.options['data'] = parse_func_list(probe_funcs,
@@ -188,30 +284,13 @@ class RADICL(object):
         triggering the start and stop on the probe.
         """
 
-        out.msg("Press the probe button to start the measurement:")
+        out.msg(">> Press the probe button to start the measurement:")
         self.probe.wait_for_state(1, retry=1000, delay=0.3)
         out.respond("Measurement Started...")
 
-        out.msg("Press the probe button to end the measurement:")
+        out.msg(">> Press the probe button to end the measurement:")
         self.probe.wait_for_state(3, retry=1000, delay=0.3)
         out.respond("Measurement ended...")
-
-    def dataframe_this(self, data, name):
-        """
-        Takes the data returned from a function and converts it into a DataFrame
-        There appears to be two scenarios so we cover it here.
-        """
-        t = type(data)
-        if t == dict:
-            data = pd.DataFrame(data, columns=data.keys())
-
-        elif t == list:
-            if isinstance(data[0], tuple):
-                data = [d[0] for d in data]
-
-            data = pd.DataFrame(data, columns=[name])
-
-        return data
 
     def grab_data(self, data_request, retries=3):
         """
@@ -239,11 +318,11 @@ class RADICL(object):
             try:
                 data = fn()
                 sr_ts = self.probe.getSetting(setting_name='samplingrate')
-                data = self.dataframe_this(data, data_request)
+                data = dataframe_this(data, name=data_request)
                 n_samples = data.index.size
                 # Default to using the sensor data sample rate
                 sr = sr_ts
-                # Decimation ratio for periphal sensors
+                # Decimation ratio for peripheral sensors
                 ratio = sr_ts / 16000
 
                 if 'acceleration' in data_request:
@@ -251,8 +330,8 @@ class RADICL(object):
                 elif data_request in ['filtereddepth', 'rawdepth', 'rawpressure']:
                     sr = int(75 * ratio)
 
-                time = np.linspace(0, n_samples / sr, n_samples)
-                data['time'] = time
+                seconds = np.linspace(0, n_samples / sr, n_samples)
+                data['time'] = seconds
                 data.set_index('time', inplace=True)
                 success = True
 
@@ -323,7 +402,7 @@ class RADICL(object):
 
                 #  Wait for real path
                 while not valid:
-                    fname = self.get_default_filename()
+                    fname = get_default_filename()
                     out.msg("Enter in a filepath for the data to be saved:")
                     filename = input("\nPress enter to use default:"
                                      "\n(Default: {0})".format(fname))
@@ -473,63 +552,6 @@ class RADICL(object):
         out.msg(msg)
         time.sleep(2)
 
-    def increment_fnumber(self, filename):
-        """
-        Check for a file numbering. Increment if there is one. Otherwise add one
-        """
-        if self.is_numbered(filename):
-            fcount = int(filename[-1]) + 1
-
-        else:
-            fcount = 1
-
-        s = -1 * len(str(fcount)) + pos_num
-        filename = filename[0:s] + str(fcount)
-
-        return filename
-
-    def is_numbered(self, filename):
-        """
-        Checks if the filename is numbered. Returns true or false.
-        """
-        if filename[-4] in [str(i) for i in range(0, 9)]:
-            result = True
-
-        else:
-            result = False
-
-        return result
-
-    def check_ext(self, filename):
-        """
-        Check to see if the user provided the .csv ext in the filename
-        and add it
-        """
-        if filename[-4:] != '.csv':
-            f = filename.split('.')
-            # Did the user try to add an ext
-            if len(f) == 2:
-                filename = f[0] + '.csv'
-            else:
-                filename += '.csv'
-
-        return filename
-
-    def get_default_filename(self):
-        """
-        Creates a datetime path for writing to
-
-        Returns:
-            filename: csv path named by the datetime
-        """
-
-        t = datetime.datetime.now()
-        fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
-        fname = fstr.format(t.year, t.month, t.day, t.hour, t.minute, t.second)
-        filename = os.path.expanduser('./{0}.csv'.format(fname))
-
-        return filename
-
     def write_probe_data(self, df, filename='', extra_meta={}):
         """
         Writes out a dataframe with a probe header to csv
@@ -539,9 +561,9 @@ class RADICL(object):
             extra_meta: Dictionary of extra notes to add to the file header
         """
 
-        # Recieve a default request
+        # Receive a default request
         if filename == '':
-            filename = self.get_default_filename()
+            filename = get_default_filename()
 
         else:
             filename = os.path.expanduser(filename)
@@ -618,7 +640,7 @@ class RADICL(object):
 
         acceptable_answer = False
 
-        while acceptable_answer == False:
+        while not acceptable_answer:
             user_answer = input('\n')
             response = user_answer.lower().strip()
 

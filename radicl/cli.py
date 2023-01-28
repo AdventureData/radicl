@@ -4,7 +4,7 @@ import argparse
 import os
 
 from radicl import __version__
-from radicl.radicl import RADICL
+from radicl.interface import RADICL
 from radicl.ui_tools import Messages
 
 debug = False

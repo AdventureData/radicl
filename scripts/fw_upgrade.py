@@ -3,7 +3,7 @@ import argparse
 import os
 import time
 
-from radicl import serial as rs
+from radicl.com import RAD_Serial
 from radicl.api import RAD_API
 from radicl.update import FW_Update
 from radicl.ui_tools import get_logger
@@ -16,7 +16,7 @@ def Upgrade(fw_image):
     app_header_crc = 0
     counter = 0
     log = get_logger(__name__)
-    port = rs.RAD_Serial()
+    port = RAD_Serial()
 
     try:
         port.openPort()
@@ -35,11 +35,11 @@ def Upgrade(fw_image):
         time.sleep(0.5)
         ret = api.Identify()
 
-        # Prior to FW revision 1.45, only 16 byte packages were possible. With FW revision 1.45 and above, the package size can be increased up to
-        # 64 byes. Although it is technically possible to send up to 256 bytes in a package, there is a bug in the USB transport layer that causes
-        # issues when transfering more than 64 bytes at a time. Until this is
-        # resolved, 64 bytes is the max.
-        if api.FWRev() >= 1.45:
+        # Prior to FW revision 1.45, only 16 byte packages were possible. With FW revision 1.45 and above,
+        # the package size can be increased up to 64 byes. Although it is technically possible to send up to 256
+        # bytes in a package, there is a bug in the USB transport layer that causes issues when transferring more
+        # than 64 bytes at a time. Until this is resolved, 64 bytes is the max.
+        if api.fw_rev >= 1.45:
             transfer_size = 64
         else:
             transfer_size = 16
@@ -89,10 +89,8 @@ def Upgrade(fw_image):
                         else:
                             port.flushPort()
                             # Create the API
-                            # The API class is linked to the port object
                             api = RAD_API(port)
-                            fw = FW_Update(
-                                api, 64)  # The FW Update class is linked to the API object
+                            fw = FW_Update(api, 64)  # The FW Update class is linked to the API object
                             api.sendApiPortEnable()
 
                             # Delay a bit and then identify the attached device
@@ -126,6 +124,6 @@ if __name__ == '__main__':
                 '.')[-1] == 'bin':
             Upgrade(fw_image_file)
         else:
-            log.error("Invalid file %s" % fw_image_file)
+            print(f"Invalid file {fw_image_file}")
 
     # Upgrade("RAD_PB3_REVC_1_45_3_0.bin")

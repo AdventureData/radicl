@@ -3,10 +3,10 @@
 import logging
 import sys
 import textwrap
-
 import coloredlogs
 from colorama import init
 from termcolor import colored
+from threading import Timer
 
 
 class Messages:
@@ -47,10 +47,10 @@ class Messages:
         print('\t' + final_msg)
 
 
-def parse_func_list(func_lst, identify_lst, ignore_keywords=[]):
+def parse_func_list(func_list, identify_lst, ignore_keywords=[]):
     """
     Reads through a list of available methods and retrieves the methods that have
-    matching words in the identify list, then it removes those key words and Returns
+    matching words in the identify list, then it removes those keywords and Returns
     a dictionary of simplified method names with values as their corresponding
     method
 
@@ -64,11 +64,11 @@ def parse_func_list(func_lst, identify_lst, ignore_keywords=[]):
     options = {}
     ignore_keywords = [w.lower() for w in ignore_keywords]
 
-    for f_name, fn in func_lst:
+    for f_name, fn in func_list:
         # Return a list of true when a word is found
         words_found = [True for w in identify_lst if w.lower()
                        in f_name.lower()]
-        # If the number of the matches matches the number of keywords were
+        # If the number of the matches the number of keywords were
         # looking for
         if len(words_found) == len(identify_lst) and 'RAD' not in f_name:
             # Remove the keywords to form the simplified method name
@@ -91,7 +91,7 @@ def parse_help(help_str):
     e.g.
 
     Function doc string
-    helpme - more end user friendly message about what this will do
+    helpme - more end user-friendly message about what this will do
 
     my arguments...
 
@@ -106,16 +106,9 @@ def parse_help(help_str):
     return result
 
 
-def columnize_str(entrie, width):
-    """
-    Takes a long string that cannot be formatted correctly into a column
-    """
-    pass
-
-
 def print_helpme(help_str, help_dict):
     """
-    Trys to help the user on request for help.
+    Tries to help the user on request for help.
 
     Args:
         help_str -
@@ -161,14 +154,14 @@ def print_helpme(help_str, help_dict):
             'https://github.com/Adventuredata/radicl/issues\n')
         print(help_dict)
 
-    # Doctor up the print out
+    # Doctor up the printout
     t = '\n{0:<20} {1:<20}\n'.format('OPTIONS', 'DESCRIPTION')
     print_able = '\n{0}'.format(colored(t, 'magenta', attrs=['bold']))
     print_able += out_str
     print(print_able)
 
 
-def get_logger(name, debug=False, ext_logger=None, ):
+def get_logger(name, debug=False, ext_logger=None):
     """
     Args:
         name: Name of the logger.
@@ -190,3 +183,12 @@ def get_logger(name, debug=False, ext_logger=None, ):
 
     coloredlogs.install(fmt=fmt, level=level, logger=log)
     return log
+
+
+def exit_requested():
+    ans = input('\nPress enter to begin listening for probe (type exit to quit): ')
+    if ans.strip().lower() in ['exit', 'quit']:
+        return True
+    else:
+        return False
+
