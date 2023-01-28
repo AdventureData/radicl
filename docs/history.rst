@@ -77,3 +77,16 @@ Overhaul (2017-10-17)
 
 .. _25: https://github.com/AdventureData/radicl/issues/25
 .. _26: https://github.com/AdventureData/radicl/issues/26
+
+
+0.7.0 (2023-01-28)
+------------------
+* Fixes for issue 31_
+* Added auto closing of plots 25_
+* Added more tests and python 3.11
+* Rearranged project structure to be more editor friendly
+* Added plot time and repeat measurements to hi res script
+* Updated installation docs
+
+.. _25: https://github.com/AdventureData/radicl/issues/25
+.. _31: https://github.com/AdventureData/radicl/issues/31
