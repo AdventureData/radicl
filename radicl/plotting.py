@@ -11,7 +11,7 @@ import matplotlib
 from radicl.ui_tools import get_logger
 
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
-from study_lyte.depth import get_depth_from_acceleration
+from study_lyte.depth import get_depth_from_acceleration, get_constrained_baro_depth
 from study_lyte.io import read_csv
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
@@ -89,17 +89,18 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         raise ValueError('No acceleration was found in the file!')
 
     # Estimate events
-    start = get_acceleration_start(df[detect_col], threshold=0.15)
-    stop = get_acceleration_stop(df[detect_col], threshold=0.45)
+    start = get_acceleration_start(df[detect_col])
+    stop = get_acceleration_stop(df[detect_col])
 
     # Calculate depth from acceleration
-    acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(-100)
-    df['acc_depth'] = acc_depth[detect_col]
+    acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(100)
+    acc_depth = acc_depth.reset_index()
+    df['acc_depth'] = acc_depth[detect_col].copy()
     df['avg_depth'] = df[['acc_depth', 'depth']].mean(axis=1)
 
     # Crop data to motion
     cropped = df.iloc[start:stop].copy()
-    surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'], threshold=0.02)
+    surface = get_nir_surface(cropped['Sensor3'], cropped['Sensor2'])
     full_surface = surface + start
 
     # Re-zero the depth
@@ -193,6 +194,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax.plot(time_series, df['depth'], color='navy', label='Baro.')
     ax.plot(time_series, df['acc_depth'], color='mediumseagreen', label='Acc.')
     ax.plot(time_series, df['avg_depth'], color='tomato', label='Avg.')
+    extra = get_constrained_baro_depth(df)
+    ax.plot(extra.index, extra['depth'], label='constr.')
     ax.legend(loc='upper right')
 
     ax.set_ylabel('Depth from Max Height [cm]')
@@ -211,6 +214,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     else:
         plt.show()
+
 
 def plot_hi_res_cli():
     files = sys.argv[1:]
@@ -319,4 +323,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    plot_hi_res_cli()
