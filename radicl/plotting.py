@@ -13,6 +13,8 @@ from radicl.ui_tools import get_logger
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
 from study_lyte.depth import get_depth_from_acceleration, get_constrained_baro_depth
 from study_lyte.io import read_csv
+from study_lyte.adjustments import remove_ambient
+
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
 
@@ -100,7 +102,9 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     # Crop data to motion
     cropped = df.iloc[start:stop].copy()
-    surface = get_nir_surface(cropped['Sensor3'], cropped['Sensor2'])
+    cropped['clean'] = remove_ambient(cropped['Sensor3'], cropped['Sensor2'])
+
+    surface = get_nir_surface(cropped['clean'])
     full_surface = surface + start
 
     # Re-zero the depth
@@ -130,7 +134,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     # Provide depth shifts
     ambient_shift = 6  # cm
-    active_shift = 4.5  # cm
+    active_shift = 4.5  #
+    mean_shift = (ambient_shift + active_shift) / 2
     time_series_events = dict(start=time_series[start],
                               surface=time_series[full_surface],
                               stop=time_series[stop],
@@ -158,21 +163,24 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
-    plot_events(ax, surface=cropped['acc_depth'].iloc[surface], plot_type='vertical')
+    ax.grid(True, axis='y', which='both', alpha=0.5)
+    plot_events(ax, surface=cropped['acc_depth'].iloc[surface] - active_shift, plot_type='vertical')
     ax.plot(cropped['Sensor1'], cropped['acc_depth'], color='k', label='Raw Force')
-    ax.set_title("Depth Corrected")
-    ax.legend(loc='lower left')
+    ax.set_title("Force Depth Corrected")
+    ax.legend(loc='lower left', fontsize='small')
     ax.set_xlim((0, 4096))
-    ax.set_ylabel('Force Depth [cm]')
+    ax.set_ylabel('Depth [cm]')
 
     # plot depth corrected NIR data
     ax = fig.add_subplot(gs[:, 3])
+    ax.grid(True, axis='y', alpha=0.5)
     plot_events(ax, surface=cropped['depth'].iloc[surface], plot_type='vertical')
-    ax.plot(cropped['Sensor2'], cropped['acc_depth'] + 2.0, color='darkorange', label='Ambient')
-    ax.plot(cropped['Sensor3'], cropped['acc_depth'], color='crimson', label='Active')
+    ax.plot(cropped['Sensor2'], cropped['acc_depth'] + 2.0, alpha=0.3, color='darkorange', label='Ambient')
+    ax.plot(cropped['Sensor3'], cropped['acc_depth'], alpha=0.3, color='crimson', label='Active')
+    ax.plot(cropped['clean'], cropped['acc_depth'], color='crimson', label='Clean Active')
     ax.set_title("NIR Depth Corrected")
-    ax.set_ylabel('Depth [cm]')
-    ax.legend(loc='lower left')
+    # ax.set_ylabel('Depth [cm]')
+    ax.legend(loc='lower left', fontsize='small')
 
     # plot the acceleration as a sub-panel with events, handle acceleration or all 3 axis
     ax = fig.add_subplot(gs[0, 4])
@@ -185,7 +193,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax.set_ylabel("Acceleration [g's]")
     ax.set_xlabel('Time [s]')
     ax.set_title('Accelerometer')
-    ax.legend(loc='lower left')
+    ax.legend(fontsize='xx-small')
 
     # plot the depth as a sub-panel with events
     ax = fig.add_subplot(gs[1, 4])
@@ -196,8 +204,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax.plot(time_series, df['avg_depth'], color='tomato', label='Avg.')
     extra = get_constrained_baro_depth(df)
     ax.plot(extra.index, extra['depth'], label='constr.')
-    ax.legend(loc='upper right')
-
+    ax.legend(loc='upper right', fontsize='xx-small')
     ax.set_ylabel('Depth from Max Height [cm]')
 
     # Make the figure full screen
