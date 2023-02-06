@@ -5,10 +5,10 @@ import os
 import sys
 import platform
 import time
-
+import traceback
 from matplotlib import pyplot as plt
 import matplotlib
-from radicl.ui_tools import get_logger
+from radicl.ui_tools import get_logger, get_index_from_ratio
 
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
 from study_lyte.depth import get_depth_from_acceleration, get_constrained_baro_depth
@@ -164,7 +164,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
     ax.grid(True, axis='y', which='both', alpha=0.5)
-    plot_events(ax, surface=cropped['acc_depth'].iloc[surface] - active_shift, plot_type='vertical')
+    plot_events(ax, surface=cropped['acc_depth'].iloc[surface],
+                plot_type='vertical')
     ax.plot(cropped['Sensor1'], cropped['acc_depth'], color='k', label='Raw Force')
     ax.set_title("Force Depth Corrected")
     ax.legend(loc='lower left', fontsize='small')
@@ -179,7 +180,6 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax.plot(cropped['Sensor3'], cropped['acc_depth'], alpha=0.3, color='crimson', label='Active')
     ax.plot(cropped['clean'], cropped['acc_depth'], color='crimson', label='Clean Active')
     ax.set_title("NIR Depth Corrected")
-    # ax.set_ylabel('Depth [cm]')
     ax.legend(loc='lower left', fontsize='small')
 
     # plot the acceleration as a sub-panel with events, handle acceleration or all 3 axis
@@ -206,11 +206,27 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax.plot(extra.index, extra['depth'], label='constr.')
     ax.legend(loc='upper right', fontsize='xx-small')
     ax.set_ylabel('Depth from Max Height [cm]')
+    # limits for depth
+    buffer = 0.3
+    n_samples = len(df.index)
+    lim_idx1 = get_index_from_ratio(start, 1-buffer, n_samples)
+    lim_idx2 = get_index_from_ratio(stop, 1 + buffer, n_samples)
+    ts1, ts2 = time_series[lim_idx1], time_series[lim_idx2]
+    depth1 = df[['depth', 'acc_depth']].iloc[lim_idx1].max() * (1-buffer)
+    depth2 = df[['depth', 'acc_depth']].iloc[lim_idx2].min() * (1+buffer)
+    if abs(depth1) < 5:
+        depth1 = 5
+
+    ax.set_xlim(ts1, ts2)
+    ax.set_ylim(*sorted([depth1, depth2]))
+    ax.grid(True, axis='y', which='both', alpha=0.5)
 
     # Make the figure full screen
     manager = plt.get_current_fig_manager()
     if 'Linux' in platform.platform():
         manager.full_screen_toggle()
+
+    # Manage plot time
     if timed_plot == 0:
         pass
     elif timed_plot is not None:
@@ -231,7 +247,9 @@ def plot_hi_res_cli():
             plot_hi_res(fname=f)
         except Exception as e:
             print(f'Encountered error while processing {f}')
-            print(e)
+            traceback.print_exc(file=sys.stdout)
+            time.sleep(1)
+            plt.close()
 
 
 def main():
