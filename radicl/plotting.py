@@ -5,14 +5,16 @@ import os
 import sys
 import platform
 import time
-
+import traceback
 from matplotlib import pyplot as plt
 import matplotlib
-from radicl.ui_tools import get_logger
+from radicl.ui_tools import get_logger, get_index_from_ratio
 
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
-from study_lyte.depth import get_depth_from_acceleration
+from study_lyte.depth import get_depth_from_acceleration, get_constrained_baro_depth
 from study_lyte.io import read_csv
+from study_lyte.adjustments import remove_ambient
+
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
 
@@ -89,17 +91,20 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         raise ValueError('No acceleration was found in the file!')
 
     # Estimate events
-    start = get_acceleration_start(df[detect_col], threshold=0.15)
-    stop = get_acceleration_stop(df[detect_col], threshold=0.45)
+    start = get_acceleration_start(df[detect_col])
+    stop = get_acceleration_stop(df[detect_col])
 
     # Calculate depth from acceleration
-    acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(-100)
-    df['acc_depth'] = acc_depth[detect_col]
+    acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(100)
+    acc_depth = acc_depth.reset_index()
+    df['acc_depth'] = acc_depth[detect_col].copy()
     df['avg_depth'] = df[['acc_depth', 'depth']].mean(axis=1)
 
     # Crop data to motion
     cropped = df.iloc[start:stop].copy()
-    surface = get_nir_surface(cropped['Sensor2'], cropped['Sensor3'], threshold=0.02)
+    cropped['clean'] = remove_ambient(cropped['Sensor3'], cropped['Sensor2'])
+
+    surface = get_nir_surface(cropped['clean'])
     full_surface = surface + start
 
     # Re-zero the depth
@@ -129,7 +134,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     # Provide depth shifts
     ambient_shift = 6  # cm
-    active_shift = 4.5  # cm
+    active_shift = 4.5  #
+    mean_shift = (ambient_shift + active_shift) / 2
     time_series_events = dict(start=time_series[start],
                               surface=time_series[full_surface],
                               stop=time_series[stop],
@@ -157,21 +163,24 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
-    plot_events(ax, surface=cropped['acc_depth'].iloc[surface], plot_type='vertical')
+    ax.grid(True, axis='y', which='both', alpha=0.5)
+    plot_events(ax, surface=cropped['acc_depth'].iloc[surface],
+                plot_type='vertical')
     ax.plot(cropped['Sensor1'], cropped['acc_depth'], color='k', label='Raw Force')
-    ax.set_title("Depth Corrected")
-    ax.legend(loc='lower left')
+    ax.set_title("Force Depth Corrected")
+    ax.legend(loc='lower left', fontsize='small')
     ax.set_xlim((0, 4096))
-    ax.set_ylabel('Force Depth [cm]')
+    ax.set_ylabel('Depth [cm]')
 
     # plot depth corrected NIR data
     ax = fig.add_subplot(gs[:, 3])
+    ax.grid(True, axis='y', alpha=0.5)
     plot_events(ax, surface=cropped['depth'].iloc[surface], plot_type='vertical')
-    ax.plot(cropped['Sensor2'], cropped['acc_depth'] + 2.0, color='darkorange', label='Ambient')
-    ax.plot(cropped['Sensor3'], cropped['acc_depth'], color='crimson', label='Active')
+    ax.plot(cropped['Sensor2'], cropped['acc_depth'] + 2.0, alpha=0.3, color='darkorange', label='Ambient')
+    ax.plot(cropped['Sensor3'], cropped['acc_depth'], alpha=0.3, color='crimson', label='Active')
+    ax.plot(cropped['clean'], cropped['acc_depth'], color='crimson', label='Clean Active')
     ax.set_title("NIR Depth Corrected")
-    ax.set_ylabel('Depth [cm]')
-    ax.legend(loc='lower left')
+    ax.legend(loc='lower left', fontsize='small')
 
     # plot the acceleration as a sub-panel with events, handle acceleration or all 3 axis
     ax = fig.add_subplot(gs[0, 4])
@@ -184,7 +193,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax.set_ylabel("Acceleration [g's]")
     ax.set_xlabel('Time [s]')
     ax.set_title('Accelerometer')
-    ax.legend(loc='lower left')
+    ax.legend(fontsize='xx-small')
 
     # plot the depth as a sub-panel with events
     ax = fig.add_subplot(gs[1, 4])
@@ -193,14 +202,31 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax.plot(time_series, df['depth'], color='navy', label='Baro.')
     ax.plot(time_series, df['acc_depth'], color='mediumseagreen', label='Acc.')
     ax.plot(time_series, df['avg_depth'], color='tomato', label='Avg.')
-    ax.legend(loc='upper right')
-
+    extra = get_constrained_baro_depth(df)
+    ax.plot(extra.index, extra['depth'], label='constr.')
+    ax.legend(loc='upper right', fontsize='xx-small')
     ax.set_ylabel('Depth from Max Height [cm]')
+    # limits for depth
+    buffer = 0.3
+    n_samples = len(df.index)
+    lim_idx1 = get_index_from_ratio(start, 1-buffer, n_samples)
+    lim_idx2 = get_index_from_ratio(stop, 1 + buffer, n_samples)
+    ts1, ts2 = time_series[lim_idx1], time_series[lim_idx2]
+    depth1 = df[['depth', 'acc_depth']].iloc[lim_idx1].max() * (1-buffer)
+    depth2 = df[['depth', 'acc_depth']].iloc[lim_idx2].min() * (1+buffer)
+    if abs(depth1) < 5:
+        depth1 = 5
+
+    ax.set_xlim(ts1, ts2)
+    ax.set_ylim(*sorted([depth1, depth2]))
+    ax.grid(True, axis='y', which='both', alpha=0.5)
 
     # Make the figure full screen
     manager = plt.get_current_fig_manager()
     if 'Linux' in platform.platform():
         manager.full_screen_toggle()
+
+    # Manage plot time
     if timed_plot == 0:
         pass
     elif timed_plot is not None:
@@ -212,6 +238,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     else:
         plt.show()
 
+
 def plot_hi_res_cli():
     files = sys.argv[1:]
 
@@ -220,7 +247,9 @@ def plot_hi_res_cli():
             plot_hi_res(fname=f)
         except Exception as e:
             print(f'Encountered error while processing {f}')
-            print(e)
+            traceback.print_exc(file=sys.stdout)
+            time.sleep(1)
+            plt.close()
 
 
 def main():
@@ -319,4 +348,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    plot_hi_res_cli()

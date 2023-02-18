@@ -192,3 +192,21 @@ def exit_requested():
     else:
         return False
 
+
+def get_index_from_ratio(idx, ratio, n_samples):
+    """
+    Sometimes we have an index and we want something
+    slightly near it. This manages grabbing those with
+    consideration for the max value
+    Args:
+        idx: idx of interest
+        ratio: scaling ratio (e.g. 1.1)
+        n_samples: max allowable number of samples
+
+    Returns:
+        result: Scaled integer of the index
+    """
+    result = int(idx*ratio)
+    if result > n_samples:
+        result = n_samples-1
+    return result
