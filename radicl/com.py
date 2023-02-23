@@ -21,7 +21,7 @@ def find_kw_port(kw):
 
     for p in port_list:
         # Make a list of true for every keyword we find in the port data
-        kw_match = [True for k in kw if k.lower() in p[1].lower()]
+        kw_match = [True for k in kw if k.lower() in p.description.lower()]
 
         # If the match list is not empty append this port name
         if kw_match:
