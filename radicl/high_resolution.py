@@ -23,6 +23,7 @@ from radicl.ui_tools import get_logger, exit_requested
 from radicl.plotting import plot_hi_res
 from radicl.gps import USBGPS
 
+
 def build_high_resolution_data(cli, log):
     """
     Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
@@ -52,7 +53,7 @@ def build_high_resolution_data(cli, log):
     depth = depth.drop(columns=['filtereddepth'])
 
     log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
-    log.info("Depth Samples: {:,}".format(len(depth.index)))
+    log.info("Barometer Samples: {:,}".format(len(depth.index)))
     log.info("Acceleration Samples: {:,}".format(len(acc.index)))
     log.info("Sensor Samples: {:,}".format(len(ts)))
 

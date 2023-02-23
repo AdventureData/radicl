@@ -29,13 +29,17 @@ class USBGPS:
             gps = NMEAReader(self.cnx)
 
             for i in range(max_attempts):
-                msg = gps.read()[1]
+                rx, msg = gps.read()
+
                 if msg.msgID in ['GGA', 'RMC']:
-                    location = msg.lat, msg.lon
-                    self.log.info(f'GPS fix acquired, {location[0]:0.4f} {location[1]:0.4f}')
-                    break
+                    info = msg.lat, msg.lon
+                    if all(info):
+                        location = [float(p) for p in info]
+                        break
                 time.sleep(0.1)
             if location is None:
                 self.log.warning('Unable to get a fix on GPS! No location data will be recorded!')
+            else:
+                self.log.info(f'GPS fix acquired, {location[0]:0.4f} {location[1]:0.4f}')
 
         return location

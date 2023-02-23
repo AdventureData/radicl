@@ -1,7 +1,7 @@
 from radicl.probe import RAD_Probe
 import pandas as pd
 import numpy as np
-
+from radicl.gps import USBGPS
 
 def probe_not_connected():
 
@@ -12,6 +12,17 @@ def probe_not_connected():
 
     except:
         not_connected = True
+
+    return not_connected
+
+
+def gps_not_connected():
+
+    dev = USBGPS()
+    if dev is None:
+        not_connected = True
+    else:
+        not_connected = False
 
     return not_connected
 
@@ -96,3 +107,12 @@ class MOCKCLI:
         result = pd.DataFrame(data)
 
         return result
+
+
+class MockGPS():
+    def __init__(self, payload):
+        self.payload = []
+
+    def read(self):
+        return self.payload.pop()
+
