@@ -1,16 +1,47 @@
-from radicl.com import *
+from radicl.com import find_kw_port, get_serial_cnx
 import pytest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 
-@pytest.mark.parametrize('kw, com_list, expected', [
-    ('test', [('', 'TEST_com'), ('', 'com1')], [('', 'TEST_com')]),
-    ('test', [('', 'com')], [])
+@pytest.mark.parametrize('kw, description_list, expected', [
+    # Check plain usage with capital letters
+    ('test', ['TEST device', 'unknown com1'], ['TEST device']),
+    # check no match found
+    ('test', ['com'], []),
+    # Check multiple matches found
+    ('test', ['TEST device', 'tester com1'], ['TEST device', 'tester com1']),
 
 ])
-def test_find_kw_port(kw, com_list, expected):
-    with patch('serial.tools.list_ports.comports', return_value=com_list):
-        assert find_kw_port(kw) == expected
+def test_find_kw_port(kw, description_list, expected):
+    """
+    Mock devices using a list of descriptions. Check the port finder
+    grabs them
+    """
+    coms = [SimpleNamespace(description=c) for c in description_list]
+    with patch('serial.tools.list_ports.comports', return_value=coms):
+        result = find_kw_port(kw)
+        assert [r.description for r in result] == expected
+
+
+@pytest.mark.parametrize('kw, com_list, match_index, expected', [
+    # One probe
+    ('ST Micro', ['St Microelectronics', 'unknown'], 0, 'dev_fake_0'),
+    # Two probes but pick the index
+    ('ST Micro', ['St Microelectronics', 'St Microelectronics 1'], 1, 'dev_fake_1'),
+    # No probe
+    ('ST Micro', ['unknown 1', 'unknown 2'], 1, None),
+
+])
+def test_get_serial_cnx(kw, com_list, match_index, expected):
+    devices = [SimpleNamespace(device=f'dev_fake_{i}', description=d[1]) for i,d in enumerate(com_list)]
+    with patch('serial.tools.list_ports.comports', return_value=devices):
+        with patch('serial.Serial.open', return_value=None):
+            cnx = get_serial_cnx(kw, match_index=match_index)
+        if hasattr(cnx, 'port'):
+            assert cnx.port == expected
+        else:
+            assert cnx == expected
 
 
 class MockSerialPort:
