@@ -2,7 +2,6 @@
 
 import serial
 from serial.tools import list_ports
-
 from .ui_tools import get_logger
 
 
@@ -29,6 +28,28 @@ def find_kw_port(kw):
             match_list.append(p)
 
     return match_list
+
+
+def get_serial_cnx(keyword, match_index=0):
+    """
+    Use a keyword to return any matches in the serial com ports.
+    Then return the match of interest using the match_index kwarg.
+
+    Args:
+        keyword:
+        match_index:
+
+    Returns:
+        cnx: serial.Serial object
+    """
+    cnx = None
+    matching_ports = find_kw_port(keyword)
+    if match_index < len(matching_ports):
+        cnx = serial.Serial(matching_ports[match_index].device)
+    return cnx
+
+
+
 
 
 class RAD_Serial:

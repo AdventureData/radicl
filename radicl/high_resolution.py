@@ -21,7 +21,7 @@ from radicl import __version__
 from radicl.interface import RADICL
 from radicl.ui_tools import get_logger, exit_requested
 from radicl.plotting import plot_hi_res
-
+from radicl.gps import USBGPS
 
 def build_high_resolution_data(cli, log):
     """
@@ -115,6 +115,9 @@ def main():
     # Retrieve a connection to the probe
     cli = RADICL()
 
+    # Look for a gps
+    gps = USBGPS()
+
     # Keep count of measurements taken
     i = 0
 
@@ -137,10 +140,19 @@ def main():
         # Collect and build the data
         ts = build_high_resolution_data(cli, log)
 
+        meta = {"SAMPLE RATE": str(SR),
+                "ZPFO": str(zpfo),
+                "ACC. Range": str(acc_range),
+                'Serial Num.': cli.probe.getProbeSerial()}
+
+        # Attempt to get a fix, if no gps cnx then no location data is returned
+        location = gps.get_fix()
+        if location is not None:
+            meta['Latitude'] = location[0]
+            meta['Longitude'] = location[1]
+
         # Output the data to a datetime file
-        cli.write_probe_data(ts, extra_meta={"SAMPLE RATE": str(SR),
-                                             "ZPFO": str(zpfo),
-                                             "ACC. Range": str(acc_range)})
+        cli.write_probe_data(ts, extra_meta=meta)
 
         # Plot the data
         plot_hi_res(df=ts, calibration_dict=calibration, timed_plot=args.plot_time)
