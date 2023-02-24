@@ -9,7 +9,6 @@ class TestUSBGPS:
     def gps_dev(self):
         return USBGPS()
 
-
     def test_get_fix(self, gps_dev):
         location = gps_dev.get_fix(max_attempts=30)
         assert len(location) == 2

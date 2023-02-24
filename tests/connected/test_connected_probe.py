@@ -7,6 +7,7 @@ import numpy as np
 from radicl.probe import RAD_Probe
 from radicl.interface import dataframe_this
 
+
 @pytest.mark.skipif(not_connected, reason='probe not connected')
 @pytest.mark.parametrize("setting_name, expected_type", [
     ('accrange', int)
