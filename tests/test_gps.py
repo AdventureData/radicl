@@ -28,7 +28,7 @@ def test_get_gps_fix(mock_gps_port, payload, expected):
         payload: List of nmea strings to read
         expected: expected lat long outcome
     """
-    with patch('radicl.com.get_serial_cnx', return_value=SimpleNamespace(device='dev_fake', description='gps')):
+    with patch('radicl.com.get_serial_cnx', return_value=SimpleNamespace(device='dev_fake', description='GPS/GNSS Receiver')):
         with patch('serial.Serial.open', return_value=None):
             with patch('radicl.gps.NMEAReader', return_value=mock_gps_port):
                 gps_dev = USBGPS()

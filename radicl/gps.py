@@ -8,12 +8,11 @@ from .ui_tools import get_logger
 class USBGPS:
     def __init__(self, debug=False):
         self.log = get_logger(__name__, debug=debug)
-        self.cnx = get_serial_cnx('gps')
+        self.cnx = get_serial_cnx('GPS/GNSS Receiver')
         if self.cnx is None:
             self.log.warning('No GPS found. No location data will be recorded.')
         else:
             self.log.info(f'GPS found ({self.cnx.port})!')
-
 
     def get_fix(self, max_attempts=20):
         """
