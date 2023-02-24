@@ -49,9 +49,6 @@ def get_serial_cnx(keyword, match_index=0):
     return cnx
 
 
-
-
-
 class RAD_Serial:
     """
     This class handles all serial communication and simply acts
@@ -79,7 +76,7 @@ class RAD_Serial:
                 raise serial.SerialException('No comports were found!')
 
             # Finally, assign the found port to the serial_port variable
-            com_port = match_list[0][0]
+            com_port = match_list[0].device
 
         try:
             self.log.debug(

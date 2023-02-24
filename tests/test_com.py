@@ -1,4 +1,4 @@
-from radicl.com import find_kw_port, get_serial_cnx
+from radicl.com import find_kw_port, get_serial_cnx, RAD_Serial
 import pytest
 from unittest.mock import patch
 from types import SimpleNamespace
@@ -71,7 +71,7 @@ class TestRAD_Serial:
 
     @pytest.fixture(scope='function')
     def rs(self):
-        with patch('serial.tools.list_ports.comports', return_value=[('mock', 'STMicroelectronics')]):
+        with patch('serial.tools.list_ports.comports', return_value=[SimpleNamespace(device='dev_mock', description='STMicroelectronics')]):
             with patch('serial.Serial', return_value=MockSerialPort(port='mock')):
                 rs = RAD_Serial()
                 yield rs
