@@ -2,7 +2,6 @@
 
 import serial
 from serial.tools import list_ports
-
 from .ui_tools import get_logger
 
 
@@ -22,13 +21,33 @@ def find_kw_port(kw):
 
     for p in port_list:
         # Make a list of true for every keyword we find in the port data
-        kw_match = [True for k in kw if k.lower() in p[1].lower()]
+        kw_match = [True for k in kw if k.lower() in p.description.lower()]
 
         # If the match list is not empty append this port name
         if kw_match:
             match_list.append(p)
 
     return match_list
+
+
+def get_serial_cnx(keyword, match_index=0):
+    """
+    Use a keyword to return any matches in the serial com ports.
+    Then return the match of interest using the match_index kwarg.
+
+    Args:
+        keyword: String keyword to search for in device descriptions
+        match_index: Index to use if more than one match comes back
+
+    Returns:
+        cnx: serial.Serial object
+    """
+    cnx = None
+    matching_ports = find_kw_port(keyword)
+    if match_index < len(matching_ports):
+        port = matching_ports[match_index]
+        cnx = serial.Serial(port.device)
+    return cnx
 
 
 class RAD_Serial:
@@ -58,7 +77,7 @@ class RAD_Serial:
                 raise serial.SerialException('No comports were found!')
 
             # Finally, assign the found port to the serial_port variable
-            com_port = match_list[0][0]
+            com_port = match_list[0].device
 
         try:
             self.log.debug(

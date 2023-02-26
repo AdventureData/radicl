@@ -1,6 +1,10 @@
 from radicl.probe import RAD_Probe
 import pandas as pd
 import numpy as np
+from radicl.gps import USBGPS
+from pynmeagps.nmeamessage import NMEAMessage
+from pynmeagps.nmeahelpers import get_parts
+from types import SimpleNamespace
 
 
 def probe_not_connected():
@@ -12,6 +16,17 @@ def probe_not_connected():
 
     except:
         not_connected = True
+
+    return not_connected
+
+
+def gps_not_connected():
+
+    dev = USBGPS()
+    if dev.cnx is None:
+        not_connected = True
+    else:
+        not_connected = False
 
     return not_connected
 
@@ -96,3 +111,20 @@ class MOCKCLI:
         result = pd.DataFrame(data)
 
         return result
+
+
+class MockGPSStream:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def read(self):
+        if self.payload:
+            message = self.payload.pop()
+            talker, msgid, payload, checksum = get_parts(message)
+
+            return message,  NMEAMessage(
+                    talker, msgid, 0, payload=payload, checksum=checksum)
+
+        else:
+            return b'', SimpleNamespace(msgID='NAN')
+
