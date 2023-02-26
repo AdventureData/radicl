@@ -44,16 +44,9 @@ def get_serial_cnx(keyword, match_index=0):
     """
     cnx = None
     matching_ports = find_kw_port(keyword)
-    if match_index < len(matching_ports) and len(matching_ports) > 0:
-        try:
-            cnx = serial.Serial(matching_ports[match_index].device)
-
-        except Exception as e:
-            port = matching_ports[match_index]
-            print(f'Unable to open Serial Port {port} w/ description {port.description}.')
-            print(e)
-            cnx = None
-
+    if match_index < len(matching_ports):
+        port = matching_ports[match_index]
+        cnx = serial.Serial(port.device)
     return cnx
 
 
