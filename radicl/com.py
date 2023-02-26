@@ -51,6 +51,7 @@ def get_serial_cnx(keyword, match_index=0):
         except Exception as e:
             print(f'Unable to open Serial Port {matching_ports[match_index].device}.')
             print(e)
+            cnx = None 
 
     return cnx
 
