@@ -36,8 +36,8 @@ def get_serial_cnx(keyword, match_index=0):
     Then return the match of interest using the match_index kwarg.
 
     Args:
-        keyword:
-        match_index:
+        keyword: String keyword to search for in device descriptions
+        match_index: Index to use if more than one match comes back
 
     Returns:
         cnx: serial.Serial object
@@ -45,7 +45,13 @@ def get_serial_cnx(keyword, match_index=0):
     cnx = None
     matching_ports = find_kw_port(keyword)
     if match_index < len(matching_ports) and len(matching_ports) > 0:
-        cnx = serial.Serial(matching_ports[match_index].device)
+        try:
+            cnx = serial.Serial(matching_ports[match_index].device)
+
+        except Exception as e:
+            print(f'Unable to open Serial Port {matching_ports[match_index].device}.')
+            print(e)
+
     return cnx
 
 
