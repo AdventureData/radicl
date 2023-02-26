@@ -44,7 +44,7 @@ def get_serial_cnx(keyword, match_index=0):
     """
     cnx = None
     matching_ports = find_kw_port(keyword)
-    if match_index < len(matching_ports):
+    if match_index < len(matching_ports) and len(matching_ports) > 0:
         cnx = serial.Serial(matching_ports[match_index].device)
     return cnx
 

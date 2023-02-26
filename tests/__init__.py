@@ -23,7 +23,7 @@ def probe_not_connected():
 def gps_not_connected():
 
     dev = USBGPS()
-    if dev is None:
+    if dev.cnx is None:
         not_connected = True
     else:
         not_connected = False
