@@ -13,8 +13,7 @@ work on Windows 10.
 Python installation
 ~~~~~~~~~~~~~~~~~~~
 
-It is preferable to use your Windows Store to install your python. You can
-search by python.
+It is preferable to download python from the website for install.
 
 1. Go to you `python downloads page`_ and at least python 3.7 or later.
 
@@ -28,15 +27,19 @@ search by python.
         :width: 400px
         :align: center
 
-3. Check the install by opening up powershell and running:
+2. Using radicl on windows is best done through conda's terminal. If you dont have it, `download conda`_ and install it.
 
-   .. code-block:: powershell
+.. _download conda: https://www.anaconda.com/products/distribution
+
+3. Check the install by opening up anacondas terminal and running:
+
+   .. code-block:: console
 
     python --version
 
    Which should print out some thing like:
 
-   .. code-block:: powershell
+   .. code-block:: console
 
       >> Python 3.11.1
 
@@ -58,17 +61,13 @@ instructions below to install them.
 3. Run the VCP_V1.4.0_Setup.exe in the folder
 4. Navigate to C:\Program Files (x86)\STMicroelectronics\Software\Virtual comport driver/Win8
 5. Run dpinst_amd64.exe (for 64 bit machines)
-6. Confirm the install by opening the device manager. Expand the
-   `Ports (COM & LPT)`, if you installed the drivers correct you should see a
-   device labeled `STMicroeletronics Virtual Com Port` with out any error
-   symbols. If it failed, you will see two associated devices one labeled with interface.
 
-If you have correctly installed the drivers move on to the radicl installation
+If you have correctly installed the drivers move on to :ref:`Install radicl`.
 below.
 
 
-Linux -Ubuntu Prerequisites
----------------------------
+Linux - Ubuntu Prerequisites
+----------------------------
 
 * Python 3.7+
 * TKinter
@@ -94,7 +93,7 @@ you through the process.
 .. _pip: https://pip.pypa.io
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
-
+.. _Install radicl:
 Install radicl
 --------------
 
@@ -106,14 +105,14 @@ Installing radicl depends on your end use:
 Install radicl for Users Only
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Install the latest stable release of radicl by running this command in your terminal:
+1. Install the latest stable release of radicl by running this command in your preferred terminal:
 
 .. code-block:: console
 
     pip install radicl
 
 2. Test the installation by, plugging in your probe to the computer, open a
-   terminal/powershell and run:
+   terminal or conda shell and run:
 
    .. code-block:: console
 
