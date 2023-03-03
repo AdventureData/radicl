@@ -21,10 +21,10 @@ def find_kw_port(kw):
 
     for p in port_list:
         # Make a list of true for every keyword we find in the port data
-        kw_match = [True for k in kw if k.lower() in p.description.lower()]
+        kw_match = [k.lower() in p.description.lower() for k in kw]
 
         # If the match list is not empty append this port name
-        if kw_match:
+        if any(kw_match):
             match_list.append(p)
 
     return match_list
@@ -43,7 +43,7 @@ def get_serial_cnx(keyword, match_index=0):
         cnx: serial.Serial object
     """
     cnx = None
-    matching_ports = find_kw_port(keyword)
+    matching_ports = find_kw_port([keyword])
     if match_index < len(matching_ports):
         port = matching_ports[match_index]
         cnx = serial.Serial(port.device)
