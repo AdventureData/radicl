@@ -9,12 +9,12 @@ class USBGPS:
     def __init__(self, debug=False):
         self.log = get_logger(__name__, debug=debug)
         try:
-            self.cnx = get_serial_cnx('GPS/GNSS Receiver')
+            self.cnx = get_serial_cnx('u-blox')
         except Exception as e:
             self.cnx = None
             self.log.error('Unable to open GPS port.')
             self.log.error(e)
-            
+
         if self.cnx is None:
             self.log.warning('No GPS found. No location data will be recorded.')
         else:

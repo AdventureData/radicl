@@ -30,11 +30,11 @@ def test_find_kw_port(kw, description_list, expected):
     # Two probes but pick the index
     ('ST Micro', ['St Microelectronics', 'St Microelectronics 1'], 1, 'dev_fake_1'),
     # No probe
-    ('ST Micro', ['unknown 1', 'unknown 2'], 1, None),
+    ('ST Micro', ['unknown 1', 'unknown 2'], 0, None),
 
 ])
 def test_get_serial_cnx(kw, com_list, match_index, expected):
-    devices = [SimpleNamespace(device=f'dev_fake_{i}', description=d[1]) for i,d in enumerate(com_list)]
+    devices = [SimpleNamespace(device=f'dev_fake_{i}', description=d) for i,d in enumerate(com_list)]
     with patch('serial.tools.list_ports.comports', return_value=devices):
         with patch('serial.Serial.open', return_value=None):
             cnx = get_serial_cnx(kw, match_index=match_index)
