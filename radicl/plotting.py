@@ -13,7 +13,7 @@ from radicl.ui_tools import get_logger, get_index_from_ratio
 from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
 from study_lyte.depth import get_depth_from_acceleration, get_constrained_baro_depth
 from study_lyte.io import read_csv
-from study_lyte.adjustments import remove_ambient
+from study_lyte.adjustments import remove_ambient, assume_no_upward_motion
 
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
@@ -88,49 +88,61 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         detect_col = 'acceleration'
         acc_cols = ['acceleration']
     else:
-        raise ValueError('No acceleration was found in the file!')
+        acc_cols = None
 
     # Estimate events
-    start = get_acceleration_start(df[detect_col])
-    stop = get_acceleration_stop(df[detect_col])
+    if acc_cols is not None:
+        start = get_acceleration_start(df[detect_col])
+        stop = get_acceleration_stop(df[detect_col])
 
-    # Calculate depth from acceleration
-    acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(100)
-    acc_depth = acc_depth.reset_index()
-    df['acc_depth'] = acc_depth[detect_col].copy()
-    df['avg_depth'] = df[['acc_depth', 'depth']].mean(axis=1)
+        # Calculate depth from acceleration
+        acc_depth = get_depth_from_acceleration(df[acc_cols + ['time']]).mul(100)
+        acc_depth = acc_depth.reset_index()
+        df['acc_depth'] = acc_depth[detect_col].copy()
+        df['avg_depth'] = df[['acc_depth', 'depth']].mean(axis=1)
+        depth_cols = ['depth', 'acc_depth', 'avg_depth']
+        # Crop data to motion
+        cropped = df.iloc[start:stop].copy()
+        cropped['clean'] = remove_ambient(cropped['Sensor3'], cropped['Sensor2'])
+    else:
+        start = 0
+        stop = df.index[-1]
+        cropped = df.copy()
+        depth_cols = ['depth']
 
-    # Crop data to motion
-    cropped = df.iloc[start:stop].copy()
     cropped['clean'] = remove_ambient(cropped['Sensor3'], cropped['Sensor2'])
-
     surface = get_nir_surface(cropped['clean'])
     full_surface = surface + start
 
     # Re-zero the depth
-    cropped['depth'] = cropped['depth'] - cropped['depth'].iloc[surface]
-    cropped['acc_depth'] = cropped['acc_depth'] - cropped['acc_depth'].iloc[surface]
-    cropped['avg_depth'] = cropped[['acc_depth', 'depth']].mean(axis=1)
+    for c in depth_cols:
+        cropped[c] = cropped[c] - cropped[c].iloc[surface]
 
     # Calculate some travel distances
-    depth_cols = ['depth', 'acc_depth', 'avg_depth']
     max_distance = df[depth_cols].max() - df[depth_cols].min()
     mv_distance = df[depth_cols].iloc[start] - df[depth_cols].iloc[stop]
     snow_distance = df[depth_cols].iloc[full_surface] - df[depth_cols].iloc[stop]
 
     # print out some handy numbers
     log.info(f"* Number of samples: {len(df.index):,}\n")
-    msg = '{:<25}{:<10}{:<10}{:<10}'
-    header = msg.format('Distance', 'Baro.', 'Accel.', 'Avg')
+    msg = "{:<25}"
+    msg_f = "{:<25}"
+    for c in depth_cols:
+        msg += '{:<10}'
+        msg_f += '{:<10.1f}'
+    header_names = ['Distance'] + depth_cols
+    header = msg.format(*header_names)
     log.info(header)
     log.info('-' * len(header))
-    msg = '{:<25}{:<10.1f}{:<10.1f}{:<10.1f}'
+
+    # Dict and summary series
     distances = {"Maximum Measured": max_distance,
                  'During Motion': mv_distance,
                  'Snow Only': snow_distance}
+
     for desc, distance in distances.items():
-        log.info(msg.format(desc, distance['depth'], distance['acc_depth'],
-                            distance['avg_depth']))
+        depths = [distance[c] for c in depth_cols]
+        log.info(msg_f.format(desc, *depths))
 
     # Provide depth shifts
     ambient_shift = 6  # cm
@@ -164,9 +176,11 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
     ax.grid(True, axis='y', which='both', alpha=0.5)
-    plot_events(ax, surface=cropped['acc_depth'].iloc[surface],
+    final_depth = 'acc_depth' if acc_cols is not None else 'depth'
+
+    plot_events(ax, surface=cropped[final_depth].iloc[surface],
                 plot_type='vertical')
-    ax.plot(cropped['Sensor1'], cropped['acc_depth'], color='k', label='Raw Force')
+    ax.plot(cropped['Sensor1'], cropped[final_depth], color='k', label='Raw Force')
     ax.set_title("Force Depth Corrected")
     ax.legend(loc='lower left', fontsize='small')
     ax.set_xlim((0, 4096))
@@ -176,9 +190,9 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax = fig.add_subplot(gs[:, 3])
     ax.grid(True, axis='y', alpha=0.5)
     plot_events(ax, surface=cropped['depth'].iloc[surface], plot_type='vertical')
-    ax.plot(cropped['Sensor2'], cropped['acc_depth'] + 2.0, alpha=0.3, color='darkorange', label='Ambient')
-    ax.plot(cropped['Sensor3'], cropped['acc_depth'], alpha=0.3, color='crimson', label='Active')
-    ax.plot(cropped['clean'], cropped['acc_depth'], color='crimson', label='Clean Active')
+    ax.plot(cropped['Sensor2'], cropped[final_depth] + 2.0, alpha=0.3, color='darkorange', label='Ambient')
+    ax.plot(cropped['Sensor3'], cropped[final_depth], alpha=0.3, color='crimson', label='Active')
+    ax.plot(cropped['clean'], cropped[final_depth], color='crimson', label='Clean Active')
     ax.set_title("NIR Depth Corrected")
     ax.legend(loc='lower left', fontsize='small')
 
@@ -186,34 +200,41 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax = fig.add_subplot(gs[0, 4])
     # Switch event direction plotting for horiz. time series
     time_series_events["plot_type"] = 'normal'
-    plot_events(ax, **time_series_events)
-    acc_colors = ['darkslategrey', 'darkgreen', 'darkorange']
-    for aidx, c in enumerate(acc_cols):
-        ax.plot(time_series, df[c], color=acc_colors[aidx], label=c)
-    ax.set_ylabel("Acceleration [g's]")
-    ax.set_xlabel('Time [s]')
-    ax.set_title('Accelerometer')
-    ax.legend(fontsize='xx-small')
+    if acc_cols is not None:
+        plot_events(ax, **time_series_events)
+        acc_colors = ['darkslategrey', 'darkgreen', 'darkorange']
+
+        for aidx, c in enumerate(acc_cols):
+            ax.plot(time_series, df[c], color=acc_colors[aidx], label=c)
+        ax.set_ylabel("Acceleration [g's]")
+        ax.set_xlabel('Time [s]')
+        ax.set_title('Accelerometer')
+        ax.legend(fontsize='xx-small')
 
     # plot the depth as a sub-panel with events
     ax = fig.add_subplot(gs[1, 4])
     ax.set_title('Depth')
     plot_events(ax, **time_series_events)
-    ax.plot(time_series, df['depth'], color='navy', label='Baro.')
-    ax.plot(time_series, df['acc_depth'], color='mediumseagreen', label='Acc.')
-    ax.plot(time_series, df['avg_depth'], color='tomato', label='Avg.')
-    extra = get_constrained_baro_depth(df)
-    ax.plot(extra.index, extra['depth'], label='constr.')
-    ax.legend(loc='upper right', fontsize='xx-small')
-    ax.set_ylabel('Depth from Max Height [cm]')
+    labels = ['Baro.', 'Acc.', 'Avg.']
+    colors = ['navy', 'mediumseagreen', 'tomato']
+    label_color_column = [(labels[i], colors[i], c) for i, c in enumerate(depth_cols)]
+
+    for label, color, col in label_color_column:
+        ax.plot(time_series, df[col], color=color, label=label)
+
+    # extra = get_constrained_baro_depth(df, acc_axis=detect_col)
+    #
+    # ax.plot(extra.index, extra['depth'], label='constr.')
+    # ax.legend(loc='upper right', fontsize='xx-small')
+    # ax.set_ylabel('Depth from Max Height [cm]')
     # limits for depth
     buffer = 0.3
     n_samples = len(df.index)
     lim_idx1 = get_index_from_ratio(start, 1-buffer, n_samples)
     lim_idx2 = get_index_from_ratio(stop, 1 + buffer, n_samples)
     ts1, ts2 = time_series[lim_idx1], time_series[lim_idx2]
-    depth1 = df[['depth', 'acc_depth']].iloc[lim_idx1].max() * (1-buffer)
-    depth2 = df[['depth', 'acc_depth']].iloc[lim_idx2].min() * (1+buffer)
+    depth1 = df[depth_cols].iloc[lim_idx1].max() * (1-buffer)
+    depth2 = df[depth_cols].iloc[lim_idx2].min() * (1+buffer)
     if abs(depth1) < 5:
         depth1 = 5
 
