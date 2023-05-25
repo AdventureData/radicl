@@ -10,10 +10,7 @@ from matplotlib import pyplot as plt
 import matplotlib
 from radicl.ui_tools import get_logger, get_index_from_ratio
 
-from study_lyte.detect import get_acceleration_start, get_acceleration_stop, get_nir_surface
-from study_lyte.depth import get_depth_from_acceleration, get_constrained_baro_depth
-from study_lyte.io import read_csv
-from study_lyte.adjustments import remove_ambient, assume_no_upward_motion
+from study_lyte.profile import LyteProfileV6
 
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
@@ -64,16 +61,17 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     if 'Linux' in platform.platform():
         matplotlib.use('TkAgg')
 
-    print('')
-    if fname is not None:
-        df, meta = read_csv(fname)
-        log.info(f"Filename: {fname}")
-
     # Setup a panel of plots
     fig = plt.figure(figsize=(10, 6), constrained_layout=True)
     gs = fig.add_gridspec(2, 5)
 
-    # # Use time when possible
+    print('')
+    if fname is not None:
+        profile = LyteProfileV6(fname)
+        log.info(f"Filename: {profile.filename}")
+        plt.suptitle(os.path.basename(profile.filename))
+
+    # Use time when possible
     if 'time' in df.columns:
         time_series = df['time']
     else:
@@ -205,7 +203,11 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         acc_colors = ['darkslategrey', 'darkgreen', 'darkorange']
 
         for aidx, c in enumerate(acc_cols):
-            ax.plot(time_series, df[c], color=acc_colors[aidx], label=c)
+            alpha = 1.0
+            if c != detect_col:
+                alpha = 0.3
+            ax.plot(time_series, df[c], color=acc_colors[aidx], label=c, alpha=alpha)
+
         ax.set_ylabel("Acceleration [g's]")
         ax.set_xlabel('Time [s]')
         ax.set_title('Accelerometer')
