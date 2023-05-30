@@ -90,3 +90,9 @@ Overhaul (2017-10-17)
 
 .. _25: https://github.com/AdventureData/radicl/issues/25
 .. _31: https://github.com/AdventureData/radicl/issues/31
+
+0.8.0 (2023-05-30)
+------------------
+* Migrated to using Study Lyte profile for plotting.
+* Added in windows daw script
+

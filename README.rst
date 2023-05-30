@@ -33,5 +33,4 @@ Features
 * Update the Probe Firmware
 * Python API for interacting with the Lyte probe
 * Commandline script for plotting profiles taken through the app (lyteplot, plot_hi_res)
-* Open data processing!
 
