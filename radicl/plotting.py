@@ -119,7 +119,11 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     #label_color_column = [(labels[i], colors[i], c) for i, c in enumerate(depth_cols)]
 
     # for label, color, col in label_color_column:
-    style = SensorStyle.from_column(profile.motion_detect_name)
+    if profile.motion_detect_name is Sensor.UNAVAILABLE:
+        style = SensorStyle.from_column('barometer')
+    else:
+        style = SensorStyle.BAROMETER
+
     ax.plot(profile.time, profile.depth, color=style.color, label=style.label)
 
     # extra = get_constrained_baro_depth(df, acc_axis=detect_col)
