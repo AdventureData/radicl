@@ -84,7 +84,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     for sensor in ['Sensor2', 'Sensor3']:
         style = SensorStyle.from_column(sensor)
-        ax.plot(profile.raw[sensor], profile.depth - profile.surface.nir.depth, alpha=0.3, color=style.color, label=style.label)
+        ax.plot(profile.raw[sensor], profile.depth - profile.surface.nir.depth,
+                alpha=0.3, color=style.color, label=style.label)
 
     style = SensorStyle.ACTIVE_NIR
     ax.plot(profile.nir['nir'], profile.nir['depth'], color=style.color, label=style.label)
@@ -109,7 +110,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         ax.set_xlabel('Time [s]')
         ax.set_title('Accelerometer')
         ax.legend(fontsize='xx-small')
-
+    else:
+        ax.annotate('No Accelerometer \nData Available', (0.2, 0.5), alpha=0.5)
     #### plot the depth as a sub-panel with events ####
     ax = fig.add_subplot(gs[1, 4])
     ax.set_title('Depth')
