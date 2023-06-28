@@ -84,7 +84,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     for sensor in ['Sensor2', 'Sensor3']:
         style = SensorStyle.from_column(sensor)
-        ax.plot(profile.raw[sensor], profile.depth - profile.surface.nir.depth,
+        ax.plot(profile.raw[sensor].iloc[profile.surface.nir.index:profile.stop.index],
+                profile.nir.depth,
                 alpha=0.3, color=style.color, label=style.label)
 
     style = SensorStyle.ACTIVE_NIR
