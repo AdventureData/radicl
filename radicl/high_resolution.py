@@ -153,10 +153,10 @@ def main():
             meta['Longitude'] = location[1]
 
         # Output the data to a datetime file
-        cli.write_probe_data(ts, extra_meta=meta)
+        filename = cli.write_probe_data(ts, extra_meta=meta)
 
         # Plot the data
-        plot_hi_res(df=ts, calibration_dict=calibration, timed_plot=args.plot_time)
+        plot_hi_res(fname=filename, calibration_dict=calibration, timed_plot=args.plot_time)
 
         # Reset the probe / clear out the data
         cli.probe.resetMeasurement()

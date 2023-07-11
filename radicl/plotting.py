@@ -125,7 +125,9 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     if profile.motion_detect_name is Sensor.UNAVAILABLE:
         style = SensorStyle.from_column('barometer')
     else:
-        style = SensorStyle.BAROMETER
+        style = SensorStyle.ACCELERATION
+        baro_style = SensorStyle.BAROMETER
+        ax.plot(profile.time, profile.raw['filtereddepth'], color=baro_style.color, label=baro_style.label, alpha=0.5)
 
     ax.plot(profile.time, profile.depth, color=style.color, label=style.label)
 
