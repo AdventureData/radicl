@@ -45,11 +45,8 @@ def build_high_resolution_data(cli, log):
     # Grab Acceleration
     acc = cli.grab_data('rawacceleration')
 
-    # Set the 0 point of depth to the Starting point or the snow Surface
-    depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].min()
-
     # Invert Depth so bottom is negative max depth
-    depth['depth'] = depth['depth'] - depth['depth'].max()
+    depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].max()
     depth = depth.drop(columns=['filtereddepth'])
 
     log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
@@ -58,8 +55,8 @@ def build_high_resolution_data(cli, log):
     log.info("Sensor Samples: {:,}".format(len(ts)))
 
     log.info("Infilling and interpolating dataset...")
-    result = pd.merge_ordered(ts, depth, on='time')
-    result = pd.merge_ordered(result, acc, on='time')
+    result = pd.merge_ordered(ts, depth, on='time', fill_method='cubic')
+    result = pd.merge_ordered(result, acc, on='time', fill_method='cubic')
     result = result.interpolate(method='index')
     return result
 
