@@ -11,29 +11,12 @@ import matplotlib
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from radicl.ui_tools import get_logger, get_index_from_ratio
-from radicl import error_icon
 from study_lyte.profile import LyteProfileV6, Sensor
 from study_lyte.plotting import SensorStyle, plot_events
 
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
 
-def plot_error_icon(ax, xy):
-    # Annotate the 2nd position with another image (a Grace Hopper portrait)
-    arr_img = plt.imread(error_icon, format='png')
-
-    imagebox = OffsetImage(arr_img, zoom=0.4)
-    imagebox.image.axes = ax
-
-    ab = AnnotationBbox(imagebox, xy,
-                        # xybox=(120., -80.),
-                        # xycoords='data',
-                        # boxcoords="offset points",
-                        pad=0.0,
-                        bboxprops=dict(alpha=0.0)
-                        )
-
-    ax.add_artist(ab)
 
 def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     """

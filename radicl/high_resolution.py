@@ -13,7 +13,6 @@ Usage:  1. plug in the probe.
 
 import argparse
 from argparse import RawTextHelpFormatter
-import pandas as pd
 import json
 import sys
 from study_lyte.adjustments import merge_time_series
