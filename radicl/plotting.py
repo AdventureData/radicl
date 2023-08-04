@@ -8,16 +8,34 @@ import time
 import traceback
 from matplotlib import pyplot as plt
 import matplotlib
-from radicl.ui_tools import get_logger, get_index_from_ratio
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
+from radicl.ui_tools import get_logger, get_index_from_ratio
+from radicl import error_icon
 from study_lyte.profile import LyteProfileV6, Sensor
 from study_lyte.plotting import SensorStyle, plot_events
 
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
 
+def plot_error_icon(ax, xy):
+    # Annotate the 2nd position with another image (a Grace Hopper portrait)
+    arr_img = plt.imread(error_icon, format='png')
 
-def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
+    imagebox = OffsetImage(arr_img, zoom=0.4)
+    imagebox.image.axes = ax
+
+    ab = AnnotationBbox(imagebox, xy,
+                        # xybox=(120., -80.),
+                        # xycoords='data',
+                        # boxcoords="offset points",
+                        pad=0.0,
+                        bboxprops=dict(alpha=0.0)
+                        )
+
+    ax.add_artist(ab)
+
+def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     """
     Plots the timeseries, the depth corrected, accelerometer and depth data.
     Plot from a dataframe or from a file. Use auto close to auto close the figure
@@ -25,7 +43,6 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     Args:
         fname: Path to csv containing hi resolution data
-        df: Optional pandas dataframe instead of a file
         timed_plot: Amount of time to show the plot, if none user has to close it
         calibration_dict: Dictionary to offer calibration coefficients for any of the sensors
 
@@ -43,7 +60,6 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         profile = LyteProfileV6(fname)
         log.info(f"Filename: {profile.filename}")
         plt.suptitle(os.path.basename(profile.filename))
-
 
     # print out some handy numbers
     log.info(profile.report_card())
@@ -134,7 +150,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     # extra = get_constrained_baro_depth(df, acc_axis=detect_col)
     #
     # ax.plot(extra.index, extra['depth'], label='constr.')
-    # ax.legend(loc='upper right', fontsize='xx-small')
+    ax.legend(loc='upper right', fontsize='xx-small')
     # ax.set_ylabel('Depth from Max Height [cm]')
     # limits for depth
     buffer = 0.3
@@ -147,8 +163,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     if abs(depth1) < 5:
         depth1 = 5
 
-    ax.set_xlim(ts1, ts2)
-    ax.set_ylim(*sorted([depth1, depth2]))
+    # ax.set_xlim(ts1, ts2)
+    # ax.set_ylim(*sorted([depth1, depth2]))
     ax.grid(True, axis='y', which='both', alpha=0.5)
 
     # Make the figure full screen

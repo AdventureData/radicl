@@ -16,7 +16,7 @@ from argparse import RawTextHelpFormatter
 import pandas as pd
 import json
 import sys
-
+from study_lyte.adjustments import merge_time_series
 from radicl import __version__
 from radicl.interface import RADICL
 from radicl.ui_tools import get_logger, exit_requested
@@ -55,9 +55,7 @@ def build_high_resolution_data(cli, log):
     log.info("Sensor Samples: {:,}".format(len(ts)))
 
     log.info("Infilling and interpolating dataset...")
-    result = pd.merge_ordered(ts, depth, on='time', fill_method='cubic')
-    result = pd.merge_ordered(result, acc, on='time', fill_method='cubic')
-    result = result.interpolate(method='index')
+    result = merge_time_series([ts, depth, acc])
     return result
 
 
