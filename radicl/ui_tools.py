@@ -6,7 +6,6 @@ import textwrap
 import coloredlogs
 from colorama import init
 from termcolor import colored
-from threading import Timer
 
 
 class Messages:

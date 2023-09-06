@@ -15,7 +15,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import json
 import sys
-from study_lyte.adjustments import merge_time_series
+from study_lyte.adjustments import merge_time_series, merge_on_to_time
 from radicl import __version__
 from radicl.interface import RADICL
 from radicl.ui_tools import get_logger, exit_requested
@@ -54,7 +54,7 @@ def build_high_resolution_data(cli, log):
     log.info("Sensor Samples: {:,}".format(len(ts)))
 
     log.info("Infilling and interpolating dataset...")
-    result = merge_time_series([ts, depth, acc])
+    result = merge_on_to_time([ts, depth, acc], ts.index)
     return result
 
 

@@ -49,7 +49,7 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
 
     # Plot time series data force data
     ax = fig.add_subplot(gs[:, 0])
-    plot_events(ax, [profile.start, profile.stop, profile.surface.force], plot_type='vertical')
+    plot_events(ax, profile.events, plot_type='vertical')
     force_style = SensorStyle.from_column('Sensor1')
     ax.plot(profile.raw['Sensor1'], profile.time, color=force_style.color)
     ax.set_title("Raw Force Timeseries")
@@ -60,7 +60,7 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
 
     # plot time series NIR data
     ax = fig.add_subplot(gs[:, 1])
-    plot_events(ax, [profile.start, profile.stop, profile.surface.nir], plot_type='vertical')
+    plot_events(ax, profile.events, plot_type='vertical')
     for sensor in ['Sensor2', 'Sensor3']:
         style = SensorStyle.from_column(sensor)
         ax.plot(profile.raw[sensor], profile.time, color=style.color, label=style.label)
@@ -116,25 +116,22 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     ax = fig.add_subplot(gs[1, 4])
     ax.set_title('Depth')
     plot_events(ax, profile.events, plot_type='normal')
-    #labels = ['Baro.', 'Acc.', 'Avg.']
-    #colors = ['navy', 'mediumseagreen', 'tomato']
-    #label_color_column = [(labels[i], colors[i], c) for i, c in enumerate(depth_cols)]
 
     # for label, color, col in label_color_column:
     if profile.motion_detect_name is Sensor.UNAVAILABLE:
         style = SensorStyle.from_column('barometer')
     else:
-        style = SensorStyle.ACCELERATION
-        baro_style = SensorStyle.BAROMETER
-        ax.plot(profile.time, profile.raw['filtereddepth'], color=baro_style.color, label=baro_style.label, alpha=0.5)
+        acc_style = SensorStyle.ACCELERATION
+        baro_style = SensorStyle.CONSTRAINED_BAROMETER
+        raw = SensorStyle.RAW_BARO
+        style = SensorStyle.FUSED
+        ax.plot(profile.barometer.raw.index, profile.barometer.raw.values, color=raw.color, label=raw.label, alpha=0.5)
+        ax.plot(profile.barometer.depth.index, profile.barometer.depth.values, color=baro_style.color, label=baro_style.label, alpha=0.5)
+        ax.plot(profile.accelerometer.depth, color=acc_style.color, label=acc_style.label, alpha=0.5)
 
     ax.plot(profile.time, profile.depth, color=style.color, label=style.label)
 
-    # extra = get_constrained_baro_depth(df, acc_axis=detect_col)
-    #
-    # ax.plot(extra.index, extra['depth'], label='constr.')
     ax.legend(loc='upper right', fontsize='xx-small')
-    # ax.set_ylabel('Depth from Max Height [cm]')
     # limits for depth
     buffer = 0.3
     n_samples = len(profile.raw)
