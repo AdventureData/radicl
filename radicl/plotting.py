@@ -8,11 +8,11 @@ import time
 import traceback
 from matplotlib import pyplot as plt
 import matplotlib
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from radicl.ui_tools import get_logger, get_index_from_ratio
 from study_lyte.profile import LyteProfileV6, Sensor
-from study_lyte.plotting import SensorStyle, plot_events
+from study_lyte.styles import SensorStyle, EventStyle
+from study_lyte.plotting import plot_events
 
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
