@@ -230,10 +230,9 @@ class RAD_Probe:
                         wait_time += wait_time
 
                         if ret['errorCode'] is not None:
-                            if ret['errorCode'] in error_codes.keys():
-                                self.log.warning("Received error code:{}".format(error_codes[ret['errorCode']]))
-                            else:
-                                self.log.warning("Received unknown error code:{}".format(ret['errorCode']))
+                            error = ProbeErrors.from_code(ret['errorCode'])
+                            self.log.warning(error.error_string)
+
 
             # Was the data read successful?
             final['status'] = int(result)
@@ -422,7 +421,7 @@ class RAD_Probe:
                       segment size
         Returns:
             final: dict containing data in bytes, number of samples and
-                   segements and return status.
+                   segments and return status.
         """
 
         buffer_name = self.__data_buffer_guide[buffer_id]
@@ -607,7 +606,7 @@ class RAD_Probe:
                     value = struct.unpack('<h', byte_object)[0]
 
                     # Convert to milli-gs while accounting for acc. range
-                    value *= sensitivity.gravite_scaling
+                    value *= sensitivity.gravity_scaling
                     # Convert to Gs.
                     value /= 1000
                     final[name].append(value)
