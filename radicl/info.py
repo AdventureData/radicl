@@ -59,7 +59,7 @@ class AccelerometerRange(Enum):
         return self.value[0]
 
     @property
-    def gravite_scaling(self):
+    def gravity_scaling(self):
         return self.value[1]
 
     @classmethod
@@ -73,10 +73,11 @@ class AccelerometerRange(Enum):
 
 
 class SensorReadInfo(Enum):
+
     # Buffer Index, bytes per seg, number of bytes per value, expected number of values, does the data live in spi mem.
-    RAWSENSOR = 0, 256, 2, 4, True
-    ACCELEROMETER = 1, None, 2, 3, False
-    FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False
+    RAWSENSOR = 0, 256, 2, 4, True, 'Raw Sensor'
+    ACCELEROMETER = 1, None, 2, 3, False, 'Acceleration'
+    FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False, 'Filtered Barometer Depth'
 
     @property
     def buffer_id(self):
@@ -89,7 +90,10 @@ class SensorReadInfo(Enum):
         return self.value[2]
     @property
     def expected_values(self):
-        return self.value[4]
+        return self.value[3]
     @property
     def uses_spi(self):
+        return self.value[4]
+    @property
+    def readable_name(self):
         return self.value[5]
