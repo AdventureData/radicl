@@ -10,21 +10,7 @@ from . import __version__
 from .com import RAD_Serial
 from .api import RAD_API
 from .ui_tools import get_logger, parse_func_list
-
-error_codes = {2049: "The probe measurement/sensor is not running",
-               2048: 'Generic Measurement error',
-               2050: "Measurement FSM not ready to start measurement",
-               2051: " Measurement FSM already stopped (i.e. in ready/idle state)",
-               2052: "Setting a parameter failed",
-               2053: "Invalid buffer was addressed",
-               2054: "Reading data failed"}
-
-# From Data sheet for accelerometer in REV C
-acc_sensitivity = {2: 0.06,
-                   4: 0.12,
-                   6: 0.18,
-                   8: 0.24,
-                   16: 0.73}
+from .info import ProbeErrors, ProbeState, AccelerometerRange, SensorReadInfo
 
 
 class RAD_Probe:
@@ -196,11 +182,8 @@ class RAD_Probe:
 
             if ret['errorCode'] is not None:
                 self.log.debug("Error {:d} occurred.".format(ret['errorCode']))
-
-                if ret['errorCode'] in error_codes.keys():
-                    self.log.error(error_codes[ret['errorCode']])
-                else:
-                    self.log.warning("Unknown error code!")
+                error = ProbeErrors.from_code(ret['errorCode'])
+                self.log.error(error.error_string)
 
         # If we do have number of segments
         if num_segments != 0 and num_segments is not None:
@@ -510,18 +493,9 @@ class RAD_Probe:
         Returns:
             dict - containing data or None if read failed
         """
-
-        # Index in the probe buffer
-        buffer_id = 0
-
-        # Expected bit size of the data
-        sgbytes = 256
-        nbytes_per_value = 2
-        nvalues = 4
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues, from_spi=True)
+        sensor = SensorReadInfo.RAWSENSOR
+        ret = self.read_check_data_integrity(sensor.buffer_id, nbytes_per_value=sensor.nbytes_per_value,
+                                             nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
 
         # ***** DATA PARSING *****
         if ret is not None:
@@ -533,19 +507,19 @@ class RAD_Probe:
             for ii in range(0, samples):
 
                 # Loop over each sensor and add it to the final dict
-                for idx in range(nvalues):
+                for idx in range(sensor.expected_values):
                     # Create a name for the dictionary
                     name = 'Sensor{}'.format(idx + 1)
 
                     # Form the index for the bytes for the start of each value.
-                    byte_idx = idx * nbytes_per_value + offset
+                    byte_idx = idx * sensor.nbytes_per_value + offset
 
                     # Grab each sensor value in the byte array
                     final[name].append(data[byte_idx] + \
-                                       data[byte_idx + 1] * sgbytes)
+                                       data[byte_idx + 1] * sensor.bytes_per_segment)
 
                 # Move farther down the bytes to read the next segment.
-                offset += nbytes_per_value * nvalues
+                offset += sensor.nbytes_per_value * sensor.expected_values
 
             data = final
         return data
@@ -593,16 +567,11 @@ class RAD_Probe:
         """
         acc_axes = ['X', 'Y', 'Z']
         name_str = '{}-Axis'
-        # Index in the probe buffer
-        buffer_id = 1
 
-        # Expected bit size of the data
-        nbytes_per_value = 2
-        nvalues = len(acc_axes)
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues)
+        sensor = SensorReadInfo.ACCELEROMETER
+        ret = self.read_check_data_integrity(sensor.buffer_id,
+                                             nbytes_per_value=sensor.nbytes_per_value,
+                                             nvalues=sensor.expected_values)
         data = None
 
         if ret is not None:
@@ -615,21 +584,21 @@ class RAD_Probe:
             offset = 0
 
             # Grab the range to scale the incoming data
-            a_r = self.getSetting(setting_name='accrange')
-            sensitivity = acc_sensitivity[a_r]
+            sensing_range = self.getSetting(setting_name='accrange')
+            sensitivity = AccelerometerRange.from_range(sensing_range)
 
             # Loop over all the samples
             for ii in range(0, samples):
                 # Loop over the sample and extract each axis
-                for idx, axis in enumerate(acc_axes):
+                for idx, axis in enumerate(sensor.expected_values):
                     # Form the dictionary name
                     name = name_str.format(axis)
 
                     # Form the index of where each axis is in the sample
-                    byte_idx = idx * nbytes_per_value + offset
+                    byte_idx = idx * sensor.nbytes_per_value + offset
 
                     # Grab the bytes from the list for a single axis
-                    byte_list = data[byte_idx: (byte_idx + nbytes_per_value)]
+                    byte_list = data[byte_idx: (byte_idx + sensor.nbytes_per_value)]
 
                     # Form a byte object
                     byte_object = bytes(byte_list)
@@ -638,14 +607,13 @@ class RAD_Probe:
                     value = struct.unpack('<h', byte_object)[0]
 
                     # Convert to milli-gs while accounting for acc. range
-                    value *= sensitivity
+                    value *= sensitivity.gravite_scaling
                     # Convert to Gs.
                     value /= 1000
-
                     final[name].append(value)
 
                 # Advance forward in the data from probe for parsing
-                offset += nbytes_per_value * nvalues
+                offset += sensor.nbytes_per_value * sensor.expected_values
 
             # Assign final to the original data var for return
             data = final
@@ -788,17 +756,10 @@ class RAD_Probe:
                  option.
 
         """
-
-        # Index in the probe buffer
-        buffer_id = 4
-
-        # Expected bit size of the data
-        nbytes_per_value = 4
-        nvalues = 1
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues)
+        sensor = SensorReadInfo.FILTERED_BAROMETER_DEPTH
+        ret = self.read_check_data_integrity(sensor.buffer_id,
+                                             nbytes_per_value=sensor.nbytes_per_value,
+                                             nvalues=sensor.expected_values)
         data = None
 
         if ret is not None:
@@ -808,11 +769,11 @@ class RAD_Probe:
             offset = 0
 
             for ii in range(0, samples):
-                this_byte_list = data[offset:(offset + nbytes_per_value)]
+                this_byte_list = data[offset:(offset + sensor.nbytes_per_value)]
                 this_byte_object = bytes(this_byte_list)
                 this_value = struct.unpack('f', this_byte_object)
                 depth_data.append(this_value)
-                offset += nbytes_per_value
+                offset += sensor.nbytes_per_value
 
             # Convert to cm
             depth_data = [(c[0] / 100.0) for c in depth_data]
