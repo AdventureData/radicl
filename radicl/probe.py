@@ -484,6 +484,57 @@ class RAD_Probe:
 
             return final
 
+    @staticmethod
+    def unpack_sensor(sensor:SensorReadInfo, data, samples, conversion=None):
+        """
+        Attempt to standardize the conversion of downloaded data for more usages
+        Args:
+            data:
+            sensor:
+            samples
+
+        Returns:
+            final: Dictionary of unpacked data
+
+        """
+        offset = 0
+
+        final = {name: [] for name in sensor.data_names}
+
+        unpack_bytes = sensor.unpack_type is not None
+        convert = conversion is not None
+
+        for ii in range(0, samples):
+
+            # Loop over each sensor and add it to the final dict
+            for idx, name in enumerate(sensor.data_names):
+                # Form the index for the bytes for the start of each value.
+                byte_idx = idx * sensor.nbytes_per_value + offset
+
+                # Cerntain datasets need to be unpacked
+                if unpack_bytes:
+                    # Form a byte object and unpack it
+                    byte_list = data[byte_idx: (byte_idx + sensor.nbytes_per_value)]
+                    byte_object = bytes(byte_list)
+                    value = struct.unpack(sensor.unpack_type, byte_object)
+
+                else:
+                    value = data[byte_idx] + \
+                                   data[byte_idx + 1] * sensor.bytes_per_segment
+
+                # Perform conversion of units
+                if convert:
+                    value *= conversion
+
+                # Grab each sensor value in the byte array
+                final[name].append(value)
+
+            # Move farther down the bytes to read the next segment.
+            offset += sensor.nbytes_per_value * sensor.expected_values
+
+        return final
+
+
     def readRawSensorData(self):
         """
         Reads the RAW sensor data.
@@ -495,33 +546,10 @@ class RAD_Probe:
         sensor = SensorReadInfo.RAWSENSOR
         ret = self.read_check_data_integrity(sensor.buffer_id, nbytes_per_value=sensor.nbytes_per_value,
                                              nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
-
-        # ***** DATA PARSING *****
         if ret is not None:
-            data = ret['data']
-            samples = ret['samples']
-            offset = 0
-            final = {'Sensor1': [], 'Sensor2': [], 'Sensor3': [], 'Sensor4': []}
+            final = self.unpack_sensor(sensor, ret['data'], ret['samples'])
 
-            for ii in range(0, samples):
-
-                # Loop over each sensor and add it to the final dict
-                for idx in range(sensor.expected_values):
-                    # Create a name for the dictionary
-                    name = 'Sensor{}'.format(idx + 1)
-
-                    # Form the index for the bytes for the start of each value.
-                    byte_idx = idx * sensor.nbytes_per_value + offset
-
-                    # Grab each sensor value in the byte array
-                    final[name].append(data[byte_idx] + \
-                                       data[byte_idx + 1] * sensor.bytes_per_segment)
-
-                # Move farther down the bytes to read the next segment.
-                offset += sensor.nbytes_per_value * sensor.expected_values
-
-            data = final
-        return data
+        return final
 
     def readCalibratedSensorData(self):
         """
@@ -564,60 +592,18 @@ class RAD_Probe:
             dict: containing accel data (x,y,z) or None if read failed
 
         """
-        acc_axes = ['X', 'Y', 'Z']
-        name_str = '{}-Axis'
-
         sensor = SensorReadInfo.ACCELEROMETER
         ret = self.read_check_data_integrity(sensor.buffer_id,
                                              nbytes_per_value=sensor.nbytes_per_value,
                                              nvalues=sensor.expected_values)
-        data = None
-
+        
         if ret is not None:
-            data = ret['data']
-
-            samples = ret['samples']
-
-            # Initialize the data
-            final = {name_str.format(a): [] for a in acc_axes}
-            offset = 0
-
             # Grab the range to scale the incoming data
             sensing_range = self.getSetting(setting_name='accrange')
             sensitivity = AccelerometerRange.from_range(sensing_range)
-
-            # Loop over all the samples
-            for ii in range(0, samples):
-                # Loop over the sample and extract each axis
-                for idx, axis in enumerate(sensor.expected_values):
-                    # Form the dictionary name
-                    name = name_str.format(axis)
-
-                    # Form the index of where each axis is in the sample
-                    byte_idx = idx * sensor.nbytes_per_value + offset
-
-                    # Grab the bytes from the list for a single axis
-                    byte_list = data[byte_idx: (byte_idx + sensor.nbytes_per_value)]
-
-                    # Form a byte object
-                    byte_object = bytes(byte_list)
-
-                    # Unpack bytes originally a 32 bit long and save
-                    value = struct.unpack('<h', byte_object)[0]
-
-                    # Convert to milli-gs while accounting for acc. range
-                    value *= sensitivity.gravity_scaling
-                    # Convert to Gs.
-                    value /= 1000
-                    final[name].append(value)
-
-                # Advance forward in the data from probe for parsing
-                offset += sensor.nbytes_per_value * sensor.expected_values
-
-            # Assign final to the original data var for return
-            data = final
-
-        return data
+            final = self.unpack_sensor(sensor, ret['data'], ret['samples'],
+                                       conversion=sensor.conversion_factor * sensitivity.value_scaling)
+        return final
 
     def readAccelerationCorrelationData(self):
         """
