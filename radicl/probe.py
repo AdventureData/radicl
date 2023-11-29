@@ -485,13 +485,14 @@ class RAD_Probe:
             return final
 
     @staticmethod
-    def unpack_sensor(sensor:SensorReadInfo, data, samples, conversion=None):
+    def unpack_sensor(sensor:SensorReadInfo, data, samples:int, conversion:float=None):
         """
         Attempt to standardize the conversion of downloaded data for more usages
         Args:
             data:
             sensor:
             samples
+            conversion:
 
         Returns:
             final: Dictionary of unpacked data
@@ -511,12 +512,12 @@ class RAD_Probe:
                 # Form the index for the bytes for the start of each value.
                 byte_idx = idx * sensor.nbytes_per_value + offset
 
-                # Cerntain datasets need to be unpacked
+                # Certain datasets need to be unpacked
                 if unpack_bytes:
                     # Form a byte object and unpack it
                     byte_list = data[byte_idx: (byte_idx + sensor.nbytes_per_value)]
                     byte_object = bytes(byte_list)
-                    value = struct.unpack(sensor.unpack_type, byte_object)
+                    value = struct.unpack(sensor.unpack_type, byte_object)[0]
 
                 else:
                     value = data[byte_idx] + \
@@ -596,7 +597,7 @@ class RAD_Probe:
         ret = self.read_check_data_integrity(sensor.buffer_id,
                                              nbytes_per_value=sensor.nbytes_per_value,
                                              nvalues=sensor.expected_values)
-        
+
         if ret is not None:
             # Grab the range to scale the incoming data
             sensing_range = self.getSetting(setting_name='accrange')
@@ -745,26 +746,11 @@ class RAD_Probe:
         ret = self.read_check_data_integrity(sensor.buffer_id,
                                              nbytes_per_value=sensor.nbytes_per_value,
                                              nvalues=sensor.expected_values)
-        data = None
-
+        final = None
         if ret is not None:
-            data = ret['data']
-            samples = ret['samples']
-            depth_data = []
-            offset = 0
+            final = self.unpack_sensor(sensor, ret['data'], ret['samples'], sensor.conversion_factor)
 
-            for ii in range(0, samples):
-                this_byte_list = data[offset:(offset + sensor.nbytes_per_value)]
-                this_byte_object = bytes(this_byte_list)
-                this_value = struct.unpack('f', this_byte_object)
-                depth_data.append(this_value)
-                offset += sensor.nbytes_per_value
-
-            # Convert to cm
-            depth_data = [(c[0] / 100.0) for c in depth_data]
-            data = depth_data
-
-        return data
+        return final
 
     def readPressureDepthCorrelationData(self):
         """

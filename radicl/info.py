@@ -78,7 +78,7 @@ class SensorReadInfo(Enum):
     RAWSENSOR = 0, 256, 2, 4, True, 'Raw Sensor', ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4"], None, None
     # 3 axis acc, convert from mG to G
     ACCELEROMETER = 1, None, 2, 3, False, 'Acceleration', ["X-Axis", "Y-Axis", "Z-Axis"], '<h', 0.001
-    FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False, 'Filtered Barometer Depth', [], 'f', 0.01
+    FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False, 'Filtered Barometer Depth', ['filtereddepth'], 'f', 0.01
 
     @property
     def buffer_id(self):
@@ -103,7 +103,12 @@ class SensorReadInfo(Enum):
         return self.value[6]
     @property
     def unpack_type(self):
-        return self.value[6]
+        return self.value[7]
     @property
     def conversion_factor(self):
-        return self.value[7]
+        return self.value[8]
+    @property
+    def bytes_per_sample(self):
+        """ Number of bytes per sample"""
+        return self.nbytes_per_value * self.expected_values
+
