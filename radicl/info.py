@@ -78,6 +78,7 @@ class SensorReadInfo(Enum):
     RAWSENSOR = 0, 256, 2, 4, True, 'Raw Sensor', ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4"], None, None
     # 3 axis acc, convert from mG to G
     ACCELEROMETER = 1, None, 2, 3, False, 'Acceleration', ["X-Axis", "Y-Axis", "Z-Axis"], '<h', 0.001
+    RAW_BAROMETER_PRESSURE = 2, 256, 3, 1, False, 'Raw Pressure', ['raw_pressure'], None, None
     FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False, 'Filtered Barometer Depth', ['filtereddepth'], 'f', 0.01
 
     @property

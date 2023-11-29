@@ -547,6 +547,7 @@ class RAD_Probe:
         sensor = SensorReadInfo.RAWSENSOR
         ret = self.read_check_data_integrity(sensor.buffer_id, nbytes_per_value=sensor.nbytes_per_value,
                                              nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
+        final = None
         if ret is not None:
             final = self.unpack_sensor(sensor, ret['data'], ret['samples'])
 
@@ -651,44 +652,16 @@ class RAD_Probe:
         Reads the RAW pressure data, including the correlation index
         """
 
-        ret = self.__readData(2)
-
+        sensor = SensorReadInfo.RAW_BAROMETER_PRESSURE
+        ret = self.read_check_data_integrity(sensor.buffer_id,
+                                             nbytes_per_value=sensor.nbytes_per_value,
+                                             nvalues=sensor.expected_values)
+        final = None
         # successfully read data
-        if ret['status'] == 1:
-            # ***** DATA INTEGRITY CHECK *****
-            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
-                # Data integrity error (not all segments read)
-                self.log.error("readRawPressureData error: Data integrity error (not "
-                               "all segments read)")
-                return None
+        if ret is not None:
+            final = self.unpack_sensor(sensor, ret['data'], ret['samples'])
+        return final
 
-            # Data integrity error (not all bytes read - incomplete data
-            # segment)
-            total_bytes = ret['BytesRead']
-            if (total_bytes % 3) != 0:
-                # The data set is not an integer multiple of 3 (Raw pressure is
-                # in 24-bit format => 3 bytes)
-                self.log.error(
-                    "readRawPressureData error: Data integrity error (incomplete data set)")
-                return None
-
-            # ***** DATA PARSING *****
-            data = ret['data']
-            pressure_data = []
-            samples = total_bytes // 3
-            offset = 0
-
-            for ii in range(0, samples):
-                this_value = data[(offset + 0)] + (data[(offset + 1)] * 256) + \
-                             (data[(offset + 2)] * 65536)
-
-                pressure_data.append(this_value / 4096)
-                offset = offset + 3
-            return pressure_data
-
-        # Read failed!
-        else:
-            return None
 
     def readRawDepthData(self):
         """
