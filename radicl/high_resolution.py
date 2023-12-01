@@ -54,7 +54,7 @@ def build_high_resolution_data(cli, log):
     log.info("Sensor Samples: {:,}".format(len(ts)))
 
     log.info("Infilling and interpolating dataset...")
-    result = merge_on_to_time([ts, depth, acc], ts.index)
+    result = merge_on_to_time([ts, depth, acc], ts['time'])
     return result
 
 
