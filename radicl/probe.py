@@ -491,7 +491,7 @@ class RAD_Probe:
         Args:
             data:
             sensor:
-            samples
+            samples:
             conversion:
 
         Returns:

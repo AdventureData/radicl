@@ -19,6 +19,7 @@ from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
 
 out = Messages()
 
+DEV_MODE=False
 
 def dataframe_this(data, name=None):
     """
@@ -315,36 +316,30 @@ class RADICL(object):
                 "Requesting data using function {0}".format(
                     fn.__name__))
 
-            try:
+            # Enable debugging w/o try and except
+            if DEV_MODE:
                 data = fn()
                 sr_ts = self.probe.getSetting(setting_name='samplingrate')
                 data = dataframe_this(data, name=data_request)
-                n_samples = data.index.size
-                # Default to using the sensor data sample rate
-                sr = sr_ts
-                # Decimation ratio for peripheral sensors
-                ratio = sr_ts / 16000
-
-                if 'acceleration' in data_request:
-                    sr = int(100 * ratio)
-                elif data_request in ['filtereddepth', 'rawdepth', 'rawpressure']:
-                    sr = int(75 * ratio)
-
-                seconds = np.linspace(0, n_samples / sr, n_samples)
-                data['time'] = seconds
-                data.set_index('time', inplace=True)
+                df = self.time_decimate(data, sr_ts, data_request)
                 success = True
+            else:
+                try:
+                    data = fn()
+                    sr_ts = self.probe.getSetting(setting_name='samplingrate')
+                    data = dataframe_this(data, name=data_request)
+                    df = self.time_decimate(data,sr_ts, data_request)
+                    success = True
 
-            except Exception as e:
-                self.log.warning(
-                    'Failed to retrieve {} data, retrying...'.format(data_request))
-                self.log.debug(
-                    "Failed {} attempt #{}".format(
-                        data_request, attempts))
-                self.log.error(e)
-
-                success = False
-                attempts += 1
+                except Exception as e:
+                    self.log.warning(
+                        'Failed to retrieve {} data, retrying...'.format(data_request))
+                    self.log.debug(
+                        "Failed {} attempt #{}".format(
+                            data_request, attempts))
+                    self.log.error(e)
+                    success = False
+                    attempts += 1
 
         if not success:
             m = ("Unable to retrieve {} data after {} attempts"
@@ -353,6 +348,30 @@ class RADICL(object):
             data = None
 
         return data
+
+    @staticmethod
+    def time_decimate(data, current_sample_rate, data_request):
+        """
+        Form the data into a dataframe and scale it according to the ratio of max
+        max sample rate
+        """
+        df = dataframe_this(data, name=data_request)
+        n_samples = df.index.size
+        # Default to using the sensor data sample rate
+        sr = current_sample_rate
+        # Decimation ratio for peripheral sensors
+        ratio = current_sample_rate / 16000
+
+        if 'acceleration' in data_request:
+            sr = int(100 * ratio)
+        elif data_request in ['filtereddepth', 'rawdepth', 'rawpressure']:
+            sr = int(75 * ratio)
+
+        seconds = np.linspace(0, n_samples / sr, n_samples)
+        df['time'] = seconds
+        df = df.set_index('time')
+        return df
+
 
     def task_daq(self):
         """
