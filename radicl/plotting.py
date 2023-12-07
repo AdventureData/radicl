@@ -8,16 +8,17 @@ import time
 import traceback
 from matplotlib import pyplot as plt
 import matplotlib
-from radicl.ui_tools import get_logger, get_index_from_ratio
 
+from radicl.ui_tools import get_logger, get_index_from_ratio
 from study_lyte.profile import LyteProfileV6, Sensor
-from study_lyte.plotting import SensorStyle, plot_events
+from study_lyte.styles import SensorStyle, EventStyle
+from study_lyte.plotting import plot_events
 
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
 
 
-def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
+def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     """
     Plots the timeseries, the depth corrected, accelerometer and depth data.
     Plot from a dataframe or from a file. Use auto close to auto close the figure
@@ -25,7 +26,6 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     Args:
         fname: Path to csv containing hi resolution data
-        df: Optional pandas dataframe instead of a file
         timed_plot: Amount of time to show the plot, if none user has to close it
         calibration_dict: Dictionary to offer calibration coefficients for any of the sensors
 
@@ -44,13 +44,12 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
         log.info(f"Filename: {profile.filename}")
         plt.suptitle(os.path.basename(profile.filename))
 
-
     # print out some handy numbers
     log.info(profile.report_card())
 
     # Plot time series data force data
     ax = fig.add_subplot(gs[:, 0])
-    plot_events(ax, [profile.start, profile.stop, profile.surface.force], plot_type='vertical')
+    plot_events(ax, profile.events, plot_type='vertical')
     force_style = SensorStyle.from_column('Sensor1')
     ax.plot(profile.raw['Sensor1'], profile.time, color=force_style.color)
     ax.set_title("Raw Force Timeseries")
@@ -61,7 +60,7 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
 
     # plot time series NIR data
     ax = fig.add_subplot(gs[:, 1])
-    plot_events(ax, [profile.start, profile.stop, profile.surface.nir], plot_type='vertical')
+    plot_events(ax, profile.events, plot_type='vertical')
     for sensor in ['Sensor2', 'Sensor3']:
         style = SensorStyle.from_column(sensor)
         ax.plot(profile.raw[sensor], profile.time, color=style.color, label=style.label)
@@ -117,23 +116,22 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     ax = fig.add_subplot(gs[1, 4])
     ax.set_title('Depth')
     plot_events(ax, profile.events, plot_type='normal')
-    #labels = ['Baro.', 'Acc.', 'Avg.']
-    #colors = ['navy', 'mediumseagreen', 'tomato']
-    #label_color_column = [(labels[i], colors[i], c) for i, c in enumerate(depth_cols)]
 
     # for label, color, col in label_color_column:
     if profile.motion_detect_name is Sensor.UNAVAILABLE:
         style = SensorStyle.from_column('barometer')
     else:
-        style = SensorStyle.BAROMETER
+        acc_style = SensorStyle.ACCELERATION
+        baro_style = SensorStyle.CONSTRAINED_BAROMETER
+        raw = SensorStyle.RAW_BARO
+        style = SensorStyle.FUSED
+        ax.plot(profile.barometer.raw.index, profile.barometer.raw.values, color=raw.color, label=raw.label, alpha=0.5)
+        ax.plot(profile.barometer.depth.index, profile.barometer.depth.values, color=baro_style.color, label=baro_style.label, alpha=0.5)
+        ax.plot(profile.accelerometer.depth, color=acc_style.color, label=acc_style.label, alpha=0.5)
 
     ax.plot(profile.time, profile.depth, color=style.color, label=style.label)
 
-    # extra = get_constrained_baro_depth(df, acc_axis=detect_col)
-    #
-    # ax.plot(extra.index, extra['depth'], label='constr.')
-    # ax.legend(loc='upper right', fontsize='xx-small')
-    # ax.set_ylabel('Depth from Max Height [cm]')
+    ax.legend(loc='upper right', fontsize='xx-small')
     # limits for depth
     buffer = 0.3
     n_samples = len(profile.raw)
@@ -145,8 +143,8 @@ def plot_hi_res(fname=None, df=None, timed_plot=None, calibration_dict={}):
     if abs(depth1) < 5:
         depth1 = 5
 
-    ax.set_xlim(ts1, ts2)
-    ax.set_ylim(*sorted([depth1, depth2]))
+    # ax.set_xlim(ts1, ts2)
+    # ax.set_ylim(*sorted([depth1, depth2]))
     ax.grid(True, axis='y', which='both', alpha=0.5)
 
     # Make the figure full screen

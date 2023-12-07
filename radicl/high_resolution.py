@@ -13,10 +13,9 @@ Usage:  1. plug in the probe.
 
 import argparse
 from argparse import RawTextHelpFormatter
-import pandas as pd
 import json
 import sys
-
+from study_lyte.adjustments import merge_time_series, merge_on_to_time
 from radicl import __version__
 from radicl.interface import RADICL
 from radicl.ui_tools import get_logger, exit_requested
@@ -45,11 +44,8 @@ def build_high_resolution_data(cli, log):
     # Grab Acceleration
     acc = cli.grab_data('rawacceleration')
 
-    # Set the 0 point of depth to the Starting point or the snow Surface
-    depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].min()
-
     # Invert Depth so bottom is negative max depth
-    depth['depth'] = depth['depth'] - depth['depth'].max()
+    depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].max()
     depth = depth.drop(columns=['filtereddepth'])
 
     log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
@@ -58,9 +54,11 @@ def build_high_resolution_data(cli, log):
     log.info("Sensor Samples: {:,}".format(len(ts)))
 
     log.info("Infilling and interpolating dataset...")
-    result = pd.merge_ordered(ts, depth, on='time')
-    result = pd.merge_ordered(result, acc, on='time')
-    result = result.interpolate(method='index')
+    if 'time' in ts.columns:
+        final_time = ts['time']
+    else:
+        final_time = ts.index.values
+    result = merge_on_to_time([ts, depth, acc], final_time)
     return result
 
 
@@ -153,10 +151,10 @@ def main():
             meta['Longitude'] = location[1]
 
         # Output the data to a datetime file
-        cli.write_probe_data(ts, extra_meta=meta)
+        filename = cli.write_probe_data(ts, extra_meta=meta)
 
         # Plot the data
-        plot_hi_res(df=ts, calibration_dict=calibration, timed_plot=args.plot_time)
+        plot_hi_res(fname=filename, calibration_dict=calibration, timed_plot=args.plot_time)
 
         # Reset the probe / clear out the data
         cli.probe.resetMeasurement()

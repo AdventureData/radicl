@@ -575,6 +575,7 @@ class RADICL(object):
             meta = self.probe.getProbeHeader()
             meta.update(extra_meta)
             write_csv(df, meta, filename)
+        return filename
 
     def ask_user(self, question_str, answer_lst=None, helpme=None,
                  next_state=True, default_answer=None):

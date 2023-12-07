@@ -94,19 +94,22 @@ class MOCKCLI:
             result: Dataframe
         """
         data = {}
+        samples = 20
         if data_name == 'rawsensor':
-            data['time'] = np.linspace(0, 1, 4)
+            data['time'] = np.linspace(0, 1, samples)
 
             for c in ['Sensor1', 'Sensor2', 'Sensor3']:
-                data[c] = np.linspace(1000, 4000, 4)
+                data[c] = np.linspace(1000, 4000, samples)
 
         elif data_name == 'filtereddepth':
-            data['time'] = np.linspace(0, 1, 2)
-            data['filtereddepth'] = np.linspace(0, 100, 2)
+            alt_samples = int(samples/3)
+            data['time'] = np.linspace(0, 1, alt_samples)
+            data['filtereddepth'] = np.linspace(100, 0, alt_samples)
 
         elif data_name == 'rawacceleration':
-            data['time'] = np.linspace(0, 1, 3)
-            data['Y-Axis'] = np.linspace(0, 2, 3)
+            alt_samples = int(samples/2)
+            data['time'] = np.linspace(0, 1, alt_samples)
+            data['Y-Axis'] = np.linspace(0, 2, alt_samples)
 
         result = pd.DataFrame(data)
 
