@@ -96,3 +96,7 @@ Overhaul (2017-10-17)
 * Migrated to using Study Lyte profile for plotting.
 * Added in windows daw script
 
+0.9.0 (2023-12-07)
+------------------
+* Migrated to study_lyte profile class usage
+* Added in features to manage past profiles with fewer sensors
