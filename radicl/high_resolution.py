@@ -149,6 +149,9 @@ def main():
         if location is not None:
             meta['Latitude'] = location[0]
             meta['Longitude'] = location[1]
+        # if a gps exists but were not able to get a fix, report back.
+        elif location is None and gps.cnx is not None:
+            log.warning("Unable to get GPS fix")
 
         # Output the data to a datetime file
         filename = cli.write_probe_data(ts, extra_meta=meta)

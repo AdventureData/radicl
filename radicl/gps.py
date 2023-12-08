@@ -9,7 +9,7 @@ class USBGPS:
     def __init__(self, debug=False):
         self.log = get_logger(__name__, debug=debug)
         try:
-            self.cnx = get_serial_cnx('u-blox')
+            self.cnx = get_serial_cnx('blox')
         except Exception as e:
             self.cnx = None
             self.log.error('Unable to open GPS port.')
@@ -40,7 +40,7 @@ class USBGPS:
             for i in range(max_attempts):
                 rx, msg = gps.read()
 
-                if msg.msgID in ['GGA', 'RMC']:
+                if msg.msgID in ['GGA']:
                     info = msg.lat, msg.lon
                     if all(info):
                         location = [float(p) for p in info]
