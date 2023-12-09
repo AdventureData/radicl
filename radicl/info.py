@@ -113,3 +113,53 @@ class SensorReadInfo(Enum):
         """ Number of bytes per sample"""
         return self.nbytes_per_value * self.expected_values
 
+class Firmware:
+    """
+    Small firmware class for comparing firmwares
+    """
+    def __init__(self, firmware_str):
+        self._info = firmware_str.split('.')
+        self.sub_versions = ['major_version', 'minor_version', 'patch_version', 'build_number']
+        # Default to 0
+        self.major_version = 0
+        self.minor_version = 0
+        self.patch_version = 0
+        self.build_number = 0
+        # Assign if the value was provided, assumed order ie. 1.3 == 1.3.0.0
+        for i, version in enumerate(self.sub_versions):
+            if i < len(self._info):
+                setattr(self, version, int(self._info[i]))
+
+    def __eq__(self, other):
+        comparisons = [getattr(self, version) == getattr(other, version) for version in self.sub_versions]
+        return all(comparisons)
+
+    def __ge__(self, other):
+        gt_comparisons = [getattr(self, version) > getattr(other, version) for version in self.sub_versions]
+        eq_comparisons = [getattr(self, version) == getattr(other, version) for version in self.sub_versions]
+        result = False
+        for greater_than, equal in zip(gt_comparisons, eq_comparisons):
+            if greater_than:
+                result = True
+                break
+            elif not greater_than and not equal:
+                result = False
+                break
+            elif equal:
+                result = True
+
+        return result
+
+    def __gt__(self, other):
+        result = False
+        for  version in self.sub_versions:
+            v = getattr(self, version)
+            ov = getattr(other, version)
+            if v > ov:
+                result = True
+                break
+
+        return result
+
+    def __repr__(self):
+        return f"v{self.major_version}.{self.minor_version}.{self.patch_version}.{self.patch_version}"
