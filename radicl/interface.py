@@ -40,6 +40,8 @@ def dataframe_this(data, name=None):
             data = [d[0] for d in data]
 
         df = pd.DataFrame(data, columns=[name])
+    elif t == pd.DataFrame:
+        df = data
 
     return df
 
@@ -345,17 +347,16 @@ class RADICL(object):
             m = ("Unable to retrieve {} data after {} attempts"
                  "".format(data_request, attempts))
             self.log.error(m)
-            data = None
+            df = None
 
-        return data
+        return df
 
     @staticmethod
-    def time_decimate(data, current_sample_rate, data_request):
+    def time_decimate(df, current_sample_rate, data_request):
         """
         Form the data into a dataframe and scale it according to the ratio of max
         max sample rate
         """
-        df = dataframe_this(data, name=data_request)
         n_samples = df.index.size
         # Default to using the sensor data sample rate
         sr = current_sample_rate

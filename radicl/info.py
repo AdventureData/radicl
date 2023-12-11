@@ -75,7 +75,7 @@ class AccelerometerRange(Enum):
 class SensorReadInfo(Enum):
 
     # Buffer Index, bytes per seg, number of bytes per value, expected number of values, does the data live in spi mem.
-    RAWSENSOR = 0, 256, 2, 4, True, 'Raw Sensor', ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4"], None, None
+    RAWSENSOR = 0, 256, 2, 4, True, 'Raw Sensor', ["Sensor1", "Sensor2", "Sensor3", "Sensor4"], None, None
     # 3 axis acc, convert from mG to G
     ACCELEROMETER = 1, None, 2, 3, False, 'Acceleration', ["X-Axis", "Y-Axis", "Z-Axis"], '<h', 0.001
     RAW_BAROMETER_PRESSURE = 2, 256, 3, 1, False, 'Raw Pressure', ['raw_pressure'], None, None
@@ -162,4 +162,23 @@ class Firmware:
         return result
 
     def __repr__(self):
-        return f"v{self.major_version}.{self.minor_version}.{self.patch_version}.{self.patch_version}"
+        return f"v{self.major_version}.{self.minor_version}.{self.patch_version}.{self.build_number}"
+
+class PCA_Name(Enum):
+    UNKNOWN = None
+    PB1 = 1
+    PB2 = 2
+    PB3 = 3
+
+    @classmethod
+    def from_index(cls, idx):
+        result = cls.UNKNOWN
+        for e in cls:
+            if e.idx == idx:
+                result = e
+                break
+        return result
+
+    @property
+    def idx(self):
+        return self.value

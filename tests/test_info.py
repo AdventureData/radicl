@@ -1,4 +1,4 @@
-from radicl.info import AccelerometerRange, ProbeErrors, ProbeState, Firmware
+from radicl.info import AccelerometerRange, ProbeErrors, ProbeState, Firmware, PCA_Name
 import pytest
 
 
@@ -67,3 +67,12 @@ class TestFirmware:
     ])
     def test_repr(self, fw1, expected):
         assert str(fw1) == expected
+
+@pytest.mark.parametrize('idx, expected', [
+    (1, PCA_Name.PB1),
+    (3, PCA_Name.PB3),
+    (100, PCA_Name.UNKNOWN),
+    (None, PCA_Name.UNKNOWN)
+])
+def test_PCA_NAME(idx, expected):
+    assert PCA_Name.from_index(idx) == expected

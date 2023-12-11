@@ -4,9 +4,7 @@ import time
 
 from .ui_tools import get_logger
 from .commands import MeasCMD, SystemCMD, SettingsCMD, FWUpdateCMD, AttributeCMD
-
-PCA_ID_LIST = ["UNKNOWN", "PB1", "PB2", "PB3"]
-
+from .info import Firmware, PCA_Name
 
 class RAD_API:
     """
@@ -337,8 +335,7 @@ class RAD_API:
         Gets the hardware id string
         """
         if self._hw_id_str is None:
-            if self.hw_id < len(PCA_ID_LIST):
-                self._hw_id_str = PCA_ID_LIST[self.hw_id]
+            self._hw_id_str = PCA_Name.from_index(self.hw_id).name
         return self._hw_id_str
 
     @property
@@ -358,7 +355,7 @@ class RAD_API:
         """
         if self._fw_rev is None:
             ret = self.getFWREV()
-            self._fw_rev = ret['data']
+            self._fw_rev = Firmware(str(ret['data']))
         return self._fw_rev
 
     @property
@@ -368,7 +365,7 @@ class RAD_API:
         """
         if self._full_fw_rev is None:
             ret = self.getFullFWREV()
-            self._full_fw_rev = ret['data']
+            self._full_fw_rev = Firmware(ret['data'])
         return self._full_fw_rev
 
     @property
@@ -388,25 +385,18 @@ class RAD_API:
         self.log.debug("Retrieving probe information...")
 
         if self.hw_id is not None:
-            if self.hw_id < len(PCA_ID_LIST):
-                id_msg = f"Attached device: {self.hw_id_str}, " \
-                         f"Revision={self.hw_rev}, "
+            id_msg = f"Attached device: {self.hw_id_str}, " \
+                     f"Revision={self.hw_rev}, " \
+                     f"Firmware = {self.full_fw_rev if self.full_fw_rev else self.fw_rev}"
 
-                if self.full_fw_rev is not None:
-                    id_msg += f"Firmware = {self.full_fw_rev}"
-                else:
-                    id_msg += f"Firmware = {self.fw_rev}"
-
-                self.log.info(id_msg)
-                return 1
-
-            else:
-                self.log.warning("Unknown device detected!")
-                return 0
+            self.log.info(id_msg)
+            result = True
 
         else:
             self.log.warning("Invalid response to ID request")
-            return 0
+            result = False
+        return result
+
 
     # ***************************
     # ***** BASIC COMMANDS ******
