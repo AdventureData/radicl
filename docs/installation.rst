@@ -53,14 +53,11 @@ RAD Drivers Install
 **Windows will not automatically find drivers for the Lyte probe**. Follow the
 instructions below to install them.
 
-1. Download Drivers from `RAD Drivers`_
+1. Download driver installation script from `Radicl on Github`_
 
-.. _RAD Drivers: https://drive.google.com/file/d/18t1XQvWoSRbmwd9GQrSo6ij6BaIVpXsY/view?usp=sharing
+.. _Radicl on Github: https://github.com/AdventureData/radicl/blob/master/scripts/windows_daq.bat
 
-2. Unzip the folder
-3. Run the VCP_V1.4.0_Setup.exe in the folder
-4. Navigate to C:\Program Files (x86)\STMicroelectronics\Software\Virtual comport driver/Win8
-5. Run dpinst_amd64.exe (for 64 bit machines)
+2. Double click to launch the install in your downloads and follow the prompts.
 
 If you have correctly installed the drivers move on to :ref:`Install radicl`.
 below.
