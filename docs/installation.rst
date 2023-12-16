@@ -55,7 +55,7 @@ instructions below to install them.
 
 1. Download driver installation script from `Radicl on Github`_
 
-.. _Radicl on Github: https://github.com/AdventureData/radicl/blob/master/scripts/windows_daq.bat
+.. _Radicl on Github: https://github.com/AdventureData/radicl/blob/master/scripts/driver_install.bat
 
 2. Double click to launch the install in your downloads and follow the prompts.
 
