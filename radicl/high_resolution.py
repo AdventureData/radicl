@@ -152,12 +152,16 @@ def main():
         # if a gps exists but were not able to get a fix, report back.
         elif location is None and gps.cnx is not None:
             log.warning("Unable to get GPS fix")
-
+            meta['Latitude'] = 'N/A'
+            meta['Longitude'] = 'N/A'
         # Output the data to a datetime file
         filename = cli.write_probe_data(ts, extra_meta=meta)
 
         # Plot the data
-        plot_hi_res(fname=filename, calibration_dict=calibration, timed_plot=args.plot_time)
+        try:
+            plot_hi_res(fname=filename, calibration_dict=calibration, timed_plot=args.plot_time)
+        except Exception as e:
+            log.error(e)
 
         # Reset the probe / clear out the data
         cli.probe.resetMeasurement()

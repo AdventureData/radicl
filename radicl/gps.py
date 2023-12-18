@@ -20,7 +20,7 @@ class USBGPS:
         else:
             self.log.info(f'GPS found ({self.cnx.port})!')
 
-    def get_fix(self, max_attempts=20):
+    def get_fix(self, max_attempts=100):
         """
         Attempts to get a location fix given a serial port
         connection to a usb gps.
@@ -42,14 +42,15 @@ class USBGPS:
 
                 if msg.msgID in ['GGA']:
                     info = msg.lat, msg.lon
-                    if all(info):
+                    if msg.quality != 0 and all(info):
                         location = [float(p) for p in info]
                         break
                 time.sleep(0.1)
+
             if location is None:
                 self.log.warning('Unable to get a fix on GPS! No location data will be recorded!')
             else:
-                self.log.info(f'GPS fix acquired, {location[0]:0.4f} {location[1]:0.4f}')
+                self.log.info(f'GPS fix acquired, {location[0]:0.6f} {location[1]:0.6f}')
 
         return location
 
