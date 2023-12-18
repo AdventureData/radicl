@@ -7,4 +7,4 @@ coloredlogs>=14.0, <15.0
 matplotlib>=3.6.0,<4.0.0
 progressbar2>=3.53.1,<4.0.0
 study-lyte>=0.6.2
-pynmeagps==1.0.19
+pynmeagps==1.0.32

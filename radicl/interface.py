@@ -332,7 +332,7 @@ class RADICL(object):
 
                 seconds = np.linspace(0, n_samples / sr, n_samples)
                 data['time'] = seconds
-                data.set_index('time', inplace=True)
+                data = data.set_index('time')
                 success = True
 
             except Exception as e:
