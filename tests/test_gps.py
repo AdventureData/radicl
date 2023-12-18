@@ -14,7 +14,8 @@ def mock_gps_port(payload):
 @pytest.mark.parametrize('payload, expected', [
     # Lat long found with a retry
     ([b'$GPTXT,01,01,02,u-blox ag - www.u-blox.com*50\r\n',
-      b'$GPRMC,201209.00,A,4400.0000,N,11600.00000,W,0.065,,230223,,,D*6B\r\n'], [44.0, -116.0]),
+      b'$GPGGA,035548.00,4400.0000,N,11600.00000,W,1,06,1.34,870.9,M,-19.4,M,,*69\r\n'], [44.0, -116.0]),
+
     # No lat long found
     ([b'$GPTXT,01,01,02,u-blox ag - www.u-blox.com*50'], None),
     # Lat long message found but not interpretable
