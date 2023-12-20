@@ -123,7 +123,7 @@ class MockGPSStream:
     def read(self):
         if self.payload:
             message = self.payload.pop()
-            talker, msgid, payload, checksum = get_parts(message)
+            content, talker, msgid, payload, checksum = get_parts(message)
 
             return message,  NMEAMessage(
                     talker, msgid, 0, payload=payload, checksum=checksum)
