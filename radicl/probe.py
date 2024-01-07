@@ -29,6 +29,8 @@ class RAD_Probe:
         Args:
             ext_api: rad_api.RAD_API object preinstantiated
         """
+        self._state = None
+        self._last_state = None
 
         self.log = get_logger(__name__, debug=debug)
 
@@ -76,6 +78,14 @@ class RAD_Probe:
                 self.getters = parse_func_list(settings_funcs,
                                                ['Meas', 'Get'],
                                                ignore_keywords=ignores)
+
+    @property
+    def state(self):
+        return  self._state
+
+    @property
+    def last_state(self):
+        return self._last_state
 
     def manage_error(self, ret_dict, stack_id=1):
         """
@@ -147,7 +157,34 @@ class RAD_Probe:
 
         return result
 
-    def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
+    def readData_by_segment(self, buffer_id, segment):
+        """
+        Read segments one at a time
+        """
+        # Data Segments to collect
+        result = False
+
+        # Request the data
+        ret = self.api.MeasReadDataSegment(buffer_id, segment)
+
+        if ret['status'] == 1 and ret['data'] is not None:
+            data_chunk = ret['data']
+        else:
+            data_chunk = None
+        return data_chunk
+
+
+    def get_number_of_segments(self, buffer_id):
+        """ Retrieve the number of data segments available from measurement"""
+        ret = self.api.MeasGetNumSegments(buffer_id)
+        if ret['status'] == 1:
+            num_segments = int.from_bytes(ret['data'], byteorder='little')
+        else:
+            num_segments = None
+        return num_segments
+
+
+    def __readData(self, buffer_id, segment, max_retry=10, init_delay=0.004):
         """
         Private function to retrieve data from the probe.
          Args:
@@ -168,10 +205,8 @@ class RAD_Probe:
                  'data': None}
 
         # Get the number of data segments available
-        ret = self.api.MeasGetNumSegments(buffer_id)
-
-        if ret['status'] == 1:
-            num_segments = int.from_bytes(ret['data'], byteorder='little')
+        num_segments = self.get_number_of_segments(buffer_id)
+        if num_segments is not None:
             self.log.debug('Retrieving {:,} segments of {} data...'.format(num_segments, buffer_name.lower()))
 
         # No data returned
@@ -203,12 +238,11 @@ class RAD_Probe:
                     time.sleep(wait_time)
 
                     # Request the data
-                    ret = self.api.MeasReadDataSegment(buffer_id, ii)
+                    data_chunk = self.readData_by_segment(buffer_id, ii)
 
-                    if ret['status'] == 1 and ret['data'] is not None:
-                        byte_counter = byte_counter + len(ret['data'])
-                        data_chunk = ret['data']
+                    if data_chunk is not None:
                         data.extend(data_chunk)
+                        byte_counter = len(data)
                         result = True
                         # Break the retry loop
                         break
@@ -296,6 +330,10 @@ class RAD_Probe:
             ret = self.api.getMeasState()
             data = self.manage_data_return(ret, dtype=int)
             attempts += 1
+
+        if self.state != data:
+            self._last_state = self._state
+            self._state = data
 
         return data
 

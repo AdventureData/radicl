@@ -7,6 +7,16 @@ class ProbeState(Enum):
     MEASUREMENT_RUNNING = 1
     MEASUREMENT_PROCESSING = 3
     MEASUREMENT_FINISHED = 5
+    UNKOWN_STATE = -1
+
+    @classmethod
+    def from_state(cls, state):
+        final = cls.UNKOWN_STATE
+        for e in cls:
+            if e.value == state:
+                final = e
+                break
+        return final
 
 class ProbeErrors(Enum):
     # Define by code and error string
