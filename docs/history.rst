@@ -100,3 +100,7 @@ Overhaul (2017-10-17)
 ------------------
 * Migrated to study_lyte profile class usage
 * Added in features to manage past profiles with fewer sensors
+
+0.10.0 (TBD)
+------------
+* Added windows driver install script
