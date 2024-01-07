@@ -84,30 +84,39 @@ class SensorReadInfo(Enum):
     @property
     def buffer_id(self):
         return self.value[0]
+
     @property
     def bytes_per_segment(self):
         return self.value[1]
+
     @property
     def nbytes_per_value(self):
         return self.value[2]
+
     @property
     def expected_values(self):
         return self.value[3]
+
     @property
     def uses_spi(self):
         return self.value[4]
+
     @property
     def readable_name(self):
         return self.value[5]
+
     @property
     def data_names(self):
         return self.value[6]
+
     @property
     def unpack_type(self):
         return self.value[7]
+
     @property
     def conversion_factor(self):
         return self.value[8]
+
     @property
     def bytes_per_sample(self):
         """ Number of bytes per sample"""
