@@ -23,7 +23,7 @@ from radicl.plotting import plot_hi_res
 from radicl.gps import USBGPS
 
 
-def build_high_resolution_data(cli, log):
+def build_high_resolution_data(raw_sensor, baro_depth, acceleration , log):
     """
     Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
     and pads with nans to fit into the same dataframe
@@ -35,26 +35,26 @@ def build_high_resolution_data(cli, log):
     Returns:
         result: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
     """
-    # Grab the Raw data
-    ts = cli.grab_data('rawsensor')
-
-    # Grab relative, filtered barometer data
-    depth = cli.grab_data('filtereddepth')
-
-    # Grab Acceleration
-    acc = cli.grab_data('rawacceleration')
+    # # Grab the Raw data
+    # ts = cli.grab_data('rawsensor')
+    #
+    # # Grab relative, filtered barometer data
+    # depth = cli.grab_data('filtereddepth')
+    #
+    # # Grab Acceleration
+    # acc = cli.grab_data('rawacceleration')
 
     # Invert Depth so bottom is negative max depth
-    depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].max()
-    depth = depth.drop(columns=['filtereddepth'])
+    baro_depth['depth'] = baro_depth['filtereddepth'] - baro_depth['filtereddepth'].max()
+    baro_depth = baro_depth.drop(columns=['filtereddepth'])
 
-    log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
-    log.info("Barometer Samples: {:,}".format(len(depth.index)))
-    log.info("Acceleration Samples: {:,}".format(len(acc.index)))
-    log.info("Sensor Samples: {:,}".format(len(ts)))
+    log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(baro_depth['depth'].max() - baro_depth['depth'].min())))
+    log.info("Barometer Samples: {:,}".format(len(baro_depth.index)))
+    log.info("Acceleration Samples: {:,}".format(len(acceleration.index)))
+    log.info("Sensor Samples: {:,}".format(len(raw_sensor)))
 
     log.info("Infilling and interpolating dataset...")
-    result = merge_on_to_time([ts, depth, acc], ts.index)
+    result = merge_on_to_time([raw_sensor, baro_depth, acceleration], raw_sensor.index)
     return result
 
 

@@ -5,6 +5,7 @@ import inspect
 import struct
 import sys
 import time
+import numpy as np
 
 from . import __version__
 from .com import RAD_Serial
@@ -31,6 +32,7 @@ class RAD_Probe:
         """
         self._state = None
         self._last_state = None
+        self._sampling_rate = None
 
         self.log = get_logger(__name__, debug=debug)
 
@@ -86,6 +88,15 @@ class RAD_Probe:
     @property
     def last_state(self):
         return self._last_state
+
+    @property
+    def sampling_rate(self):
+        if self._sampling_rate is None:
+            ret = self.api.MeasGetSamplingRate()
+            sr = self.manage_data_return(ret)
+            if sr is not None:
+                self._sampling_rate = sr
+        return self._sampling_rate
 
     def manage_error(self, ret_dict, stack_id=1):
         """
@@ -184,7 +195,7 @@ class RAD_Probe:
         return num_segments
 
 
-    def __readData(self, buffer_id, segment, max_retry=10, init_delay=0.004):
+    def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
         """
         Private function to retrieve data from the probe.
          Args:
@@ -443,7 +454,7 @@ class RAD_Probe:
 
         return result
 
-    def read_check_data_integrity(self, buffer_id, nbytes_per_value=None,
+    def read_check_data_integrity(self, byte_arr, nbytes_per_value=None,
                                   nvalues=None, from_spi=False):
         """
         Receives a data function and  performs the data integrity check
@@ -452,7 +463,7 @@ class RAD_Probe:
         so we check for integer_multiples of that data
 
         Args:
-            buffer_id: Index the data is in the probe buffer
+            byte_arr: Byte array of data
             nbytes_per_value: how many bytes expected per value per sample
             nvalues: Number of values expecter per sample
             from_spi: Is the data coming from SPI flash which guarantees a
@@ -463,15 +474,11 @@ class RAD_Probe:
         """
 
         buffer_name = self.__data_buffer_guide[buffer_id]
-
-        ret_dict = self.__readData(buffer_id)
         final = None
 
         # successfully read data
-        if ret_dict['status'] != 1:
-            self.log.error('Read {} error: No data available!'
-                           ''.format(buffer_name))
-            self.log.debug('Data received from probe:\n{}'.format(ret_dict))
+        if byte_arr is None:
+            self.log.error('Read error: No data available!')
 
         else:
 
@@ -523,25 +530,24 @@ class RAD_Probe:
             return final
 
     @staticmethod
-    def unpack_sensor(sensor:SensorReadInfo, data, samples:int, conversion:float=None):
+    def unpack_sensor(data, sensor:SensorReadInfo):
         """
         Attempt to standardize the conversion of downloaded data for more usages
         Args:
             data:
             sensor:
-            samples:
-            conversion:
 
         Returns:
             final: Dictionary of unpacked data
 
         """
         offset = 0
-
         final = {name: [] for name in sensor.data_names}
 
         unpack_bytes = sensor.unpack_type is not None
-        convert = conversion is not None
+        convert = sensor.conversion_factor is not None
+
+        samples = len(data) // sensor.bytes_per_sample
 
         for ii in range(0, samples):
 
@@ -563,7 +569,7 @@ class RAD_Probe:
 
                 # Perform conversion of units
                 if convert:
-                    value *= conversion
+                    value *= sensor.conversion_factor
 
                 # Grab each sensor value in the byte array
                 final[name].append(value)
@@ -573,6 +579,19 @@ class RAD_Probe:
 
         return final
 
+    def time_decimate(self, df, sensor):
+        """
+        Form the data into a dataframe and scale it according to the ratio of max
+        max sample rate as is done in the FW
+        """
+        n_samples = df.index.size
+        # Decimation ratio for peripheral sensors
+        ratio = self.sampling_rate / SensorReadInfo.RAWSENSOR.max_sample_rate
+        sr = int(sensor.max_sample_rate * ratio)
+        seconds = np.linspace(0, n_samples / sr, n_samples)
+        df['time'] = seconds
+        df = df.set_index('time')
+        return df
 
     def readRawSensorData(self):
         """
@@ -583,6 +602,7 @@ class RAD_Probe:
             dict - containing data or None if read failed
         """
         sensor = SensorReadInfo.RAWSENSOR
+        ret = self.__readData(sensor.buffer_id)
         ret = self.read_check_data_integrity(sensor.buffer_id, nbytes_per_value=sensor.nbytes_per_value,
                                              nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
         final = None

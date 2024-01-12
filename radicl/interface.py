@@ -5,6 +5,7 @@ import inspect
 import os
 import sys
 import time
+from os.path import join, abspath, dirname, expanduser
 
 import pandas as pd
 import numpy as np
@@ -82,20 +83,18 @@ def add_ext(filename):
     return filename
 
 
-def get_default_filename():
+def get_default_filename(output_dir='./'):
     """
     Creates a datetime path for writing to
 
     Returns:
-        filename: csv path named by the datetime
+        fname: csv path named by the datetime
     """
 
     t = datetime.datetime.now()
-    fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}"
+    fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}.csv"
     fname = fstr.format(t.year, t.month, t.day, t.hour, t.minute, t.second)
-    filename = os.path.expanduser('./{0}.csv'.format(fname))
-
-    return filename
+    return join(output_dir, fname)
 
 
 def increment_fnumber(filename):
@@ -321,9 +320,9 @@ class RADICL(object):
             # Enable debugging w/o try and except
             if DEV_MODE:
                 data = fn()
-                sr_ts = self.probe.getSetting(setting_name='samplingrate')
                 data = dataframe_this(data, name=data_request)
-                df = self.time_decimate(data, sr_ts, data_request)
+                # TODO: This is not going to work
+                df = self.probe.time_decimate(data, data_request)
                 success = True
             else:
                 try:
@@ -354,6 +353,9 @@ class RADICL(object):
     @staticmethod
     def time_decimate(df, current_sample_rate, data_request):
         """
+        TODO: Migrate this function to probe.py and remove from here when confident it all
+        works
+        
         Form the data into a dataframe and scale it according to the ratio of max
         max sample rate
         """
@@ -432,8 +434,8 @@ class RADICL(object):
                         filename = fname
 
                     # Make it absolute
-                    filename = os.path.abspath(filename)
-                    real_path = os.path.isdir(os.path.dirname(filename))
+                    filename = abspath(filename)
+                    real_path = isdir(dirname(filename))
 
                     # Double check a real path was given
                     if not real_path:
@@ -586,7 +588,7 @@ class RADICL(object):
             filename = get_default_filename()
 
         else:
-            filename = os.path.expanduser(filename)
+            filename = expanduser(filename)
 
         out.msg("Saving Data to :\n{0}".format(filename))
 

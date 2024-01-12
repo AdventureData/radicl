@@ -85,11 +85,11 @@ class AccelerometerRange(Enum):
 class SensorReadInfo(Enum):
 
     # Buffer Index, bytes per seg, number of bytes per value, expected number of values, does the data live in spi mem.
-    RAWSENSOR = 0, 256, 2, 4, True, 'Raw Sensor', ["Sensor1", "Sensor2", "Sensor3", "Sensor4"], None, None
+    RAWSENSOR = 0, 256, 2, 4, True, 'Raw Sensor', ["Sensor1", "Sensor2", "Sensor3", "Sensor4"], None, None, 16000
     # 3 axis acc, convert from mG to G
-    ACCELEROMETER = 1, None, 2, 3, False, 'Acceleration', ["X-Axis", "Y-Axis", "Z-Axis"], '<h', 0.001
-    RAW_BAROMETER_PRESSURE = 2, 256, 3, 1, False, 'Raw Pressure', ['raw_pressure'], None, None
-    FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False, 'Filtered Barometer Depth', ['filtereddepth'], 'f', 0.01
+    ACCELEROMETER = 1, None, 2, 3, False, 'Acceleration', ["X-Axis", "Y-Axis", "Z-Axis"], '<h', 0.001, 100
+    RAW_BAROMETER_PRESSURE = 2, 256, 3, 1, False, 'Raw Pressure', ['raw_pressure'], None, None, 75
+    FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False, 'Filtered Barometer Depth', ['filtereddepth'], 'f', 0.01, 75
 
     @property
     def buffer_id(self):
@@ -128,9 +128,14 @@ class SensorReadInfo(Enum):
         return self.value[8]
 
     @property
+    def max_sample_rate(self):
+        return self.value[9]
+
+    @property
     def bytes_per_sample(self):
         """ Number of bytes per sample"""
         return self.nbytes_per_value * self.expected_values
+
 
 class Firmware:
     """
