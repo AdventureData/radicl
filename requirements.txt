@@ -6,5 +6,5 @@ argparse>=1.4.0, <2.0.0
 coloredlogs>=14.0, <15.0
 matplotlib>=3.6.0,<4.0.0
 progressbar2>=3.53.1,<4.0.0
-study-lyte>=0.6.2
+study-lyte>=0.7.0
 pynmeagps==1.0.32
