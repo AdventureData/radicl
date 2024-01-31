@@ -95,9 +95,9 @@ def main():
                    help='Path to a json containing any calibration coefficients for any of the sensors')
     p.add_argument('--version', action='version',
                    version='%(prog)s v{version}'.format(version=__version__))
-    p.add_argument('--plot_time', default=10, type=int, help='Automatically close a plot after number of seconds')
+    p.add_argument('--plot_time', default=None, type=int, help='Automatically close a plot after number of seconds')
 
-    p.add_argument('--n_measurements', default=0, type=int, help='Number of measurements to take without asking to exit')
+    p.add_argument('--n_measurements', default=100, type=int, help='Number of measurements to take without asking to exit')
     args = p.parse_args()
 
     if args.calibration is not None:
