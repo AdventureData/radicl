@@ -755,7 +755,9 @@ class RAD_API:
         helpme - Sets the calibration data for the specified sensor
         """
         code = SettingsCMD.CALIBDATA.cmd
-        message = [0x9F, code, 0x01, 0x00, 0x05]
+        #message initial format = CMD, EXT_CMD, ID, Length, data
+
+        message = [0x9F, code, 0x01, 0x00, 0x11]
 
         # Convert values each into a 1 and 2 bytes
         message.extend(num_sensor.to_bytes(1, byteorder='little'))

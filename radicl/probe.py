@@ -126,9 +126,12 @@ class RAD_Probe:
                       function name when errors occur.
         """
         name = inspect.stack()[stack_id][3]
-
-        if ret_dict['errorCode'] is not None:
-            self.log.error("{} error:{}".format(name, ret_dict['errorCode']))
+        code = ret_dict['errorCode']
+        if code is not None:
+            if code in error_codes.keys():
+                self.log.error(f'{error_codes[code]}')
+            else:
+                self.log.error("{} error:{}".format(name, ret_dict['errorCode']))
 
         else:
             self.log.error("{} error: COM".format(name))
@@ -600,7 +603,7 @@ class RAD_Probe:
                 m = 4095 / (d[1] - d[0])
                 # Set the intercept to the LOW value
                 b = d[0]
-
+            # TODO: Change to cubic poly
             calib_data[sensor] = [m * (x - b) for x in raw[sensor]]
 
         return calib_data

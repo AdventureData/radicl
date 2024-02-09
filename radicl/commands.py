@@ -6,6 +6,9 @@ class CMDEnum(Enum):
     def cmd(self):
         return self.value
 
+class PrecursorMessage(CMDEnum):
+    WRITE = 0x01
+    READ = 0x00
 
 class AttributeCMD(CMDEnum):
     """Commands to retrieve non-measurement attributes """
