@@ -733,8 +733,7 @@ class RAD_API:
         # Expect 4 bytes back two for the low value and 2 for the high value
         return self.__EvaluateAndReturn(response, code, 4)
 
-    def MeasSetCalibData(self, num_sensor, calibration_value_low,
-                         calibration_value_high):
+    def MeasSetCalibData(self, num_sensor, c1, c2, c3, c4):
         """
         Sets the probes calibration values. A high and low are set where the
         low. This is applied linearly and thus the low value should be the
@@ -745,9 +744,10 @@ class RAD_API:
 
         Args:
                 num_sensor: Integer indicating sensors 1,2,3, or 4.
-                calibration_value_low: 12-bit integer indicating the y intercept of a linear
-                                   calibration
-                calibration_value_high: 12-bit integer for the
+                c1: Single precision float indicating the first term in a cubic polynomial                              calibration
+                c2: Single precision float indicating the 2nd term in a cubic polynomial                              calibration
+                c3: Single precision float indicating the 3rd term in a cubic polynomial                              calibration
+                c4: Single precision float indicating the 4th term in a cubic polynomial                              calibration
 
         Returns:
                 status: 1 if successful, 0 otherwise
@@ -759,8 +759,11 @@ class RAD_API:
 
         # Convert values each into a 1 and 2 bytes
         message.extend(num_sensor.to_bytes(1, byteorder='little'))
-        message.extend(calibration_value_low.to_bytes(2, byteorder='little'))
-        message.extend(calibration_value_high.to_bytes(2, byteorder='little'))
+        message.extend(c1.to_bytes(4, byteorder='little'))
+        message.extend(c2.to_bytes(4, byteorder='little'))
+        message.extend(c3.to_bytes(4, byteorder='little'))
+        message.extend(c4.to_bytes(4, byteorder='little'))
+
         response = self.__send_receive(message)
         return self.__EvaluateAndReturn(response, code, 0)
 

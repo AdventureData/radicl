@@ -11,13 +11,35 @@ from .com import RAD_Serial
 from .api import RAD_API
 from .ui_tools import get_logger, parse_func_list
 
-error_codes = {2049: "The probe measurement/sensor is not running",
-               2048: 'Generic Measurement error',
-               2050: "Measurement FSM not ready to start measurement",
-               2051: " Measurement FSM already stopped (i.e. in ready/idle state)",
-               2052: "Setting a parameter failed",
-               2053: "Invalid buffer was addressed",
-               2054: "Reading data failed"}
+error_codes = {
+                # General command errors
+                0: "Undefined Error",
+                1:"Invalid Command",
+                2:"Command not allowed",
+                3:"Read not allowed",
+                4:"Write not allowed",
+                5: "Data payload is not the expected size",
+                6: "Data payload is too many bytes",
+                512: "I/O out of range",
+                # Supervisor Errors (1024-2047 => Range = 1024)
+                # This includes errors from services (uFS, etc.)
+                1024: "General services error",
+                1025:"Unable to set testmode",
+                1026:"Probe filesystem read error",
+                # Sensor/Measurement Errors (2048-3071)
+                2048: "Generic measurement error",
+                2049: "The probe measurement/sensor is not running",
+                2050: "Measurement FSM not ready to start measurement",
+                2051: " Measurement FSM already stopped (i.e. in ready/idle state)",
+                2052: "Setting a parameter failed",
+                2053: "Invalid buffer was addressed",
+                2054: "Reading data failed",
+                2055: "Could not get/set calibration data",
+                # Firmware update errors (5120-6144)
+                5120: "Probe not ready to update firmware",
+                5121: "Probe firmware update checksum doenst match",
+                5122: "An error occurred writing to flash"
+}
 
 # From Data sheet for accelerometer in REV C
 acc_sensitivity = {2: 0.06,
@@ -139,7 +161,8 @@ class RAD_Probe:
                 data = ret['data'][i:i + increment]
                 if dtype == int:
                     value = int.from_bytes(data, byteorder='little')
-
+                elif float:
+                    value = struct.unpack('f', data)
                 elif dtype == str:
                     value = data.decode('utf-8')
 
@@ -949,21 +972,23 @@ class RAD_Probe:
         """
         if setting_name == 'calibdata':
             ret = self.getters[setting_name](sensor)
-            num_values = 2
+            num_values = 4
+            return_type = float
         else:
             ret = self.getters[setting_name]()
             num_values = 1
+            return_type = int
 
-        return self.manage_data_return(ret, num_values=num_values, dtype=int)
+        return self.manage_data_return(ret, num_values=num_values, dtype=return_type)
 
-    def setSetting(self, setting_name=None, sensor=None, value=None, low_value=None,
-                   hi_value=None):
+    def setSetting(self, setting_name=None, sensor=None, value=None):
         """
         sets the probe's setting
         """
 
         if setting_name == 'calibdata':
-            ret = self.settings[setting_name](sensor, low_value, hi_value)
+            (c1, c2, c3, c4) = value
+            ret = self.settings[setting_name](sensor, c1, c2, c3, c4)
 
         else:
             ret = self.settings[setting_name](value)

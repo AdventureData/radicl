@@ -119,3 +119,9 @@ def test_rawacceleration_scaling(real_probe, scale):
     result = np.mean(data['magnitude'])
     real_probe.resetMeasurement()
     assert pytest.approx(result, abs=2e-2) == 1
+
+def test_calibration_data(real_probe):
+    d = real_probe.setSetting(setting_name='calibdata', sensor=1, value=[0,0,1,0])
+    print(d)
+    d = real_probe.getSetting(setting_name='calibdata', sensor=1)
+    print(d)
