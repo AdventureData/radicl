@@ -6,9 +6,11 @@ class CMDEnum(Enum):
     def cmd(self):
         return self.value
 
-class PrecursorMessage(CMDEnum):
+class API_MSG(CMDEnum):
     WRITE = 0x01
     READ = 0x00
+    DELIMITER = 0x9F
+
 
 class AttributeCMD(CMDEnum):
     """Commands to retrieve non-measurement attributes """
@@ -32,7 +34,6 @@ class MeasCMD(CMDEnum):
 
 class SettingsCMD(CMDEnum):
     """Commands for probe settings"""
-
     SAMPLING_RATE = 0x46
     ZPFO = 0x47
     PPMM = 0x48

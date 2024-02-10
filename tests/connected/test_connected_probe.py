@@ -121,7 +121,7 @@ def test_rawacceleration_scaling(real_probe, scale):
     assert pytest.approx(result, abs=2e-2) == 1
 
 def test_calibration_data(real_probe):
-    d = real_probe.setSetting(setting_name='calibdata', sensor=1, value=[0, 0, 1, 0])
+    d = real_probe.setSetting(setting_name='calibdata', sensor=1, value=[0, 0, 0.5, 0])
     print(d)
     d = real_probe.getSetting(setting_name='calibdata', sensor=1)
-    print(d)
+    assert d == [0.0, 0.0, 0.5, 0.0]
