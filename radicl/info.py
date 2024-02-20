@@ -17,6 +17,32 @@ class ProbeState(Enum):
                 final = e
                 break
         return final
+    @classmethod
+    def ready(cls, state):
+        return state in [cls.IDLE.value, cls.MEASUREMENT_FINISHED.value]
+
+
+class CLIState(Enum):
+    """Enum for managing the cli state"""
+    HOME = 0
+    DAQ_HOME = 1
+    DAQ_CHOICE = 2
+    DAQ_MEASUREMENT = 3
+    DAQ_OUTPUT = 4
+    DAQ_FINISHED = 5
+    SETTINGS_HOME = 6
+    SETTINGS_CHOICE = 7
+    MODIFY_SETTING = 8
+    UNKNOWN = 99
+    @classmethod
+    def from_choice(cls, choice):
+        """Return state based on user input"""
+        result = cls.UNKNOWN
+        if choice == 'daq':
+            result = cls.DAQ_HOME
+        elif choice == 'settings':
+            result = cls.SETTINGS_HOME
+        return result
 
 class ProbeErrors(Enum):
     # Define by code and error string
@@ -91,6 +117,7 @@ class SensorReadInfo(Enum):
     RAW_BAROMETER_PRESSURE = 2, 256, 3, 1, False, 'Raw Pressure', ['raw_pressure'], None, None, 75
     FILTERED_BAROMETER_DEPTH = 4, None, 4, 1, False, 'Filtered Barometer Depth', ['filtereddepth'], 'f', 0.01, 75
 
+
     @property
     def buffer_id(self):
         return self.value[0]
@@ -135,6 +162,20 @@ class SensorReadInfo(Enum):
     def bytes_per_sample(self):
         """ Number of bytes per sample"""
         return self.nbytes_per_value * self.expected_values
+
+    @classmethod
+    def from_data_request(cls, data_request):
+        if data_request == 'filtered_depth':
+            result = cls.FILTERED_BAROMETER_DEPTH
+        elif data_request in ['calibratedsensor', 'rawsensor']:
+            result = cls.RAWSENSOR
+        elif data_request == 'rawpressure':
+            result = cls.RAW_BAROMETER_PRESSURE
+        elif data_request == 'rawacceleration':
+            result = cls.ACCELEROMETER
+        else:
+            result = None
+        return result
 
 
 class Firmware:

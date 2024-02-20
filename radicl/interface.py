@@ -17,10 +17,12 @@ from .probe import RAD_Probe
 from .calibrate import get_avg_sensor
 from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
                        print_helpme)
+from .info import ProbeState, CLIState, SensorReadInfo
+
 
 out = Messages()
 
-DEV_MODE=False
+DEV_MODE = True
 
 def dataframe_this(data, name=None):
     """
@@ -130,7 +132,10 @@ class RADICL(object):
 
     def __init__(self, **kwargs):
 
-        self.state = 0
+        self.data = None
+        self.current_setting_value = None
+
+        self.state = CLIState.HOME
         for k, v in self.defaults.items():
             if k not in kwargs.keys():
                 kwargs[k] = v
@@ -156,7 +161,7 @@ class RADICL(object):
         # Assign all data functions with keywords to auto gather data packages
         self.options['data'] = parse_func_list(probe_funcs,
                                                ['read', 'Data'],
-                                               ignore_keywords=['correlation', 'integrity'])
+                                               ignore_keywords=['_by_segment', 'correlation', 'integrity'])
 
         # Grab the settings from the probe
         self.options['settings'] = self.probe.settings
@@ -190,11 +195,11 @@ class RADICL(object):
         # Create the probe command with an arbitrary command to have access to
         while self.running:
 
-            pstate = self.probe.getProbeMeasState()
+            self.probe.getProbeMeasState()
 
-            if self.state == 0:
+            if self.state == CLIState.HOME:
                 # If probe is not ready.
-                if pstate not in [0, 5]:
+                if not ProbeState.ready(self.probe.state):
                     self.probe.resetMeasurement()
 
                 else:
@@ -202,8 +207,9 @@ class RADICL(object):
                     self.task = self.ask_user("What do you want to do with the"
                                               " probe?", self.tasks,
                                               helpme=self.task_help)
+                    self.state = CLIState.from_choice(self.task)
 
-            elif self.state >= 1:
+            elif self.state != CLIState.HOME:
                 self.tasking()
 
             else:
@@ -310,7 +316,6 @@ class RADICL(object):
 
         attempts = 0
         success = False
-        data = None
 
         while attempts < retries and not success:
             self.log.debug(
@@ -319,17 +324,11 @@ class RADICL(object):
 
             # Enable debugging w/o try and except
             if DEV_MODE:
-                data = fn()
-                data = dataframe_this(data, name=data_request)
-                # TODO: This is not going to work
-                df = self.probe.time_decimate(data, data_request)
+                df = fn()
                 success = True
             else:
                 try:
-                    data = fn()
-                    sr_ts = self.probe.getSetting(setting_name='samplingrate')
-                    data = dataframe_this(data, name=data_request)
-                    df = self.time_decimate(data,sr_ts, data_request)
+                    df = fn()
                     success = True
 
                 except Exception as e:
@@ -347,78 +346,54 @@ class RADICL(object):
                  "".format(data_request, attempts))
             self.log.error(m)
             df = None
-
         return df
-
-    @staticmethod
-    def time_decimate(df, current_sample_rate, data_request):
-        """
-        TODO: Migrate this function to probe.py and remove from here when confident it all
-        works
-        
-        Form the data into a dataframe and scale it according to the ratio of max
-        max sample rate
-        """
-        n_samples = df.index.size
-        # Default to using the sensor data sample rate
-        sr = current_sample_rate
-        # Decimation ratio for peripheral sensors
-        ratio = current_sample_rate / 16000
-
-        if 'acceleration' in data_request:
-            sr = int(100 * ratio)
-        elif data_request in ['filtereddepth', 'rawdepth', 'rawpressure']:
-            sr = int(75 * ratio)
-
-        seconds = np.linspace(0, n_samples / sr, n_samples)
-        df['time'] = seconds
-        df = df.set_index('time')
-        return df
-
 
     def task_daq(self):
         """
         The state machine for request to do daq
         """
         # Data Selection
-        if self.state == 1:
-            pstate = self.probe.getProbeMeasState()
+        if self.state == CLIState.DAQ_HOME:
+            self.probe.getProbeMeasState()
             self.log.info("Checking to see if probe is ready...")
-            self.log.debug("Probe State = {0}".format(pstate))
+            self.log.debug(f"Probe State = {self.probe.state}")
 
             # Make sure probe is ready
-            if pstate == 0 or pstate == 5:
+            if ProbeState.ready(self.probe.state):
                 self.daq = self.ask_user("What data do you want?",
                                          list(self.options['data'].keys()),
                                          helpme=self.help_dialog['data'])
+                if self.state != CLIState.HOME:
+                    self.state = CLIState.DAQ_CHOICE
 
         # Method for outputting data
-        elif self.state == 2:
+        elif self.state == CLIState.DAQ_CHOICE:
             self.output_preference = self.ask_user("How do you want to output"
                                                    " {0} data?".format(
                 self.daq),
                 ['plot', 'write', 'both'],
                 default_answer=self.output_preference)
+            if self.state != CLIState.HOME:
+                self.state = CLIState.DAQ_MEASUREMENT
 
         # Take Measurements
-        elif self.state == 3:
+        elif self.state == CLIState.DAQ_MEASUREMENT:
             self.take_a_reading()
-
             self.data = self.grab_data(self.daq)
-            # acc_cols = [c for c in self.data.columns if 'Axis' in c]
-            # self.data[acc_cols] = self.data[acc_cols].mul(2)
-
-            self.state = 4
 
             if self.data is None:
-                self.state = 3
+                if self.state != CLIState.HOME:
+                    self.state = CLIState.DAQ_MEASUREMENT
                 self.log.error('')
                 self.log.error('Retrieving probe data failed, try again.')
+            else:
+                if self.state != CLIState.HOME:
+                    self.state = CLIState.DAQ_OUTPUT
 
             response = self.probe.resetMeasurement()
 
         # Data output and options
-        elif self.state == 4:
+        elif self.state == CLIState.DAQ_OUTPUT:
             if self.output_preference in ['write', 'both']:
                 valid = False
 
@@ -450,22 +425,21 @@ class RADICL(object):
 
                         if not self.data.empty:
                             self.write_probe_data(self.data, filename=filename)
-                            self.state = 5
+                            self.state = CLIState.DAQ_FINISHED
 
             if self.output_preference in ['plot', 'both']:
                 self.data.plot()
                 plt.show()
-                self.state = 5
+                self.state = CLIState.DAQ_FINISHED
 
-        elif self.state == 5:
+        elif self.state == CLIState.DAQ_FINISHED:
             response = self.ask_user("Take another measurement?")
-
             if response in ['y', 'yes', True]:
-                self.state = 3
+                self.state = CLIState.DAQ_MEASUREMENT
 
-            # Go to DAQ menu
+            # Go to the Home menu
             else:
-                self.state = 0
+                self.state = CLIState.HOME
 
     def task_settings(self):
         """
@@ -473,27 +447,30 @@ class RADICL(object):
         """
 
         # Setting Selection
-        if self.state == 1:
-            pstate = self.probe.getProbeMeasState()
+        if self.state == CLIState.SETTINGS_HOME:
+            self.probe.getProbeMeasState()
             self.log.info("Checking to see if probe is ready...")
-            self.log.debug("Probe State = {0}".format(pstate))
+            self.log.debug(f"Probe State = {self.probe.state}")
 
             # Make sure probe is ready
-            if pstate in [0, 5]:
+            if ProbeState.ready(self.probe.state):
                 self.setting_request = \
                     self.ask_user("What setting do you want to adjust?",
                                   sorted(list(self.probe.settings.keys())),
                                   helpme=self.help_dialog['settings'])
+            if self.state != CLIState.HOME:
+                self.state = CLIState.SETTINGS_CHOICE
 
         # Get current setting
-        elif self.state == 2:
+        elif self.state == CLIState.SETTINGS_CHOICE:
 
             if self.setting_request == 'show':
                 self.options['settings'][self.setting_request]()
-                self.state = 1
+                self.state = CLIState.SETTINGS_HOME
 
             # Retrieve calibration values
             elif self.setting_request == 'calibdata':
+                # TODO for calibration update this needs changing
                 for i in range(1, 3):
                     self.current_setting_value = []
                     self.current_setting_value.append(
@@ -505,25 +482,28 @@ class RADICL(object):
                            "".format(self.setting_request,
                                      values, i))
                     self.log.info(msg)
-                self.state += 1
+
+                if self.state != CLIState.HOME:
+                    self.state = CLIState.MODIFY_SETTING
 
             else:
+                # Retrieve the current setting
                 self.current_setting_value = \
                     self.probe.getSetting(setting_name=self.setting_request)
-                self.state += 1
+                if self.state != CLIState.HOME:
+                    self.state = CLIState.MODIFY_SETTING
+
 
         # Modify setting
-        elif self.state == 3:
-
+        elif self.state == CLIState.MODIFY_SETTING:
             if self.setting_request == 'calibdata':
                 self.calibrate()
-                self.state = 1
+                if self.state != CLIState.HOME:
+                    self.state = CLIState.SETTINGS_HOME
 
             else:
-                values = self.current_setting_value
-                msg = ("Currently {0} = {1}\nEnter value to change probe {0}\n"
-                       "".format(self.setting_request,
-                                 values))
+                msg = (f"Currently {self.setting_request} = {self.current_setting_value}\n"
+                       f"Enter value to change probe {self.setting_request} [{self.current_setting_value}]\n")
                 self.log.info(msg)
 
                 valid = False
@@ -531,6 +511,8 @@ class RADICL(object):
                 # All entries have to be numeric. Ensure this is the case.
                 while not valid:
                     self.new_value = input(msg)
+                    if self.new_value == '':
+                        self.new_value = self.current_setting_value
                     try:
                         self.new_value = int(self.new_value)
                         valid = True
@@ -555,7 +537,8 @@ class RADICL(object):
                 time.sleep(1)
 
                 # Go back to settings menu
-                self.state = 1
+                if self.state != CLIState.HOME:
+                    self.state = CLIState.SETTINGS_HOME
 
     def print_settings(self):
         """
@@ -600,7 +583,7 @@ class RADICL(object):
         return filename
 
     def ask_user(self, question_str, answer_lst=None, helpme=None,
-                 next_state=True, default_answer=None):
+                 default_answer=None):
         """
         Function is used to wait for an appropriate response from user and handle unknown answers
 
@@ -626,7 +609,7 @@ class RADICL(object):
         lower_lst = [i.lower() for i in sorted(answer_lst)]
 
         # Add in option to return to main menu
-        if self.state != 0:
+        if self.state != CLIState.HOME:
             lower_lst.append('home')
 
         # Help documentation
@@ -683,7 +666,7 @@ class RADICL(object):
                 self.log.info("Returning to the main menu.")
                 self.running = True
                 acceptable_answer = True
-                self.state = 0
+                self.state = CLIState.HOME
 
             # Default Picked
             elif response == '':
@@ -698,9 +681,6 @@ class RADICL(object):
                         response = True
                     else:
                         response = False
-
-                if next_state:
-                    self.state += 1
 
             else:
                 out.error('Only acceptable answers are:')

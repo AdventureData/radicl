@@ -6,6 +6,7 @@ import struct
 import sys
 import time
 import numpy as np
+import pandas as pd
 
 from . import __version__
 from .com import RAD_Serial
@@ -105,7 +106,7 @@ class RAD_Probe:
         if self._accelerometer_range is None:
             sensing_range = self.getSetting(setting_name='accrange')
             self._accelerometer_range = sensing_range
-        return
+        return self._accelerometer_range
 
     def manage_error(self, ret_dict, stack_id=1):
         """
@@ -232,13 +233,7 @@ class RAD_Probe:
         # No data returned
         else:
 
-            self.log.debug("getNumSegments error: %d (buffer_id = %d)" %
-                           (ret['errorCode'], buffer_id))
-
-            if ret['errorCode'] is not None:
-                self.log.debug("Error {:d} occurred.".format(ret['errorCode']))
-                error = ProbeErrors.from_code(ret['errorCode'])
-                self.log.error(error.error_string)
+            self.log.debug(f"getNumSegments Error (buffer_id = {buffer_id})")
 
         # If we do have number of segments
         if num_segments != 0 and num_segments is not None:
@@ -282,11 +277,6 @@ class RAD_Probe:
 
                         # Increase the wait time every failed request
                         wait_time += wait_time
-
-                        if ret['errorCode'] is not None:
-                            error = ProbeErrors.from_code(ret['errorCode'])
-                            self.log.warning(error.error_string)
-
 
             # Was the data read successful?
             final['status'] = int(result)
@@ -463,7 +453,7 @@ class RAD_Probe:
 
         return result
 
-    def read_check_data_integrity(self, byte_arr, nbytes_per_value=None,
+    def read_check_data_integrity(self, buffer_id, ret_dict, nbytes_per_value=None,
                                   nvalues=None, from_spi=False):
         """
         Receives a data function and  performs the data integrity check
@@ -472,7 +462,7 @@ class RAD_Probe:
         so we check for integer_multiples of that data
 
         Args:
-            byte_arr: Byte array of data
+            ret_dict: Returned dictionary of data and supporting meta
             nbytes_per_value: how many bytes expected per value per sample
             nvalues: Number of values expecter per sample
             from_spi: Is the data coming from SPI flash which guarantees a
@@ -486,7 +476,7 @@ class RAD_Probe:
         final = None
 
         # successfully read data
-        if byte_arr is None:
+        if ret_dict['data'] is None:
             self.log.error('Read error: No data available!')
 
         else:
@@ -539,12 +529,13 @@ class RAD_Probe:
             return final
 
     @staticmethod
-    def unpack_sensor(data, sensor:SensorReadInfo):
+    def unpack_sensor(data, sensor:SensorReadInfo, extra_conversion=None):
         """
         Attempt to standardize the conversion of downloaded data for more usages
         Args:
-            data:
-            sensor:
+            data: Data to unpack
+            sensor: Sensor storage info
+            extra_conversion: Option to add a more dynamic conversion like in accelerometer
 
         Returns:
             final: Dictionary of unpacked data
@@ -585,10 +576,13 @@ class RAD_Probe:
 
             # Move farther down the bytes to read the next segment.
             offset += sensor.nbytes_per_value * sensor.expected_values
+        df = pd.DataFrame.from_dict(final)
+        # Allow for more dynamic conversions like in the acceleration's case
+        if extra_conversion is not None:
+                df = df.mul(extra_conversion)
+        return df
 
-        return final
-
-    def time_decimate(self, df, sensor):
+    def time_decimate(self, df, sensor: SensorReadInfo):
         """
         Form the data into a dataframe and scale it according to the ratio of max
         max sample rate as is done in the FW
@@ -602,6 +596,21 @@ class RAD_Probe:
         df = df.set_index('time')
         return df
 
+    def _parse_data(self, sensor):
+        ret = self.__readData(sensor.buffer_id)
+        ret = self.read_check_data_integrity(sensor.buffer_id, ret, nbytes_per_value=sensor.nbytes_per_value,
+                                             nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
+        final = None
+        if ret is not None:
+            if sensor == SensorReadInfo.ACCELEROMETER:
+                sensitivty = AccelerometerRange.from_range(self.accelerometer_range)
+                extra = sensitivty.value_scaling
+            else:
+                extra = None
+            final = self.unpack_sensor(ret['data'], sensor, extra_conversion=extra)
+            final = self.time_decimate(final, sensor)
+        return final
+
     def readRawSensorData(self):
         """
         Reads the RAW sensor data.
@@ -611,46 +620,40 @@ class RAD_Probe:
             dict - containing data or None if read failed
         """
         sensor = SensorReadInfo.RAWSENSOR
-        ret = self.__readData(sensor.buffer_id)
-        ret = self.read_check_data_integrity(sensor.buffer_id, nbytes_per_value=sensor.nbytes_per_value,
-                                             nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
-        final = None
-        if ret is not None:
-            final = self.unpack_sensor(sensor, ret['data'], ret['samples'])
+        return self._parse_data(sensor)
 
-        return final
-
-    def readCalibratedSensorData(self):
-        """
-        Reads the Read Calibrated sensor data.
-        helpme - Calibrated data for 4 sensors
-
-        Returns:
-            dict - containing data or None if read failed
-        """
-        calib_data = {}
-        raw = self.readRawSensorData()
-
-        for id in range(1, 5):
-            sensor = "Sensor{}".format(id)
-            d = self.getSetting(setting_name='calibdata', sensor=id)
-
-            # For the calibration for sensor 1 we invert
-            if id == 1:
-                # Set the slope to the negative difference
-                m = 4095 / (d[0] - d[1])
-                # Set the intercept to the LOW value
-                b = d[1]
-
-            else:
-                # Set the slope to the positive difference
-                m = 4095 / (d[1] - d[0])
-                # Set the intercept to the LOW value
-                b = d[0]
-
-            calib_data[sensor] = [m * (x - b) for x in raw[sensor]]
-
-        return calib_data
+    # TODO update for calibration scheme
+    # def readCalibratedSensorData(self):
+    #     """
+    #     Reads the Read Calibrated sensor data.
+    #     helpme - Calibrated data for 4 sensors
+    #
+    #     Returns:
+    #         dict - containing data or None if read failed
+    #     """
+    #     calib_data = {}
+    #     raw = self.readRawSensorData()
+    #
+    #     for id in range(1, 5):
+    #         sensor = "Sensor{}".format(id)
+    #         d = self.getSetting(setting_name='calibdata', sensor=id)
+    #
+    #         # For the calibration for sensor 1 we invert
+    #         if id == 1:
+    #             # Set the slope to the negative difference
+    #             m = 4095 / (d[0] - d[1])
+    #             # Set the intercept to the LOW value
+    #             b = d[1]
+    #
+    #         else:
+    #             # Set the slope to the positive difference
+    #             m = 4095 / (d[1] - d[0])
+    #             # Set the intercept to the LOW value
+    #             b = d[0]
+    #
+    #         calib_data[sensor] = [m * (x - b) for x in raw[sensor]]
+    #
+    #     return calib_data
 
     def readRawAccelerationData(self):
         """
@@ -662,16 +665,7 @@ class RAD_Probe:
 
         """
         sensor = SensorReadInfo.ACCELEROMETER
-        ret = self.read_check_data_integrity(sensor.buffer_id,
-                                             nbytes_per_value=sensor.nbytes_per_value,
-                                             nvalues=sensor.expected_values)
-
-        if ret is not None:
-            # Grab the range to scale the incoming data
-            sensitivity = AccelerometerRange.from_range(self.accelerometer_range)
-            final = self.unpack_sensor(sensor, ret['data'], ret['samples'],
-                                       conversion=sensor.conversion_factor * sensitivity.value_scaling)
-        return final
+        return self._parse_data(sensor)
 
     def readAccelerationCorrelationData(self):
         """
@@ -717,58 +711,49 @@ class RAD_Probe:
         """
         Reads the RAW pressure data, including the correlation index
         """
-
         sensor = SensorReadInfo.RAW_BAROMETER_PRESSURE
-        ret = self.read_check_data_integrity(sensor.buffer_id,
-                                             nbytes_per_value=sensor.nbytes_per_value,
-                                             nvalues=sensor.expected_values)
-        final = None
-        # successfully read data
-        if ret is not None:
-            final = self.unpack_sensor(sensor, ret['data'], ret['samples'])
-        return final
+        return self._parse_data(sensor)
 
-
-    def readRawDepthData(self):
-        """
-        Reads the converted depth data, including the correlation index
-        Return type is a dict containing data or None if read failed
-        helpme - Unfiltered elevation data from the depth sensor
-        """
-        ret = self.__readData(3)
-        if ret['status'] == 1:
-            # successfully read data
-            # ***** DATA INTEGRITY CHECK *****
-            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
-                # Data integrity error (not all segments read)
-                self.log.error("readDepthData error: Data integrity error (not all "
-                               "segments read)")
-                return None
-
-            total_bytes = ret['BytesRead']
-            if (total_bytes % 4) != 0:
-                # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Floating point)
-                # values are 32-bit long => 4 bytes)
-                self.log.error("readDepthData error: Data integrity error "
-                               "(incomplete data set)")
-                return None
-
-            # ***** DATA PARSING *****
-            data = ret['data']
-            depth_data = []
-            samples = total_bytes // 4
-            offset = 0
-            for ii in range(0, samples):
-                this_byte_list = data[(offset + 0):(offset + 4)]
-                this_byte_object = bytes(this_byte_list)
-                this_value = struct.unpack('f', this_byte_object)
-                depth_data.append(this_value)
-                offset = offset + 4
-            return depth_data
-        else:
-            # Read failed!
-            return None
+    # def readRawDepthData(self):
+    #     """
+    #     Reads the converted depth data, including the correlation index
+    #     Return type is a dict containing data or None if read failed
+    #     helpme - Unfiltered elevation data from the depth sensor
+    #     """
+    #     ret = self.__readData(3)
+    #     if ret['status'] == 1:
+    #         # successfully read data
+    #         # ***** DATA INTEGRITY CHECK *****
+    #         if ret['SegmentsAvailable'] != ret['SegmentsRead']:
+    #             # Data integrity error (not all segments read)
+    #             self.log.error("readDepthData error: Data integrity error (not all "
+    #                            "segments read)")
+    #             return None
+    #
+    #         total_bytes = ret['BytesRead']
+    #         if (total_bytes % 4) != 0:
+    #             # Data integrity error (not all bytes read - incomplete data segment)
+    #             # The data set is not an integer multiple of 4 (Floating point)
+    #             # values are 32-bit long => 4 bytes)
+    #             self.log.error("readDepthData error: Data integrity error "
+    #                            "(incomplete data set)")
+    #             return None
+    #
+    #         # ***** DATA PARSING *****
+    #         data = ret['data']
+    #         depth_data = []
+    #         samples = total_bytes // 4
+    #         offset = 0
+    #         for ii in range(0, samples):
+    #             this_byte_list = data[(offset + 0):(offset + 4)]
+    #             this_byte_object = bytes(this_byte_list)
+    #             this_value = struct.unpack('f', this_byte_object)
+    #             depth_data.append(this_value)
+    #             offset = offset + 4
+    #         return depth_data
+    #     else:
+    #         # Read failed!
+    #         return None
 
     def readFilteredDepthData(self):
         """
@@ -782,14 +767,7 @@ class RAD_Probe:
 
         """
         sensor = SensorReadInfo.FILTERED_BAROMETER_DEPTH
-        ret = self.read_check_data_integrity(sensor.buffer_id,
-                                             nbytes_per_value=sensor.nbytes_per_value,
-                                             nvalues=sensor.expected_values)
-        final = None
-        if ret is not None:
-            final = self.unpack_sensor(sensor, ret['data'], ret['samples'], sensor.conversion_factor)
-
-        return final
+        return self._parse_data(sensor)
 
     def readPressureDepthCorrelationData(self):
         """
@@ -832,56 +810,56 @@ class RAD_Probe:
             # Read failed!
             return None
 
-    def readDepthCorrectedSensorData(self):
-        """
-        Reads the processed data as a sensor-depth combo
-        """
-        # Data columns
-        nsensors = 4
-        name_str = 'Sensor{}'
-        sensor_names = [name_str.format(i) for i in range(1, nsensors + 1)]
-
-        # Index in the probe buffer
-        buffer_id = 7
-
-        # Expected byte size of the data
-        nbytes_per_value = 4
-        nvalues = 4
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues, from_spi=False)
-        data = None
-
-        if ret is not None:
-            # initialize
-            data = ret['data']
-            samples = ret['samples']
-            final = {sensor: [] for sensor in sensor_names}
-            final['depth'] = []
-            nbytes = nbytes_per_value * nvalues
-            sgbytes = 256
-            offset = 0
-
-            # Loop over all the samples
-            for ii in range(0, samples):
-                data_set = data[offset: offset + nbytes]
-
-                # Grab the depth
-                final['depth'].append(data_set[4] + (data_set[5] * sgbytes) +
-                                      (data_set[6] * 65536) + (data_set[7] *
-                                                               16777216))
-
-                for idx, name in enumerate(sensor_names):
-                    # Starts at idx 8 in the buffer
-                    byte_idx = idx * 2 + 8
-                    final[name].append(data_set[byte_idx] + \
-                                       data_set[byte_idx + 1] * sgbytes)
-                offset += nbytes
-
-            data = final
-
-        return data
+    # def readDepthCorrectedSensorData(self):
+    #     """
+    #     Reads the processed data as a sensor-depth combo
+    #     """
+    #     # Data columns
+    #     nsensors = 4
+    #     name_str = 'Sensor{}'
+    #     sensor_names = [name_str.format(i) for i in range(1, nsensors + 1)]
+    #
+    #     # Index in the probe buffer
+    #     buffer_id = 7
+    #
+    #     # Expected byte size of the data
+    #     nbytes_per_value = 4
+    #     nvalues = 4
+    #
+    #     ret = self.read_check_data_integrity(buffer_id,
+    #                                          nbytes_per_value=nbytes_per_value,
+    #                                          nvalues=nvalues, from_spi=False)
+    #     data = None
+    #
+    #     if ret is not None:
+    #         # initialize
+    #         data = ret['data']
+    #         samples = ret['samples']
+    #         final = {sensor: [] for sensor in sensor_names}
+    #         final['depth'] = []
+    #         nbytes = nbytes_per_value * nvalues
+    #         sgbytes = 256
+    #         offset = 0
+    #
+    #         # Loop over all the samples
+    #         for ii in range(0, samples):
+    #             data_set = data[offset: offset + nbytes]
+    #
+    #             # Grab the depth
+    #             final['depth'].append(data_set[4] + (data_set[5] * sgbytes) +
+    #                                   (data_set[6] * 65536) + (data_set[7] *
+    #                                                            16777216))
+    #
+    #             for idx, name in enumerate(sensor_names):
+    #                 # Starts at idx 8 in the buffer
+    #                 byte_idx = idx * 2 + 8
+    #                 final[name].append(data_set[byte_idx] + \
+    #                                    data_set[byte_idx + 1] * sgbytes)
+    #             offset += nbytes
+    #
+    #         data = final
+    #
+    #     return data
 
     def readMeasurementTemperature(self):
         """
