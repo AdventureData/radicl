@@ -15,13 +15,13 @@ import argparse
 from argparse import RawTextHelpFormatter
 import json
 import sys
-from study_lyte.adjustments import merge_time_series, merge_on_to_time
+from study_lyte.adjustments import merge_on_to_time
 from radicl import __version__
 from radicl.interface import RADICL
 from radicl.ui_tools import get_logger, exit_requested
 from radicl.plotting import plot_hi_res
 from radicl.gps import USBGPS
-
+from radicl.info import SensorReadInfo
 
 def build_high_resolution_data(raw_sensor, baro_depth, acceleration , log):
     """
@@ -120,10 +120,6 @@ def main():
     response = cli.probe.resetMeasurement()
 
     # Grab the probe sample rate
-    SR = cli.probe.getSetting(setting_name='samplingrate')
-    zpfo = cli.probe.getSetting(setting_name='zpfo')
-    acc_range = cli.probe.getSetting(setting_name='accrange')
-
     finished = exit_requested()
 
     # Loop through each sensor and retrieve the calibration data
@@ -133,12 +129,16 @@ def main():
         cli.listen_for_a_reading()
 
         # Collect and build the data
-        ts = build_high_resolution_data(cli, log)
+        raw_sensor = cli.grab_data(data_request='rawsensor')
+        baro_depth = cli.grab_data(data_request='filtereddepth')
+        acceleration = cli.grab_data(data_request='rawacceleration')
 
-        meta = {"SAMPLE RATE": str(SR),
-                "ZPFO": str(zpfo),
-                "ACC. Range": str(acc_range),
-                'Serial Num.': cli.probe.getProbeSerial()}
+        ts = build_high_resolution_data(raw_sensor, baro_depth, acceleration, log)
+
+        meta = {"SAMPLE RATE": str(cli.probe.sampling_rate),
+                "ZPFO": str(cli.probe.zpfo),
+                "ACC. Range": str(cli.probe.accelerometer_range),
+                'Serial Num.': cli.probe.api.serial}
 
         # Attempt to get a fix, if no gps cnx then no location data is returned
         location = gps.get_fix()

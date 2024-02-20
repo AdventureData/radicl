@@ -35,6 +35,7 @@ class RAD_Probe:
         self._last_state = None
         self._sampling_rate = None
         self._accelerometer_range = None
+        self._zpfo = None
 
         self.log = get_logger(__name__, debug=debug)
 
@@ -94,11 +95,13 @@ class RAD_Probe:
     @property
     def sampling_rate(self):
         if self._sampling_rate is None:
-            ret = self.api.MeasGetSamplingRate()
-            sr = self.manage_data_return(ret)
-            if sr is not None:
-                self._sampling_rate = sr
+            self._sampling_rate = self.getSetting(setting_name='samplingrate')
         return self._sampling_rate
+    @property
+    def zpfo(self):
+        if self._zpfo is None:
+            self._zpfo = self.getSetting(setting_name='zpfo')
+        return self._zpfo
 
     @property
     def accelerometer_range(self):
