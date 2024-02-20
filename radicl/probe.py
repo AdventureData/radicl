@@ -531,8 +531,7 @@ class RAD_Probe:
 
             return final
 
-    @staticmethod
-    def unpack_sensor(data, sensor:SensorReadInfo, extra_conversion=None):
+    def unpack_sensor(self, data, sensor:SensorReadInfo):
         """
         Attempt to standardize the conversion of downloaded data for more usages
         Args:
@@ -580,9 +579,12 @@ class RAD_Probe:
             # Move farther down the bytes to read the next segment.
             offset += sensor.nbytes_per_value * sensor.expected_values
         df = pd.DataFrame.from_dict(final)
-        # Allow for more dynamic conversions like in the acceleration's case
-        if extra_conversion is not None:
-                df = df.mul(extra_conversion)
+
+        if sensor == SensorReadInfo.ACCELEROMETER:
+            sensitivty = AccelerometerRange.from_range(self.accelerometer_range)
+            df = df.mul(sensitivty.value_scaling)
+
+        df = self.time_decimate(df, sensor)
         return df
 
     def time_decimate(self, df, sensor: SensorReadInfo):
@@ -605,13 +607,7 @@ class RAD_Probe:
                                              nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
         final = None
         if ret is not None:
-            if sensor == SensorReadInfo.ACCELEROMETER:
-                sensitivty = AccelerometerRange.from_range(self.accelerometer_range)
-                extra = sensitivty.value_scaling
-            else:
-                extra = None
-            final = self.unpack_sensor(ret['data'], sensor, extra_conversion=extra)
-            final = self.time_decimate(final, sensor)
+            final = self.unpack_sensor(ret['data'], sensor)
         return final
 
     def readRawSensorData(self):
