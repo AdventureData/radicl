@@ -33,6 +33,7 @@ class RAD_Probe:
         self._state = None
         self._last_state = None
         self._sampling_rate = None
+        self._accelerometer_range = None
 
         self.log = get_logger(__name__, debug=debug)
 
@@ -97,6 +98,14 @@ class RAD_Probe:
             if sr is not None:
                 self._sampling_rate = sr
         return self._sampling_rate
+
+    @property
+    def accelerometer_range(self):
+        # Grab the range to scale the incoming data
+        if self._accelerometer_range is None:
+            sensing_range = self.getSetting(setting_name='accrange')
+            self._accelerometer_range = sensing_range
+        return
 
     def manage_error(self, ret_dict, stack_id=1):
         """
@@ -659,8 +668,7 @@ class RAD_Probe:
 
         if ret is not None:
             # Grab the range to scale the incoming data
-            sensing_range = self.getSetting(setting_name='accrange')
-            sensitivity = AccelerometerRange.from_range(sensing_range)
+            sensitivity = AccelerometerRange.from_range(self.accelerometer_range)
             final = self.unpack_sensor(sensor, ret['data'], ret['samples'],
                                        conversion=sensor.conversion_factor * sensitivity.value_scaling)
         return final
