@@ -6,6 +6,8 @@ import sys
 import platform
 import time
 import traceback
+
+import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
 
@@ -16,6 +18,40 @@ from study_lyte.plotting import plot_events
 
 
 matplotlib.rcParams['agg.path.chunksize'] = 100000
+
+
+def plot_nir_depth_correct(ax, profile):
+    ax.grid(True, axis='y', alpha=0.5)
+
+    for sensor in ['Sensor2', 'Sensor3']:
+        style = SensorStyle.from_column(sensor)
+        ax.plot(profile.nir[sensor],
+                profile.nir.depth,
+                alpha=0.3, color=style.color, label=style.label)
+
+    style = SensorStyle.ACTIVE_NIR
+    ax.plot(profile.nir['nir'], profile.nir['depth'], color=style.color, label=style.label)
+    ax.set_title("NIR Depth Corrected")
+    ax.legend(loc='lower left', fontsize='small')
+    return ax
+
+
+def plot_force_depth_corrected(ax, profile, ):
+    # plot the depth corrected Force
+    force_style = SensorStyle.RAW_FORCE
+    ax.grid(True, axis='y', which='both', alpha=0.5)
+    ax.plot(profile.force['force'], profile.force['depth'], color=force_style.color, label=force_style.label)
+    ax.set_title("Force Depth Corrected")
+    ax.legend(loc='lower left', fontsize='small')
+    ax.set_ylabel('Depth [cm]')
+    ax.set_xlim((0, 4096))
+    return ax
+
+def report_profile_error(ax):
+    ylims = ax.get_ylim()
+    xlims = ax.get_xlim()
+    ax.annotate('Failed to compute \ncorrected profile.', (np.mean(xlims)*0.25, np.mean(ylims)))
+    return ax
 
 
 def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
@@ -70,27 +106,17 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
 
     # plot the depth corrected Force
     ax = fig.add_subplot(gs[:, 2])
-    ax.grid(True, axis='y', which='both', alpha=0.5)
-    ax.plot(profile.force['force'], profile.force['depth'], color=force_style.color, label=force_style.label)
-    ax.set_title("Force Depth Corrected")
-    ax.legend(loc='lower left', fontsize='small')
-    ax.set_ylabel('Depth [cm]')
-    ax.set_xlim((0, 4096))
+    try:
+        ax = plot_force_depth_corrected(ax, profile)
+    except:
+        report_profile_error(ax)
 
     # plot depth corrected NIR data
     ax = fig.add_subplot(gs[:, 3])
-    ax.grid(True, axis='y', alpha=0.5)
-
-    for sensor in ['Sensor2', 'Sensor3']:
-        style = SensorStyle.from_column(sensor)
-        ax.plot(profile.raw[sensor].iloc[profile.surface.nir.index:profile.stop.index],
-                profile.nir.depth,
-                alpha=0.3, color=style.color, label=style.label)
-
-    style = SensorStyle.ACTIVE_NIR
-    ax.plot(profile.nir['nir'], profile.nir['depth'], color=style.color, label=style.label)
-    ax.set_title("NIR Depth Corrected")
-    ax.legend(loc='lower left', fontsize='small')
+    try:
+        ax = plot_nir_depth_correct(ax, profile)
+    except:
+        report_profile_error(ax)
 
     #### plot the acceleration as a sub-panel with events ####
     ax = fig.add_subplot(gs[0, 4])

@@ -16,12 +16,13 @@ from argparse import RawTextHelpFormatter
 import json
 import sys
 from study_lyte.adjustments import merge_on_to_time
+
 from radicl import __version__
 from radicl.interface import RADICL
 from radicl.ui_tools import get_logger, exit_requested
 from radicl.plotting import plot_hi_res
 from radicl.gps import USBGPS
-from radicl.info import SensorReadInfo
+
 
 def build_high_resolution_data(raw_sensor, baro_depth, acceleration , log):
     """
@@ -35,14 +36,6 @@ def build_high_resolution_data(raw_sensor, baro_depth, acceleration , log):
     Returns:
         result: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
     """
-    # # Grab the Raw data
-    # ts = cli.grab_data('rawsensor')
-    #
-    # # Grab relative, filtered barometer data
-    # depth = cli.grab_data('filtereddepth')
-    #
-    # # Grab Acceleration
-    # acc = cli.grab_data('rawacceleration')
 
     # Invert Depth so bottom is negative max depth
     baro_depth['depth'] = baro_depth['filtereddepth'] - baro_depth['filtereddepth'].max()
@@ -145,11 +138,16 @@ def main():
         if location is not None:
             meta['Latitude'] = location[0]
             meta['Longitude'] = location[1]
-
+        # if a gps exists but were not able to get a fix, report back.
+        elif location is None and gps.cnx is not None:
+            log.warning("Unable to get GPS fix")
+            meta['Latitude'] = 'N/A'
+            meta['Longitude'] = 'N/A'
         # Output the data to a datetime file
         filename = cli.write_probe_data(ts, extra_meta=meta)
 
         # Plot the data
+
         plot_hi_res(fname=filename, calibration_dict=calibration, timed_plot=args.plot_time)
 
         # Reset the probe / clear out the data

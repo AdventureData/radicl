@@ -1,3 +1,4 @@
+import time
 from radicl.gps import USBGPS
 import pytest
 from . import gps_not_connected
@@ -11,5 +12,13 @@ class TestUSBGPS:
 
     def test_get_fix(self, gps_dev):
         location = gps_dev.get_fix(max_attempts=30)
+
         assert len(location) == 2
 
+    def test_get_fix_not_identical(self, gps_dev):
+        """ Even a static GPS should be slightly different."""
+        location = gps_dev.get_fix(max_attempts=30)
+        time.sleep(0.5)
+        location2 = gps_dev.get_fix(max_attempts=30)
+
+        assert location != location2

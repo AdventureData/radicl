@@ -2,13 +2,11 @@
 
 import datetime
 import inspect
-import os
 import sys
 import time
-from os.path import join, abspath, dirname, expanduser
+from os.path import join, abspath, dirname, expanduser, isdir
 
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
 from termcolor import colored
 from study_lyte.io import write_csv
@@ -17,7 +15,7 @@ from .probe import RAD_Probe
 from .calibrate import get_avg_sensor
 from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
                        print_helpme)
-from .info import ProbeState, CLIState, SensorReadInfo
+from .info import ProbeState, CLIState
 
 
 out = Messages()
@@ -412,7 +410,7 @@ class RADICL(object):
                     filename = abspath(filename)
                     real_path = isdir(dirname(filename))
 
-                    # Double check a real path was given
+                    # Double-check a real path was given
                     if not real_path:
                         out.warn("Path provided does not exist.")
                         valid = False
