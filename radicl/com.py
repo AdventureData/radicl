@@ -59,25 +59,40 @@ class RAD_Serial:
     def __init__(self, debug=False):
         self.serial_port = None
         self.log = get_logger(__name__, debug=debug)
+        self._available_ports = None
+
+    @property
+    def available_ports(self):
+        if self._available_ports is None:
+            self.log.info("No COM port provided. Scanning for COM ports...")
+            self._available_ports = find_kw_port(['STMicroelectronics', 'STM32'])
+
+        return self._available_ports
+
+    @property
+    def multiple_ports_available(self):
+        return len(self.available_ports) > 1
+
+    @property
+    def no_ports_available(self):
+        return len(self.available_ports) == 0
+
 
     def openPort(self, com_port=None):
 
         # No COM port has been provided. Need to detect port automatically
         if com_port is None:
-            self.log.info("No COM port provided. Scanning for COM ports...")
-            match_list = find_kw_port(['STMicroelectronics', 'STM32'])
-
             # Check if more than one was found
-            if len(match_list) > 1:
+            if self.multiple_ports_available:
                 self.log.warn('Multiple COM ports found, using the first')
 
             # If no ports match then error out gracefully
-            elif not match_list:
+            elif self.no_ports_available:
                 self.log.error("No serial ports were found for the Lyte probe!")
                 raise serial.SerialException('No comports were found!')
 
             # Finally, assign the found port to the serial_port variable
-            com_port = match_list[0].device
+            com_port = self.available_ports[0].device
 
         try:
             self.log.debug(
