@@ -26,29 +26,39 @@ class RAD_Probe:
                            'Pressure/Depth Correlation',
                            'Depth Corrected Sensor']
 
-    def __init__(self, ext_api=None, debug=False):
+    def __init__(self, ext_api: RAD_API=None, debug=False):
         """
         Args:
-            ext_api: rad_api.RAD_API object preinstantiated
+            ext_api: rad_api.RAD_API object pre-instantiated
         """
         self._state = None
         self._last_state = None
         self._sampling_rate = None
         self._accelerometer_range = None
         self._zpfo = None
+        self.debug = debug
+        self.api = ext_api
 
-        self.log = get_logger(__name__, debug=debug)
+        self.log = get_logger(__name__, debug=self.debug)
 
-        # Check if an external API object was passed in.
-        if ext_api is not None:
-            # An external API object was provided. Use it. Note: We assume here
-            # that the appropriate initialization, identification, and API port
-            # enable procedure has already taken place
-            self.api = ext_api
-        else:
+        # Manages the settings
+        settings_funcs = inspect.getmembers(self.api,
+                                            predicate=inspect.ismethod)
+        ignores = ['reset']
+        self.settings = parse_func_list(settings_funcs,
+                                        ['Meas', 'Set'],
+                                        ignore_keywords=ignores)
+        self.getters = parse_func_list(settings_funcs,
+                                       ['Meas', 'Get'],
+                                       ignore_keywords=ignores)
+
+    def connect(self):
+        """ Attempt to establish a connection with the probe"""
+
+        if self.api is None:
             # No external API object was provided. Create new serial and API
             # objects for internal use
-            port = RAD_Serial(debug=debug)
+            port = RAD_Serial(debug=self.debug)
             port.openPort()
 
             if not port:
@@ -57,7 +67,7 @@ class RAD_Probe:
                 port.flushPort()
                 # Create the API and FMTR instances The API class is linked to
                 # the port object
-                api = RAD_API(port, debug=debug)
+                api = RAD_API(port, debug=self.debug)
 
                 # Switch the device over to API mode
                 api.sendApiPortEnable()
@@ -65,24 +75,14 @@ class RAD_Probe:
 
                 # Delay a bit and then identify the attached device
                 time.sleep(0.5)
-                ret = api.Identify()
 
-                if ret == 0:
-                    self.log.error("Unable to connect to the probe. Unplug and"
-                                   " power cycle it.")
-                    sys.exit()
-                time.sleep(0.1)
+        ret = self.api.Identify()
+        connected = True if ret == 1 else False
+        if not connected:
+            self.log.error("Unable to connect to the probe. Unplug and"
+                           " power cycle it.")
+        return connected
 
-                # Manages the settings
-                settings_funcs = inspect.getmembers(self.api,
-                                                    predicate=inspect.ismethod)
-                ignores = ['reset']
-                self.settings = parse_func_list(settings_funcs,
-                                                ['Meas', 'Set'],
-                                                ignore_keywords=ignores)
-                self.getters = parse_func_list(settings_funcs,
-                                               ['Meas', 'Get'],
-                                               ignore_keywords=ignores)
 
     @property
     def state(self):
@@ -97,6 +97,7 @@ class RAD_Probe:
         if self._sampling_rate is None:
             self._sampling_rate = self.getSetting(setting_name='samplingrate')
         return self._sampling_rate
+
     @property
     def zpfo(self):
         if self._zpfo is None:
