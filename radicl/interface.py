@@ -146,6 +146,8 @@ class RADICL(object):
                           'update': 'Firmware update dialog for the probe.'}
 
         self.probe = RAD_Probe(debug=kwargs['debug'])
+        self.probe.connect()
+
         self.running = True
 
         self.settings = dir(self.probe)

@@ -25,6 +25,8 @@ def real_probe():
     Probe object with a reset at the end
     """
     prb = RAD_Probe(debug=True)
+    prb.connect()
+
     yield prb
     prb.resetMeasurement()
 

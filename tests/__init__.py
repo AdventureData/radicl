@@ -11,7 +11,8 @@ def probe_not_connected():
 
     # Create a bool to use for skipping tests
     try:
-        RAD_Probe()
+        p = RAD_Probe()
+        p.connect()
         not_connected = False
 
     except:
@@ -80,10 +81,13 @@ class MockRADPort:
     def numBytesInBuffer(self):
         return len(self.payload)
 
-class MockProbe():
+
+class MockProbe:
     pass
 
+
 class MOCKCLI:
+
     def grab_data(self, data_name):
         """
         Return a dataframe of the requested data
