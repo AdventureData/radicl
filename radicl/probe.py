@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from . import __version__
-from .com import RAD_Serial
+from .com import RAD_Serial, find_kw_port
 from .api import RAD_API
 from .ui_tools import get_logger, parse_func_list
 from .info import ProbeErrors, ProbeState, AccelerometerRange, SensorReadInfo
@@ -31,13 +31,15 @@ class RAD_Probe:
         Args:
             ext_api: rad_api.RAD_API object pre-instantiated
         """
-        self._state = None
-        self._last_state = None
+
+        self._state = ProbeState.NOT_SET
+        self._last_state = ProbeState.NOT_SET
         self._sampling_rate = None
         self._accelerometer_range = None
         self._zpfo = None
         self.debug = debug
-        self.api = ext_api
+        self.api:RAD_API = ext_api
+        self.available_devices = []
 
         self.log = get_logger(__name__, debug=self.debug)
 
@@ -52,7 +54,19 @@ class RAD_Probe:
                                        ['Meas', 'Get'],
                                        ignore_keywords=ignores)
 
-    def connect(self):
+    def update_devices(self):
+        self.log.info("Scanning for COM ports...")
+        self._available_devices = find_kw_port(['STMicroelectronics', 'STM32'])
+
+    @property
+    def multiple_devices_available(self):
+        return len(self.available_devices) > 1
+
+    @property
+    def no_devices_available(self):
+        return len(self.available_devices) == 0
+
+    def connect(self, device=None):
         """ Attempt to establish a connection with the probe"""
 
         if self.api is None:
@@ -82,7 +96,6 @@ class RAD_Probe:
             self.log.error("Unable to connect to the probe. Unplug and"
                            " power cycle it.")
         return connected
-
 
     @property
     def state(self):
@@ -198,7 +211,6 @@ class RAD_Probe:
             data_chunk = None
         return data_chunk
 
-
     def get_number_of_segments(self, buffer_id):
         """ Retrieve the number of data segments available from measurement"""
         ret = self.api.MeasGetNumSegments(buffer_id)
@@ -207,7 +219,6 @@ class RAD_Probe:
         else:
             num_segments = None
         return num_segments
-
 
     def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
         """

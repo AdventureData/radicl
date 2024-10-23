@@ -5,13 +5,14 @@ import time
 from .ui_tools import get_logger
 from .commands import MeasCMD, SystemCMD, SettingsCMD, FWUpdateCMD, AttributeCMD
 from .info import Firmware, PCA_Name
+from .com import RAD_Serial
 
 class RAD_API:
     """
     Class for directly interacting with the probe in a non-human friendly way
     """
 
-    def __init__(self, port, debug=False):
+    def __init__(self, port:RAD_Serial, debug=False):
         self.port = port
         self.log = get_logger(__name__, debug=debug)
         self._serial = None

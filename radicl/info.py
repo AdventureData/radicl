@@ -3,11 +3,15 @@ from enum import Enum
 
 class ProbeState(Enum):
     """ States for the probe running during a measurement"""
+    NOT_SET = 10
     IDLE = 0
-    MEASUREMENT_RUNNING = 1
-    MEASUREMENT_PROCESSING = 3
-    MEASUREMENT_FINISHED = 5
-    UNKOWN_STATE = -1
+    MEASURING = 1
+    PROCESSING = 2
+    DATA_STAGED = 3
+    SENDING_DATA = 4
+    RESET = 5
+    UNKOWN_STATE = 11
+
 
     @classmethod
     def from_state(cls, state):
@@ -17,9 +21,22 @@ class ProbeState(Enum):
                 final = e
                 break
         return final
+
     @classmethod
     def ready(cls, state):
-        return state in [cls.IDLE.value, cls.MEASUREMENT_FINISHED.value]
+        return state in [cls.IDLE, cls.RESET]
+
+    def __ge__(self, other):
+        return self.value >= other.value
+
+    def __le__(self, other):
+        return self.value <= other.value
+
+    def __lt__(self, other):
+        return self.value < other.value
+
+    def __gt__(self, other):
+        return self.value > other.value
 
 
 class CLIState(Enum):
