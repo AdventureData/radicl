@@ -24,7 +24,7 @@ from radicl.plotting import plot_hi_res
 from radicl.gps import USBGPS
 
 
-def build_high_resolution_data(raw_sensor, baro_depth, acceleration , log):
+def build_high_resolution_data(raw_sensor, baro_depth, acceleration, log):
     """
     Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
     and pads with nans to fit into the same dataframe

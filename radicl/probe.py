@@ -44,8 +44,8 @@ class RAD_Probe:
         self.log = get_logger(__name__, debug=self.debug)
 
         # Manages the settings
-        settings_funcs = inspect.getmembers(self.api,
-                                            predicate=inspect.ismethod)
+        settings_funcs = inspect.getmembers(RAD_API,
+                                            predicate=inspect.isfunction)
         ignores = ['reset']
         self.settings = parse_func_list(settings_funcs,
                                         ['Meas', 'Set'],
@@ -358,7 +358,7 @@ class RAD_Probe:
 
         if self.state != data:
             self._last_state = self._state
-            self._state = data
+            self._state = ProbeState.from_state(data)
 
         return data
 
@@ -371,7 +371,7 @@ class RAD_Probe:
         self.log.debug("Start measurement requested.")
 
         if ret['status'] == 1:
-            self.wait_for_state(1)
+            self.wait_for_state(ProbeState.MEASURING)
             self.log.info("Measurement started...")
 
             return 1
@@ -390,7 +390,7 @@ class RAD_Probe:
         self.log.debug("Stop measurement requested.")
 
         if ret['status'] == 1:
-            self.wait_for_state(3)
+            self.wait_for_state(ProbeState.PROCESSING)
             self.log.info("Measurement stopped...")
 
             return 1
@@ -409,7 +409,7 @@ class RAD_Probe:
         self.log.debug("Measurement reset requested...")
 
         if ret['status'] == 1:
-            self.wait_for_state(0, delay=0.1)
+            result = self.wait_for_state(ProbeState.IDLE, delay=0.1)
             self.log.info("Probe measurement reset...")
 
             return 1
@@ -419,7 +419,7 @@ class RAD_Probe:
 
             return 0
 
-    def wait_for_state(self, state, retry=500, delay=0.2):
+    def wait_for_state(self, state:ProbeState, retry=500, delay=0.2):
         """
         Waits for the specified state to occur. This is particularly useful when
         a command is requested.
@@ -432,22 +432,18 @@ class RAD_Probe:
         """
 
         attempts = 0
-        pstate = self.getProbeMeasState()
         result = False
-        self.log.info(
-            "Waiting for state {0}, current state = {1}".format(
-                state, pstate))
+        self.log.info(f"Waiting for state {state.value}, current state = {self.state.value}")
 
         while not result:
-            result = pstate == state
+            result = self.state == state
 
             # Check for a probe advanced past the state
-            if isinstance(pstate, int):
-                if state != 0:
-                    if pstate >= state:
-                        result = True
-                if state == 5:
-                    if pstate == 0:
+            if state != ProbeState.IDLE:
+                if self.state >= state:
+                    result = True
+            if ProbeState.ready(state):
+                if self.state == ProbeState.IDLE:
                         result = True
 
             if attempts > retry:
@@ -459,7 +455,9 @@ class RAD_Probe:
                 attempts += 1
 
             time.sleep(delay)
-            pstate = self.getProbeMeasState()
+
+            # Update the state
+            self.getProbeMeasState()
 
         if result:
             self.log.debug(
@@ -911,7 +909,7 @@ class RAD_Probe:
             ret = self.getters[setting_name](sensor)
             num_values = 2
         else:
-            ret = self.getters[setting_name]()
+            ret = self.getters[setting_name](self.api)
             num_values = 1
 
         return self.manage_data_return(ret, num_values=num_values, dtype=int)

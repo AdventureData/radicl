@@ -21,7 +21,6 @@ class ProbeState(Enum):
                 final = e
                 break
         return final
-
     @classmethod
     def ready(cls, state):
         return state in [cls.IDLE, cls.RESET]
