@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "study-lyte"
+name = "radicl"
 version = "0.8.0"
 description = "Command line interface for the Lyte probe, a digital penetrometer for studying snow"
 keywords = ["snow penetrometer", "smart probe", "digital penetrometer", 'lyte probe', "avalanches"]

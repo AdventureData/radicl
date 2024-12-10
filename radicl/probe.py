@@ -37,22 +37,16 @@ class RAD_Probe:
         self._sampling_rate = None
         self._accelerometer_range = None
         self._zpfo = None
+        self._settings = None
+        self._getters = None
+
         self.debug = debug
         self.api:RAD_API = ext_api
         self.available_devices = []
 
         self.log = get_logger(__name__, debug=self.debug)
 
-        # Manages the settings
-        settings_funcs = inspect.getmembers(RAD_API,
-                                            predicate=inspect.isfunction)
-        ignores = ['reset']
-        self.settings = parse_func_list(settings_funcs,
-                                        ['Meas', 'Set'],
-                                        ignore_keywords=ignores)
-        self.getters = parse_func_list(settings_funcs,
-                                       ['Meas', 'Get'],
-                                       ignore_keywords=ignores)
+
 
     def update_devices(self):
         self.log.info("Scanning for COM ports...")
@@ -122,8 +116,38 @@ class RAD_Probe:
         # Grab the range to scale the incoming data
         if self._accelerometer_range is None:
             sensing_range = self.getSetting(setting_name='accrange')
+            # Add in a default
+            if sensing_range is None:
+                sensing_range = 16
             self._accelerometer_range = sensing_range
         return self._accelerometer_range
+
+    def _assign_settings_functions(self):
+        # Manages the settings
+        settings_funcs = inspect.getmembers(self.api,
+                                            predicate=inspect.ismethod)
+        ignores = ['reset']
+        self._settings = parse_func_list(settings_funcs,
+                                        ['Meas', 'Set'],
+                                        ignore_keywords=ignores)
+        self._getters = parse_func_list(settings_funcs,
+                                       ['Meas', 'Get'],
+                                       ignore_keywords=ignores)
+
+    @property
+    def settings(self):
+        """Dictionary of function to set settings"""
+        if self._settings is None:
+            self._assign_settings_functions()
+        return self._settings
+
+    @property
+    def getters(self):
+        """ Dictionary of functions to get settings"""
+        if self._getters is None:
+            self._assign_settings_functions()
+        return self._getters
+
 
     def manage_error(self, ret_dict, stack_id=1):
         """
@@ -442,6 +466,7 @@ class RAD_Probe:
             if state != ProbeState.IDLE:
                 if self.state >= state:
                     result = True
+
             if ProbeState.ready(state):
                 if self.state == ProbeState.IDLE:
                         result = True
@@ -909,7 +934,7 @@ class RAD_Probe:
             ret = self.getters[setting_name](sensor)
             num_values = 2
         else:
-            ret = self.getters[setting_name](self.api)
+            ret = self.getters[setting_name]()
             num_values = 1
 
         return self.manage_data_return(ret, num_values=num_values, dtype=int)

@@ -293,11 +293,11 @@ class RADICL(object):
         """
 
         out.msg(">> Press the probe button to start the measurement:")
-        self.probe.wait_for_state(1, retry=1000, delay=0.3)
+        self.probe.wait_for_state(ProbeState.MEASURING, retry=1000, delay=0.3)
         out.respond("Measurement Started...")
 
         out.msg(">> Press the probe button to end the measurement:")
-        self.probe.wait_for_state(3, retry=1000, delay=0.3)
+        self.probe.wait_for_state(ProbeState.DATA_STAGED, retry=1000, delay=0.3)
         out.respond("Measurement ended...")
 
     def grab_data(self, data_request, retries=3):
