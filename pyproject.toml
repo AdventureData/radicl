@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "study-lyte"
+version = "0.8.0"
+description = "Command line interface for the Lyte probe, a digital penetrometer for studying snow"
+keywords = ["snow penetrometer", "smart probe", "digital penetrometer", 'lyte probe', "avalanches"]
+readme = "README.rst"
+requires-python = ">=3.8"
+classifiers = [
+    'Development Status :: 2 - Pre-Alpha',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10'
+]
+dependencies = ["study_lyte >= 0.8.0",
+                "pyserial>=3.4, <4.0.0",
+                "colorama>=0.4.3, <0.5.0",
+                "termcolor>=1.1.0, <2.0.0",
+                "argparse>=1.4.0, <2.0.0",
+                "coloredlogs>=14.0, <15.0",
+                "matplotlib>=3.6.0,<4.0.0",
+                "progressbar2>=3.53.1,<4.0.0",
+                "pynmeagps==1.0.32"]
+
+[project.scripts]
+radicl = 'radicl.cli:main'
+plotlyte = 'radicl.plotting:main'
+lyte_hi_res = 'radicl.high_resolution:main'
+plot_hi_res = 'radicl.plotting:plot_hi_res_cli'
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "jupyterlab",
+    "twine"
+]
+
+docs = [ "nbsphinx>=0.8.12",
+        "sphinx-gallery>=0.9.0",
+        "Sphinx>=5.0.0,<6.0.0",
+        "pandoc>=1.0.2",
+        "sphinxcontrib-apidoc>=0.3.0",
+        "ipython>=7.23.1"
+    ]
+
+all = ["radicl[dev,docs]"]
+
+[project.license]
+file = "LICENSE"
+
+[project.urls]
+Homepage = "https://adventuredata.com/"
+Documentation = "https://radicl.readthedocs.io"
+Repository = "https://github.com/AdventureData/radicl"
+Issues = "https://github.com/AdventureData/radicl/issues"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["radicl*"]
+exclude = ["docs*", "tests*"]
