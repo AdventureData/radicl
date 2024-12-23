@@ -53,6 +53,7 @@ def report_profile_error(ax):
     ax.annotate('Failed to compute \ncorrected profile.', (np.mean(xlims)*0.25, np.mean(ylims)))
     return ax
 
+
 def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     """
     Plots the timeseries, the depth corrected, accelerometer and depth data.

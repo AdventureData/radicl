@@ -4,16 +4,15 @@ import time
 
 from .ui_tools import get_logger
 from .commands import MeasCMD, SystemCMD, SettingsCMD, FWUpdateCMD, AttributeCMD
-
-PCA_ID_LIST = ["UNKNOWN", "PB1", "PB2", "PB3"]
-
+from .info import Firmware, PCA_Name
+from .com import RAD_Serial
 
 class RAD_API:
     """
     Class for directly interacting with the probe in a non-human friendly way
     """
 
-    def __init__(self, port, debug=False):
+    def __init__(self, port:RAD_Serial, debug=False):
         self.port = port
         self.log = get_logger(__name__, debug=debug)
         self._serial = None
@@ -114,7 +113,7 @@ class RAD_API:
             # If we get here then we have passed the additional specified
             # checks.
             if message[2] == 0x04:
-                # ACK detectec
+                # ACK detected
                 return 1
             else:
                 # No ACK found
@@ -168,7 +167,8 @@ class RAD_API:
         valid = 0
         length = len(message)
         if length >= 5:
-            if message[2] == 0x02:
+            # Cope with temperature measurement request
+            if message[2] == 0x02 or cmd ==79:
                 calc_len = message[4] + 5
                 # If a command was specified we need to check if it matches.
                 # If it is incorrect, the response is invalid
@@ -337,8 +337,7 @@ class RAD_API:
         Gets the hardware id string
         """
         if self._hw_id_str is None:
-            if self.hw_id < len(PCA_ID_LIST):
-                self._hw_id_str = PCA_ID_LIST[self.hw_id]
+            self._hw_id_str = PCA_Name.from_index(self.hw_id).name
         return self._hw_id_str
 
     @property
@@ -358,7 +357,7 @@ class RAD_API:
         """
         if self._fw_rev is None:
             ret = self.getFWREV()
-            self._fw_rev = ret['data']
+            self._fw_rev = Firmware(str(ret['data']))
         return self._fw_rev
 
     @property
@@ -368,7 +367,7 @@ class RAD_API:
         """
         if self._full_fw_rev is None:
             ret = self.getFullFWREV()
-            self._full_fw_rev = ret['data']
+            self._full_fw_rev = Firmware(ret['data'])
         return self._full_fw_rev
 
     @property
@@ -388,25 +387,18 @@ class RAD_API:
         self.log.debug("Retrieving probe information...")
 
         if self.hw_id is not None:
-            if self.hw_id < len(PCA_ID_LIST):
-                id_msg = f"Attached device: {self.hw_id_str}, " \
-                         f"Revision={self.hw_rev}, "
+            id_msg = f"Attached device: {self.hw_id_str}, " \
+                     f"Revision={self.hw_rev}, " \
+                     f"Firmware = {self.full_fw_rev if self.full_fw_rev else self.fw_rev}"
 
-                if self.full_fw_rev is not None:
-                    id_msg += f"Firmware = {self.full_fw_rev}"
-                else:
-                    id_msg += f"Firmware = {self.fw_rev}"
-
-                self.log.info(id_msg)
-                return 1
-
-            else:
-                self.log.warning("Unknown device detected!")
-                return 0
+            self.log.info(id_msg)
+            result = True
 
         else:
             self.log.warning("Invalid response to ID request")
-            return 0
+            result = False
+        return result
+
 
     # ***************************
     # ***** BASIC COMMANDS ******
@@ -771,7 +763,7 @@ class RAD_API:
         """
         code = MeasCMD.TEMP.cmd
         response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, code, 0)
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasGetAccThreshold(self):
         """

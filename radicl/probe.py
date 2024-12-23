@@ -3,28 +3,15 @@
 import datetime
 import inspect
 import struct
-import sys
 import time
+import numpy as np
+import pandas as pd
 
 from . import __version__
-from .com import RAD_Serial
+from .com import RAD_Serial, find_kw_port
 from .api import RAD_API
 from .ui_tools import get_logger, parse_func_list
-
-error_codes = {2049: "The probe measurement/sensor is not running",
-               2048: 'Generic Measurement error',
-               2050: "Measurement FSM not ready to start measurement",
-               2051: " Measurement FSM already stopped (i.e. in ready/idle state)",
-               2052: "Setting a parameter failed",
-               2053: "Invalid buffer was addressed",
-               2054: "Reading data failed"}
-
-# From Data sheet for accelerometer in REV C
-acc_sensitivity = {2: 0.06,
-                   4: 0.12,
-                   6: 0.18,
-                   8: 0.24,
-                   16: 0.73}
+from .info import ProbeErrors, ProbeState, AccelerometerRange, SensorReadInfo
 
 
 class RAD_Probe:
@@ -38,24 +25,53 @@ class RAD_Probe:
                            'Pressure/Depth Correlation',
                            'Depth Corrected Sensor']
 
-    def __init__(self, ext_api=None, debug=False):
+    def __init__(self, ext_api: RAD_API=None, debug=False):
         """
         Args:
-            ext_api: rad_api.RAD_API object preinstantiated
+            ext_api: rad_api.RAD_API object pre-instantiated
         """
 
-        self.log = get_logger(__name__, debug=debug)
+        self._state = ProbeState.NOT_SET
+        self._last_state = ProbeState.NOT_SET
+        self._sampling_rate = None
+        self._accelerometer_range = None
+        self._zpfo = None
+        self._serial_number = None
 
-        # Check if an external API object was passed in.
-        if ext_api is not None:
-            # An external API object was provided. Use it. Note: We assume here
-            # that the appropriate initialization, identification, and API port
-            # enable procedure has already taken place
-            self.api = ext_api
-        else:
+        self._settings = None
+        self._getters = None
+
+        self.debug = debug
+        self.api:RAD_API = ext_api
+        self.available_devices = []
+
+        self.log = get_logger(__name__, debug=self.debug)
+
+    def update_devices(self):
+        self.log.info("Scanning for COM ports...")
+        self._available_devices = find_kw_port(['STMicroelectronics', 'STM32'])
+
+    @property
+    def serial_number(self):
+        if self._serial_number is None:
+            self._serial_number = self.getProbeSerial()
+        return self._serial_number
+
+    @property
+    def multiple_devices_available(self):
+        return len(self.available_devices) > 1
+
+    @property
+    def no_devices_available(self):
+        return len(self.available_devices) == 0
+
+    def connect(self, device=None):
+        """ Attempt to establish a connection with the probe"""
+
+        if self.api is None:
             # No external API object was provided. Create new serial and API
             # objects for internal use
-            port = RAD_Serial(debug=debug)
+            port = RAD_Serial(debug=self.debug)
             port.openPort()
 
             if not port:
@@ -64,32 +80,76 @@ class RAD_Probe:
                 port.flushPort()
                 # Create the API and FMTR instances The API class is linked to
                 # the port object
-                api = RAD_API(port, debug=debug)
+                api = RAD_API(port, debug=self.debug)
 
                 # Switch the device over to API mode
                 api.sendApiPortEnable()
                 self.api = api
 
-                # Delay a bit and then identify the attached device
-                time.sleep(0.5)
-                ret = api.Identify()
+        ret = self.getProbeMeasState()
+        connected = True if ret is not None else False
+        if not connected:
+            self.log.error("Unable to connect to the probe. Unplug and"
+                           " power cycle it.")
+        return connected
 
-                if ret == 0:
-                    self.log.error("Unable to connect to the probe. Unplug and"
-                                   " power cycle it.")
-                    sys.exit()
-                time.sleep(0.1)
+    @property
+    def state(self):
+        return  self._state
 
-                # Manages the settings
-                settings_funcs = inspect.getmembers(self.api,
-                                                    predicate=inspect.ismethod)
-                ignores = ['reset']
-                self.settings = parse_func_list(settings_funcs,
-                                                ['Meas', 'Set'],
-                                                ignore_keywords=ignores)
-                self.getters = parse_func_list(settings_funcs,
-                                               ['Meas', 'Get'],
-                                               ignore_keywords=ignores)
+    @property
+    def last_state(self):
+        return self._last_state
+
+    @property
+    def sampling_rate(self):
+        if self._sampling_rate is None:
+            self._sampling_rate = self.getSetting(setting_name='samplingrate')
+        return self._sampling_rate
+
+    @property
+    def zpfo(self):
+        if self._zpfo is None:
+            self._zpfo = self.getSetting(setting_name='zpfo')
+        return self._zpfo
+
+    @property
+    def accelerometer_range(self):
+        # Grab the range to scale the incoming data
+        if self._accelerometer_range is None:
+            sensing_range = self.getSetting(setting_name='accrange')
+            # Add in a default
+            if sensing_range is None:
+                sensing_range = 16
+            self._accelerometer_range = sensing_range
+        return self._accelerometer_range
+
+    def _assign_settings_functions(self):
+        # Manages the settings
+        settings_funcs = inspect.getmembers(self.api,
+                                            predicate=inspect.ismethod)
+        ignores = ['reset']
+        self._settings = parse_func_list(settings_funcs,
+                                        ['Meas', 'Set'],
+                                        ignore_keywords=ignores)
+        self._getters = parse_func_list(settings_funcs,
+                                       ['Meas', 'Get'],
+                                       ignore_keywords=ignores)
+
+    @property
+    def settings(self):
+        """Dictionary of function to set settings"""
+        if self._settings is None:
+            self._assign_settings_functions()
+        return self._settings
+
+    @property
+    def getters(self):
+        """ Dictionary of functions to get settings"""
+        if self._getters is None:
+            self._assign_settings_functions()
+        return self._getters
+
 
     def manage_error(self, ret_dict, stack_id=1):
         """
@@ -161,6 +221,31 @@ class RAD_Probe:
 
         return result
 
+    def readData_by_segment(self, buffer_id, segment):
+        """
+        Read segments one at a time
+        """
+        # Data Segments to collect
+        result = False
+
+        # Request the data
+        ret = self.api.MeasReadDataSegment(buffer_id, segment)
+
+        if ret['status'] == 1 and ret['data'] is not None:
+            data_chunk = ret['data']
+        else:
+            data_chunk = None
+        return data_chunk
+
+    def get_number_of_segments(self, buffer_id):
+        """ Retrieve the number of data segments available from measurement"""
+        ret = self.api.MeasGetNumSegments(buffer_id)
+        if ret['status'] == 1:
+            num_segments = int.from_bytes(ret['data'], byteorder='little')
+        else:
+            num_segments = None
+        return num_segments
+
     def __readData(self, buffer_id, max_retry=10, init_delay=0.004):
         """
         Private function to retrieve data from the probe.
@@ -182,25 +267,14 @@ class RAD_Probe:
                  'data': None}
 
         # Get the number of data segments available
-        ret = self.api.MeasGetNumSegments(buffer_id)
-
-        if ret['status'] == 1:
-            num_segments = int.from_bytes(ret['data'], byteorder='little')
+        num_segments = self.get_number_of_segments(buffer_id)
+        if num_segments is not None:
             self.log.debug('Retrieving {:,} segments of {} data...'.format(num_segments, buffer_name.lower()))
 
         # No data returned
         else:
 
-            self.log.debug("getNumSegments error: %d (buffer_id = %d)" %
-                           (ret['errorCode'], buffer_id))
-
-            if ret['errorCode'] is not None:
-                self.log.debug("Error {:d} occurred.".format(ret['errorCode']))
-
-                if ret['errorCode'] in error_codes.keys():
-                    self.log.error(error_codes[ret['errorCode']])
-                else:
-                    self.log.warning("Unknown error code!")
+            self.log.debug(f"getNumSegments Error (buffer_id = {buffer_id})")
 
         # If we do have number of segments
         if num_segments != 0 and num_segments is not None:
@@ -220,12 +294,11 @@ class RAD_Probe:
                     time.sleep(wait_time)
 
                     # Request the data
-                    ret = self.api.MeasReadDataSegment(buffer_id, ii)
+                    data_chunk = self.readData_by_segment(buffer_id, ii)
 
-                    if ret['status'] == 1 and ret['data'] is not None:
-                        byte_counter = byte_counter + len(ret['data'])
-                        data_chunk = ret['data']
+                    if data_chunk is not None:
                         data.extend(data_chunk)
+                        byte_counter = len(data)
                         result = True
                         # Break the retry loop
                         break
@@ -245,12 +318,6 @@ class RAD_Probe:
 
                         # Increase the wait time every failed request
                         wait_time += wait_time
-
-                        if ret['errorCode'] is not None:
-                            if ret['errorCode'] in error_codes.keys():
-                                self.log.warning("Received error code:{}".format(error_codes[ret['errorCode']]))
-                            else:
-                                self.log.warning("Received unknown error code:{}".format(ret['errorCode']))
 
             # Was the data read successful?
             final['status'] = int(result)
@@ -277,9 +344,10 @@ class RAD_Probe:
             # Flip the byte array since it comes in backwards
             ret['data'] = ret['data'][::-1]
             # upper case to match the store serial number lists
-            return self.manage_data_return(ret, dtype='hex').upper()
-        else:
-            return self.manage_data_return(ret, dtype='hex')
+            result = self.manage_data_return(ret, dtype='hex') #.upper()
+            if result is not None:
+                result = result.upper()
+        return result
 
     def getProbeSystemStatus(self):
         """
@@ -315,6 +383,10 @@ class RAD_Probe:
             data = self.manage_data_return(ret, dtype=int)
             attempts += 1
 
+        if self.state != data:
+            self._last_state = self._state
+            self._state = ProbeState.from_state(data)
+
         return data
 
     def startMeasurement(self):
@@ -326,7 +398,7 @@ class RAD_Probe:
         self.log.debug("Start measurement requested.")
 
         if ret['status'] == 1:
-            self.wait_for_state(1)
+            self.wait_for_state(ProbeState.MEASURING)
             self.log.info("Measurement started...")
 
             return 1
@@ -345,7 +417,7 @@ class RAD_Probe:
         self.log.debug("Stop measurement requested.")
 
         if ret['status'] == 1:
-            self.wait_for_state(3)
+            self.wait_for_state(ProbeState.PROCESSING)
             self.log.info("Measurement stopped...")
 
             return 1
@@ -364,7 +436,7 @@ class RAD_Probe:
         self.log.debug("Measurement reset requested...")
 
         if ret['status'] == 1:
-            self.wait_for_state(0, delay=0.1)
+            result = self.wait_for_state(ProbeState.IDLE, delay=0.1)
             self.log.info("Probe measurement reset...")
 
             return 1
@@ -374,7 +446,7 @@ class RAD_Probe:
 
             return 0
 
-    def wait_for_state(self, state, retry=500, delay=0.2):
+    def wait_for_state(self, state:ProbeState, retry=500, delay=0.2):
         """
         Waits for the specified state to occur. This is particularly useful when
         a command is requested.
@@ -387,22 +459,19 @@ class RAD_Probe:
         """
 
         attempts = 0
-        pstate = self.getProbeMeasState()
         result = False
-        self.log.info(
-            "Waiting for state {0}, current state = {1}".format(
-                state, pstate))
+        self.log.info(f"Waiting for state {state.value}, current state = {self.state.value}")
 
         while not result:
-            result = pstate == state
+            result = self.state == state
 
             # Check for a probe advanced past the state
-            if isinstance(pstate, int):
-                if state != 0:
-                    if pstate >= state:
-                        result = True
-                if state == 5:
-                    if pstate == 0:
+            if state != ProbeState.IDLE:
+                if self.state >= state:
+                    result = True
+
+            if ProbeState.ready(state):
+                if self.state == ProbeState.IDLE:
                         result = True
 
             if attempts > retry:
@@ -414,7 +483,9 @@ class RAD_Probe:
                 attempts += 1
 
             time.sleep(delay)
-            pstate = self.getProbeMeasState()
+
+            # Update the state
+            self.getProbeMeasState()
 
         if result:
             self.log.debug(
@@ -423,7 +494,7 @@ class RAD_Probe:
 
         return result
 
-    def read_check_data_integrity(self, buffer_id, nbytes_per_value=None,
+    def read_check_data_integrity(self, buffer_id, ret_dict, nbytes_per_value=None,
                                   nvalues=None, from_spi=False):
         """
         Receives a data function and  performs the data integrity check
@@ -432,26 +503,22 @@ class RAD_Probe:
         so we check for integer_multiples of that data
 
         Args:
-            buffer_id: Index the data is in the probe buffer
+            ret_dict: Returned dictionary of data and supporting meta
             nbytes_per_value: how many bytes expected per value per sample
             nvalues: Number of values expecter per sample
             from_spi: Is the data coming from SPI flash which guarantees a
                       segment size
         Returns:
             final: dict containing data in bytes, number of samples and
-                   segements and return status.
+                   segments and return status.
         """
 
         buffer_name = self.__data_buffer_guide[buffer_id]
-
-        ret_dict = self.__readData(buffer_id)
         final = None
 
         # successfully read data
-        if ret_dict['status'] != 1:
-            self.log.error('Read {} error: No data available!'
-                           ''.format(buffer_name))
-            self.log.debug('Data received from probe:\n{}'.format(ret_dict))
+        if ret_dict['data'] is None:
+            self.log.error('Read error: No data available!')
 
         else:
 
@@ -502,6 +569,87 @@ class RAD_Probe:
 
             return final
 
+    def unpack_sensor(self, data, sensor:SensorReadInfo):
+        """
+        Attempt to standardize the conversion of downloaded data for more usages
+        Args:
+            data: Data to unpack
+            sensor: Sensor storage info
+            extra_conversion: Option to add a more dynamic conversion like in accelerometer
+
+        Returns:
+            final: Dictionary of unpacked data
+
+        """
+        offset = 0
+        final = {name: [] for name in sensor.data_names}
+
+        unpack_bytes = sensor.unpack_type is not None
+        convert = sensor.conversion_factor is not None
+
+        samples = len(data) // sensor.bytes_per_sample
+
+        for ii in range(0, samples):
+
+            # Loop over each sensor and add it to the final dict
+            for idx, name in enumerate(sensor.data_names):
+                # Form the index for the bytes for the start of each value.
+                byte_idx = idx * sensor.nbytes_per_value + offset
+
+                # Certain datasets need to be unpacked
+                if unpack_bytes:
+                    # Form a byte object and unpack it
+                    byte_list = data[byte_idx: (byte_idx + sensor.nbytes_per_value)]
+                    byte_object = bytes(byte_list)
+                    value = struct.unpack(sensor.unpack_type, byte_object)[0]
+
+                else:
+                    value = data[byte_idx] + \
+                                   data[byte_idx + 1] * sensor.bytes_per_segment
+
+                # Perform conversion of units
+                if convert:
+                    value *= sensor.conversion_factor
+
+                # Grab each sensor value in the byte array
+                final[name].append(value)
+
+            # Move farther down the bytes to read the next segment.
+            offset += sensor.nbytes_per_value * sensor.expected_values
+        df = pd.DataFrame.from_dict(final)
+
+        # Special Treatment of the accelerometer data
+        if sensor == SensorReadInfo.ACCELEROMETER:
+            self.log.info('Scaling accelerometer data')
+            sensitivity = AccelerometerRange.from_range(self.accelerometer_range)
+            df = df.mul(sensitivity.value_scaling)
+
+        df = self.time_decimate(df, sensor)
+        return df
+
+    def time_decimate(self, df, sensor: SensorReadInfo):
+        """
+        Form the data into a dataframe and scale it according to the ratio of max
+        sample rate as is done in the FW
+        """
+        n_samples = df.index.size
+        # Decimation ratio for peripheral sensors
+        ratio = self.sampling_rate / SensorReadInfo.RAWSENSOR.max_sample_rate
+        sr = int(sensor.max_sample_rate * ratio)
+        seconds = np.linspace(0, n_samples / sr, n_samples)
+        df['time'] = seconds
+        df = df.set_index('time')
+        return df
+
+    def _parse_data(self, sensor):
+        ret = self.__readData(sensor.buffer_id)
+        ret = self.read_check_data_integrity(sensor.buffer_id, ret, nbytes_per_value=sensor.nbytes_per_value,
+                                             nvalues=sensor.expected_values, from_spi=sensor.uses_spi)
+        final = None
+        if ret is not None:
+            final = self.unpack_sensor(ret['data'], sensor)
+        return final
+
     def readRawSensorData(self):
         """
         Reads the RAW sensor data.
@@ -510,77 +658,41 @@ class RAD_Probe:
         Returns:
             dict - containing data or None if read failed
         """
+        sensor = SensorReadInfo.RAWSENSOR
+        return self._parse_data(sensor)
 
-        # Index in the probe buffer
-        buffer_id = 0
-
-        # Expected bit size of the data
-        sgbytes = 256
-        nbytes_per_value = 2
-        nvalues = 4
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues, from_spi=True)
-
-        # ***** DATA PARSING *****
-        if ret is not None:
-            data = ret['data']
-            samples = ret['samples']
-            offset = 0
-            final = {'Sensor1': [], 'Sensor2': [], 'Sensor3': [], 'Sensor4': []}
-
-            for ii in range(0, samples):
-
-                # Loop over each sensor and add it to the final dict
-                for idx in range(nvalues):
-                    # Create a name for the dictionary
-                    name = 'Sensor{}'.format(idx + 1)
-
-                    # Form the index for the bytes for the start of each value.
-                    byte_idx = idx * nbytes_per_value + offset
-
-                    # Grab each sensor value in the byte array
-                    final[name].append(data[byte_idx] + \
-                                       data[byte_idx + 1] * sgbytes)
-
-                # Move farther down the bytes to read the next segment.
-                offset += nbytes_per_value * nvalues
-
-            data = final
-        return data
-
-    def readCalibratedSensorData(self):
-        """
-        Reads the Read Calibrated sensor data.
-        helpme - Calibrated data for 4 sensors
-
-        Returns:
-            dict - containing data or None if read failed
-        """
-        calib_data = {}
-        raw = self.readRawSensorData()
-
-        for id in range(1, 5):
-            sensor = "Sensor{}".format(id)
-            d = self.getSetting(setting_name='calibdata', sensor=id)
-
-            # For the calibration for sensor 1 we invert
-            if id == 1:
-                # Set the slope to the negative difference
-                m = 4095 / (d[0] - d[1])
-                # Set the intercept to the LOW value
-                b = d[1]
-
-            else:
-                # Set the slope to the positive difference
-                m = 4095 / (d[1] - d[0])
-                # Set the intercept to the LOW value
-                b = d[0]
-
-            calib_data[sensor] = [m * (x - b) for x in raw[sensor]]
-
-        return calib_data
+    # TODO update for calibration scheme
+    # def readCalibratedSensorData(self):
+    #     """
+    #     Reads the Read Calibrated sensor data.
+    #     helpme - Calibrated data for 4 sensors
+    #
+    #     Returns:
+    #         dict - containing data or None if read failed
+    #     """
+    #     calib_data = {}
+    #     raw = self.readRawSensorData()
+    #
+    #     for id in range(1, 5):
+    #         sensor = "Sensor{}".format(id)
+    #         d = self.getSetting(setting_name='calibdata', sensor=id)
+    #
+    #         # For the calibration for sensor 1 we invert
+    #         if id == 1:
+    #             # Set the slope to the negative difference
+    #             m = 4095 / (d[0] - d[1])
+    #             # Set the intercept to the LOW value
+    #             b = d[1]
+    #
+    #         else:
+    #             # Set the slope to the positive difference
+    #             m = 4095 / (d[1] - d[0])
+    #             # Set the intercept to the LOW value
+    #             b = d[0]
+    #
+    #         calib_data[sensor] = [m * (x - b) for x in raw[sensor]]
+    #
+    #     return calib_data
 
     def readRawAccelerationData(self):
         """
@@ -591,191 +703,15 @@ class RAD_Probe:
             dict: containing accel data (x,y,z) or None if read failed
 
         """
-        acc_axes = ['X', 'Y', 'Z']
-        name_str = '{}-Axis'
-        # Index in the probe buffer
-        buffer_id = 1
-
-        # Expected bit size of the data
-        nbytes_per_value = 2
-        nvalues = len(acc_axes)
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues)
-        data = None
-
-        if ret is not None:
-            data = ret['data']
-
-            samples = ret['samples']
-
-            # Initialize the data
-            final = {name_str.format(a): [] for a in acc_axes}
-            offset = 0
-
-            # Grab the range to scale the incoming data
-            a_r = self.getSetting(setting_name='accrange')
-            sensitivity = acc_sensitivity[a_r]
-
-            # Loop over all the samples
-            for ii in range(0, samples):
-                # Loop over the sample and extract each axis
-                for idx, axis in enumerate(acc_axes):
-                    # Form the dictionary name
-                    name = name_str.format(axis)
-
-                    # Form the index of where each axis is in the sample
-                    byte_idx = idx * nbytes_per_value + offset
-
-                    # Grab the bytes from the list for a single axis
-                    byte_list = data[byte_idx: (byte_idx + nbytes_per_value)]
-
-                    # Form a byte object
-                    byte_object = bytes(byte_list)
-
-                    # Unpack bytes originally a 32 bit long and save
-                    value = struct.unpack('<h', byte_object)[0]
-
-                    # Convert to milli-gs while accounting for acc. range
-                    value *= sensitivity
-                    # Convert to Gs.
-                    value /= 1000
-
-                    final[name].append(value)
-
-                # Advance forward in the data from probe for parsing
-                offset += nbytes_per_value * nvalues
-
-            # Assign final to the original data var for return
-            data = final
-
-        return data
-
-    def readAccelerationCorrelationData(self):
-        """
-        Reads the acceleration correlation data
-        """
-
-        ret = self.__readData(5)
-        if ret['status'] == 1:
-            # successfully read data
-            # ***** DATA INTEGRITY CHECK *****
-            # Data integrity error (not all segments read)
-            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
-                self.log.error("readAccelerationCorrelationData error: Data integrity "
-                               "error (not all segments read)")
-                return None
-
-            total_bytes = ret['BytesRead']
-
-            if (total_bytes % 4) != 0:
-                # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Correlation
-                # number is a 32-bit int => 4 bytes)
-                self.log.error("readAccelerationCorrelationData error: Data integrity "
-                               "error (incomplete data set)")
-                return None
-
-            # ***** DATA PARSING *****
-            data = ret['data']
-            correll_data = []
-            samples = total_bytes // 4
-            offset = 0
-
-            for ii in range(0, samples):
-                correll_data.append(data[(offset + 0)] + (data[(offset + 1)] * 256) + (
-                    data[(offset + 2)] * 65536) + (data[(offset + 3)] * 16777216))
-                offset = offset + 4
-            return correll_data
-        else:
-            # Read failed!
-            return None
+        sensor = SensorReadInfo.ACCELEROMETER
+        return self._parse_data(sensor)
 
     def readRawPressureData(self):
         """
         Reads the RAW pressure data, including the correlation index
         """
-
-        ret = self.__readData(2)
-
-        # successfully read data
-        if ret['status'] == 1:
-            # ***** DATA INTEGRITY CHECK *****
-            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
-                # Data integrity error (not all segments read)
-                self.log.error("readRawPressureData error: Data integrity error (not "
-                               "all segments read)")
-                return None
-
-            # Data integrity error (not all bytes read - incomplete data
-            # segment)
-            total_bytes = ret['BytesRead']
-            if (total_bytes % 3) != 0:
-                # The data set is not an integer multiple of 3 (Raw pressure is
-                # in 24-bit format => 3 bytes)
-                self.log.error(
-                    "readRawPressureData error: Data integrity error (incomplete data set)")
-                return None
-
-            # ***** DATA PARSING *****
-            data = ret['data']
-            pressure_data = []
-            samples = total_bytes // 3
-            offset = 0
-
-            for ii in range(0, samples):
-                this_value = data[(offset + 0)] + (data[(offset + 1)] * 256) + \
-                             (data[(offset + 2)] * 65536)
-
-                pressure_data.append(this_value / 4096)
-                offset = offset + 3
-            return pressure_data
-
-        # Read failed!
-        else:
-            return None
-
-    def readRawDepthData(self):
-        """
-        Reads the converted depth data, including the correlation index
-        Return type is a dict containing data or None if read failed
-        helpme - Unfiltered elevation data from the depth sensor
-        """
-        ret = self.__readData(3)
-        if ret['status'] == 1:
-            # successfully read data
-            # ***** DATA INTEGRITY CHECK *****
-            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
-                # Data integrity error (not all segments read)
-                self.log.error("readDepthData error: Data integrity error (not all "
-                               "segments read)")
-                return None
-
-            total_bytes = ret['BytesRead']
-            if (total_bytes % 4) != 0:
-                # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Floating point)
-                # values are 32-bit long => 4 bytes)
-                self.log.error("readDepthData error: Data integrity error "
-                               "(incomplete data set)")
-                return None
-
-            # ***** DATA PARSING *****
-            data = ret['data']
-            depth_data = []
-            samples = total_bytes // 4
-            offset = 0
-            for ii in range(0, samples):
-                this_byte_list = data[(offset + 0):(offset + 4)]
-                this_byte_object = bytes(this_byte_list)
-                this_value = struct.unpack('f', this_byte_object)
-                depth_data.append(this_value)
-                offset = offset + 4
-            return depth_data
-        else:
-            # Read failed!
-            return None
+        sensor = SensorReadInfo.RAW_BAROMETER_PRESSURE
+        return self._parse_data(sensor)
 
     def readFilteredDepthData(self):
         """
@@ -788,129 +724,8 @@ class RAD_Probe:
                  option.
 
         """
-
-        # Index in the probe buffer
-        buffer_id = 4
-
-        # Expected bit size of the data
-        nbytes_per_value = 4
-        nvalues = 1
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues)
-        data = None
-
-        if ret is not None:
-            data = ret['data']
-            samples = ret['samples']
-            depth_data = []
-            offset = 0
-
-            for ii in range(0, samples):
-                this_byte_list = data[offset:(offset + nbytes_per_value)]
-                this_byte_object = bytes(this_byte_list)
-                this_value = struct.unpack('f', this_byte_object)
-                depth_data.append(this_value)
-                offset += nbytes_per_value
-
-            # Convert to cm
-            depth_data = [(c[0] / 100.0) for c in depth_data]
-            data = depth_data
-
-        return data
-
-    def readPressureDepthCorrelationData(self):
-        """
-        Reads the pressure/depth correlation data
-        """
-
-        ret = self.__readData(6)
-        if ret['status'] == 1:
-            # successfully read data
-            # ***** DATA INTEGRITY CHECK *****
-            if ret['SegmentsAvailable'] != ret['SegmentsRead']:
-                # Data integrity error (not all segments read)
-                self.log.error("readPressureDepthCorrelationData error: Data integrity "
-                               "error (not all segments read)")
-                return None
-
-            total_bytes = ret['BytesRead']
-            if (total_bytes % 4) != 0:
-                # Data integrity error (not all bytes read - incomplete data segment)
-                # The data set is not an integer multiple of 4 (Correlation
-                # number is a 32-bit int => 4 bytes)
-                self.log.error("readPressureDepthCorrelationData error: Data integrity "
-                               "error (incomplete data set)")
-                return None
-
-            # ***** DATA PARSING *****
-            data = ret['data']
-            correll_data = []
-            samples = total_bytes // 4
-            offset = 0
-
-            for ii in range(0, samples):
-                correll_data.append(data[(offset + 0)] + (data[(offset + 1)] *
-                                                          256) + (data[(offset + 2)] * 65536) +
-                                    (data[(offset + 3)] * 16777216))
-                offset = offset + 4
-            return correll_data
-
-        else:
-            # Read failed!
-            return None
-
-    def readDepthCorrectedSensorData(self):
-        """
-        Reads the processed data as a sensor-depth combo
-        """
-        # Data columns
-        nsensors = 4
-        name_str = 'Sensor{}'
-        sensor_names = [name_str.format(i) for i in range(1, nsensors + 1)]
-
-        # Index in the probe buffer
-        buffer_id = 7
-
-        # Expected byte size of the data
-        nbytes_per_value = 4
-        nvalues = 4
-
-        ret = self.read_check_data_integrity(buffer_id,
-                                             nbytes_per_value=nbytes_per_value,
-                                             nvalues=nvalues, from_spi=False)
-        data = None
-
-        if ret is not None:
-            # initialize
-            data = ret['data']
-            samples = ret['samples']
-            final = {sensor: [] for sensor in sensor_names}
-            final['depth'] = []
-            nbytes = nbytes_per_value * nvalues
-            sgbytes = 256
-            offset = 0
-
-            # Loop over all the samples
-            for ii in range(0, samples):
-                data_set = data[offset: offset + nbytes]
-
-                # Grab the depth
-                final['depth'].append(data_set[4] + (data_set[5] * sgbytes) +
-                                      (data_set[6] * 65536) + (data_set[7] *
-                                                               16777216))
-
-                for idx, name in enumerate(sensor_names):
-                    # Starts at idx 8 in the buffer
-                    byte_idx = idx * 2 + 8
-                    final[name].append(data_set[byte_idx] + \
-                                       data_set[byte_idx + 1] * sgbytes)
-                offset += nbytes
-
-            data = final
-
-        return data
+        sensor = SensorReadInfo.FILTERED_BAROMETER_DEPTH
+        return self._parse_data(sensor)
 
     def readMeasurementTemperature(self):
         """
@@ -918,7 +733,8 @@ class RAD_Probe:
         """
 
         ret = self.api.MeasGetMeasTemp()
-        return self.manage_error(ret)
+        result = struct.unpack('<i', ret['data'][5:])[0]
+        return result
 
     def getProbeHeader(self):
         """
@@ -932,7 +748,10 @@ class RAD_Probe:
                   "radicl VERSION": __version__,
                   "FIRMWARE REVISION": self.api.fw_rev,
                   "HARDWARE REVISION": self.api.hw_rev,
-                  "MODEL NUMBER": self.api.hw_id}
+                  "MODEL NUMBER": self.api.hw_id,
+                  "Serial Num.":self.serial_number,
+                  "Baro Temp.":self.readMeasurementTemperature(),
+                  "ACC. Range": str(self.accelerometer_range)}
         return header
 
     def getSetting(self, setting_name=None, sensor=None):
@@ -967,8 +786,18 @@ class RAD_Probe:
 
         else:
             ret = self.settings[setting_name](value)
-
+        # Successful change!
         if ret['status'] == 1:
+            # Reset properties to pull again
+            if setting_name == 'accrange':
+                self._accelerometer_range = None
+
+            elif setting_name == 'samplingrate':
+                self._sampling_rate = None
+
+            elif setting_name == 'zpfo':
+                self._zpfo = None
+
             return True
 
         else:

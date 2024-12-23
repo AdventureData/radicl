@@ -7,7 +7,7 @@ from radicl.com import RAD_Serial
 from radicl.api import RAD_API
 from radicl.update import FW_Update
 from radicl.ui_tools import get_logger
-
+from radicl.info import Firmware
 
 def Upgrade(fw_image):
     app_header_version = 0
@@ -39,7 +39,7 @@ def Upgrade(fw_image):
         # the package size can be increased up to 64 byes. Although it is technically possible to send up to 256
         # bytes in a package, there is a bug in the USB transport layer that causes issues when transferring more
         # than 64 bytes at a time. Until this is resolved, 64 bytes is the max.
-        if api.fw_rev >= 1.45:
+        if api.fw_rev >= Firmware('1.45'):
             transfer_size = 64
         else:
             transfer_size = 16

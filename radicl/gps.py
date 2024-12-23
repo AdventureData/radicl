@@ -39,10 +39,9 @@ class USBGPS:
             gps = NMEAReader(self.cnx)
             for i in range(max_attempts):
                 rx, msg = gps.read()
-
-                if msg.msgID in ['GGA']:
+                if msg.msgID in ['GGA', 'GLL', 'RMC']:
                     info = msg.lat, msg.lon
-                    if msg.quality != 0 and all(info):
+                    if all(info):
                         location = [float(p) for p in info]
                         break
                 time.sleep(0.1)

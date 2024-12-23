@@ -15,15 +15,19 @@ import argparse
 from argparse import RawTextHelpFormatter
 import json
 import sys
-from study_lyte.adjustments import merge_time_series, merge_on_to_time
+from study_lyte.adjustments import merge_on_to_time
+import logging
+
 from radicl import __version__
 from radicl.interface import RADICL
 from radicl.ui_tools import get_logger, exit_requested
 from radicl.plotting import plot_hi_res
 from radicl.gps import USBGPS
 
+LOG = logging.getLogger(__name__)
 
-def build_high_resolution_data(cli, log):
+
+def build_high_resolution_data(raw_sensor, baro_depth, acceleration, log):
     """
     Grabs the bottom sensors (sampled at the highest rate) then grabs the supporting sensors
     and pads with nans to fit into the same dataframe
@@ -35,30 +39,18 @@ def build_high_resolution_data(cli, log):
     Returns:
         result: Single data frame containing Force, NIR, Ambient NIR, Accel, Depth
     """
-    # Grab the Raw data
-    ts = cli.grab_data('rawsensor')
-
-    # Grab relative, filtered barometer data
-    depth = cli.grab_data('filtereddepth')
-
-    # Grab Acceleration
-    acc = cli.grab_data('rawacceleration')
-
+    LOG.info("Building High resolution profile...")
     # Invert Depth so bottom is negative max depth
-    depth['depth'] = depth['filtereddepth'] - depth['filtereddepth'].max()
-    depth = depth.drop(columns=['filtereddepth'])
+    baro_depth['depth'] = baro_depth['filtereddepth'] - baro_depth['filtereddepth'].max()
+    baro_depth = baro_depth.drop(columns=['filtereddepth'])
 
-    log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(depth['depth'].max() - depth['depth'].min())))
-    log.info("Barometer Samples: {:,}".format(len(depth.index)))
-    log.info("Acceleration Samples: {:,}".format(len(acc.index)))
-    log.info("Sensor Samples: {:,}".format(len(ts)))
+    log.info("Barometer Depth achieved: {:0.1f} cm".format(abs(baro_depth['depth'].max() - baro_depth['depth'].min())))
+    log.info("Barometer Samples: {:,}".format(len(baro_depth.index)))
+    log.info("Acceleration Samples: {:,}".format(len(acceleration.index)))
+    log.info("Sensor Samples: {:,}".format(len(raw_sensor)))
 
     log.info("Infilling and interpolating dataset...")
-    if 'time' in ts.columns:
-        final_time = ts['time']
-    else:
-        final_time = ts.index.values
-    result = merge_on_to_time([ts, depth, acc], final_time)
+    result = merge_on_to_time([raw_sensor, baro_depth, acceleration], raw_sensor.index)
     return result
 
 
@@ -124,10 +116,6 @@ def main():
     response = cli.probe.resetMeasurement()
 
     # Grab the probe sample rate
-    SR = cli.probe.getSetting(setting_name='samplingrate')
-    zpfo = cli.probe.getSetting(setting_name='zpfo')
-    acc_range = cli.probe.getSetting(setting_name='accrange')
-
     finished = exit_requested()
 
     # Loop through each sensor and retrieve the calibration data
@@ -137,12 +125,12 @@ def main():
         cli.listen_for_a_reading()
 
         # Collect and build the data
-        ts = build_high_resolution_data(cli, log)
+        raw_sensor = cli.grab_data(data_request='rawsensor')
+        baro_depth = cli.grab_data(data_request='filtereddepth')
+        acceleration = cli.grab_data(data_request='rawacceleration')
 
-        meta = {"SAMPLE RATE": str(SR),
-                "ZPFO": str(zpfo),
-                "ACC. Range": str(acc_range),
-                'Serial Num.': cli.probe.getProbeSerial()}
+        ts = build_high_resolution_data(raw_sensor, baro_depth, acceleration, log)
+        meta = cli.probe.getProbeHeader()
 
         # Attempt to get a fix, if no gps cnx then no location data is returned
         location = gps.get_fix()
@@ -158,10 +146,7 @@ def main():
         filename = cli.write_probe_data(ts, extra_meta=meta)
 
         # Plot the data
-        try:
-            plot_hi_res(fname=filename, calibration_dict=calibration, timed_plot=args.plot_time)
-        except Exception as e:
-            log.error(e)
+        plot_hi_res(fname=filename, calibration_dict=calibration, timed_plot=args.plot_time)
 
         # Reset the probe / clear out the data
         cli.probe.resetMeasurement()
