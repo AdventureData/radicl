@@ -101,6 +101,12 @@ Overhaul (2017-10-17)
 * Migrated to study_lyte profile class usage
 * Added in features to manage past profiles with fewer sensors
 
-0.10.0 (TBD)
-------------
+0.10.0 (2024-12-23)
+-------------------
 * Added windows driver install script
+* Enabled event driven programming
+* Added connection functionality
+* Added lots of enums around sensors, probe state, etc to improve readability
+* Added tests around timeseries merging
+* Modernized package for pytoml, python versions, RTD
+
