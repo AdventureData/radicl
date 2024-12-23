@@ -18,7 +18,6 @@ sphinx:
   fail_on_warning: false
 
 python:
-  version: "3.10"
   install:
     - method: pip
       path: .
