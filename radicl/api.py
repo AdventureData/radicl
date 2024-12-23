@@ -113,7 +113,7 @@ class RAD_API:
             # If we get here then we have passed the additional specified
             # checks.
             if message[2] == 0x04:
-                # ACK detectec
+                # ACK detected
                 return 1
             else:
                 # No ACK found
@@ -167,7 +167,8 @@ class RAD_API:
         valid = 0
         length = len(message)
         if length >= 5:
-            if message[2] == 0x02:
+            # Cope with temperature measurement request
+            if message[2] == 0x02 or cmd ==79:
                 calc_len = message[4] + 5
                 # If a command was specified we need to check if it matches.
                 # If it is incorrect, the response is invalid
@@ -762,7 +763,7 @@ class RAD_API:
         """
         code = MeasCMD.TEMP.cmd
         response = self.__send_receive([0x9F, code, 0x00, 0x00, 0x00])
-        return self.__EvaluateAndReturn(response, code, 0)
+        return self.__EvaluateAndReturn(response, code, 4)
 
     def MeasGetAccThreshold(self):
         """

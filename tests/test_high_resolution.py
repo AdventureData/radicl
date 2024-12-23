@@ -12,8 +12,12 @@ class TestBuildingHighResolution:
     def df(self):
         cli = MOCKCLI()
         log = get_logger('test_high_res')
-        df = build_high_resolution_data(cli, log)
-        return df
+        rawsensor = cli.grab_data('rawsensor')
+        baro = cli.grab_data('filtereddepth')
+        acc = cli.grab_data('rawacceleration')
+
+        hi_res_df = build_high_resolution_data(rawsensor, baro, acc, log)
+        return hi_res_df
 
     def test_no_nans(self, df):
         """ Ensure we have interpolated all nans"""
