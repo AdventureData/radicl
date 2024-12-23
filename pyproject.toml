@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "radicl"
-version = "0.10.0"
+version = "0.11.0"
 description = "Command line interface for the Lyte probe, a digital penetrometer for studying snow"
 keywords = ["snow penetrometer", "smart probe", "digital penetrometer", 'lyte probe', "avalanches"]
 readme = "README.rst"
