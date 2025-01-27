@@ -332,71 +332,66 @@ class FW_Update:
                 self.log.error("Incorrect state (%d)" % state)
             return 0
 
+    def download_packet(self, ii, packet_id):
+        """Attempts to download a single packet to the device for fw update"""
+        data = self.f.read(self.packet_size)
+        packet_id_arr = packet_id.to_bytes(4, byteorder='little')
+        retry = 1
+        retry_count = 0
+
+        while retry == 1:
+            crc8 = self.__CalculateChecksum(data)
+            if self.packet_size == 256:
+                ret = self.api.UpdateDownload_Long(data,
+                                                   crc8,
+                                                   packet_id_arr[0])
+            else:
+                ret = self.api.UpdateDownload_Short(data,
+                                                    crc8,
+                                                    packet_id_arr[0])
+
+            if ret['status'] != 1:
+                # Packet was not accepted. Check if it was checksum
+                # mismatch
+                if ret['errorCode'] == 5121:
+                    if retry_count > 3:
+                        self.log.error(
+                            "Max retries exceeded. Stopping.")
+                        return 0
+
+                    # Retry, by simply allowing to loop again
+                    retry = 1
+                    retry_count = retry_count + 1
+                    self.log.error("Checksum mismatch error. Retrying packet"
+                                   " %d (%d)" % (packet_id, retry_count))
+
+                # Error other than checksum mismatch.
+                else:
+                    self.log.error("Download error (%d, Packet=%d)" %
+                                   (ii, packet_id))
+                    return 0
+
+            # Packet was accepted by device. Skip retry/ update
+            # progress
+            else:
+                retry = 0
+        return (100 * ii) / self.num_packets
+
+
     def downloadFile(self):
         """
-        Downloads the file in chuncks
-        Returns 1 if successfull, 0 otherwise
+        Downloads the file in chunks
+        Returns 1 if successful, 0 otherwise
         """
         state = self.getState()
         if state == 3:
             # Set the file pointer to the very beginning
             self.f.seek(0)
-            packet_counter = 0
-            retry_count = 0
             packet_id = 0
-            last_pct = 0
-            bar = progressbar.ProgressBar(max_value=100)
 
             for ii in range(0, int(self.num_packets)):
-                data = self.f.read(self.packet_size)
-                packet_id_arr = packet_id.to_bytes(4, byteorder='little')
-                retry = 1
-                retry_count = 0
-
-                while retry == 1:
-                    crc8 = self.__CalculateChecksum(data)
-                    if self.packet_size == 256:
-                        ret = self.api.UpdateDownload_Long(data,
-                                                           crc8,
-                                                           packet_id_arr[0])
-                    else:
-                        ret = self.api.UpdateDownload_Short(data,
-                                                            crc8,
-                                                            packet_id_arr[0])
-
-                    if ret['status'] != 1:
-                        # Packet was not accepted. Check if it was checksum
-                        # mismatch
-                        if ret['errorCode'] == 5121:
-                            if retry_count > 3:
-                                self.log.error(
-                                    "Max retries exceeded. Stopping.")
-                                return 0
-                            # Retry, by simply allowing to loop again
-                            retry = 1
-                            retry_count = retry_count + 1
-                            self.log.error("Checksum mismatch error. Retrying packet"
-                                           " %d (%d)" % (packet_id, retry_count))
-
-                        # Error other than checksum mismatch.
-                        else:
-                            self.log.error("Download error (%d, Packet=%d)" %
-                                           (ii, packet_id))
-                            return 0
-
-                    # Packet was accepted by device. Skip retry/ update
-                    # progress
-                    else:
-                        retry = 0
-                        pct = (100 * ii) / self.num_packets
-                        if pct >= (last_pct + 1):
-                            last_pct = pct
-                            # self.log.info("\rProgress = %d%%    " % pct, end=" ")
-                            # self.log.info("Progress = %d%%" % pct)
-                            bar.update(int(pct))
-
-                        packet_id = packet_id + 1
-                        retry_count = 0
+                self.download_packet(ii, packet_id)
+                packet_id = packet_id + 1
 
             # If we get here then the entire download succeeded
             self.log.info("Download done - Waiting for state change")
@@ -420,7 +415,7 @@ class FW_Update:
     def sendImageCRC32(self):
         """
         Sends the CRC32 of the entire FW image
-        Returns 1 if successfull, 0 otherwise
+        Returns 1 if successful, 0 otherwise
         """
 
         # Check that we are in the right state

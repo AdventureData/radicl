@@ -85,6 +85,7 @@ class RAD_Probe:
                 # Switch the device over to API mode
                 api.sendApiPortEnable()
                 self.api = api
+                self.api.Identify()
 
         ret = self.getProbeMeasState()
         connected = True if ret is not None else False
@@ -746,7 +747,7 @@ class RAD_Probe:
                                  t.hour, t.minute, t.second)
         header = {"RECORDED": time_stamp,
                   "radicl VERSION": __version__,
-                  "FIRMWARE REVISION": self.api.fw_rev,
+                  "FIRMWARE REVISION": self.api.full_fw_rev,
                   "HARDWARE REVISION": self.api.hw_rev,
                   "MODEL NUMBER": self.api.hw_id,
                   "Serial Num.":self.serial_number,
