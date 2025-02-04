@@ -18,7 +18,7 @@ class FWState(Enum):
     DOWNLOAD_COMPLETE = 4
     VERIFICATION = 5
     DONE = 6
-    ERROR = 10
+    ERROR = 7
     # If we cant id the state use this
     UNKNOWN = None
 
@@ -254,11 +254,12 @@ class FW_Update:
             byte_arr = ret['data']
             state_int = int.from_bytes(byte_arr, byteorder='little')
             state = FWState.from_int(state_int)
-
-        if ret['errorCode'] is not None:
-            self.log.error(
-                "FW_Update.getState returned error %d" %
-                ret['errorCode'])
+            self.log.info(f"State = {state}({state_int})")
+        else:
+            if ret['errorCode'] is not None:
+                self.log.error(
+                    "FW_Update.getState returned error %d" %
+                    ret['errorCode'])
             state = FWState.ERROR
 
         self.state = state
@@ -483,9 +484,6 @@ class FW_Update:
                 success = False
             else:
                 success = True
-
-        # Update state
-        self.getState()
         return success
 
     def verify(self):
@@ -551,6 +549,7 @@ class FW_Update:
 
         self.log.info("Waiting for update completion.")
         while self.state not in [FWState.DONE, FWState.ERROR]:
+            # TODO: This will advance even when there is an error...
             time.sleep(1)
             self.getState()
 
