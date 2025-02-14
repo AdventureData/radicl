@@ -10,7 +10,7 @@ import traceback
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
-
+import traceback
 from radicl.ui_tools import get_logger, get_index_from_ratio
 from study_lyte.profile import LyteProfileV6, Sensor
 from study_lyte.styles import SensorStyle, EventStyle
@@ -109,6 +109,7 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     try:
         ax = plot_force_depth_corrected(ax, profile)
     except:
+        log.error(traceback.format_exc())
         report_profile_error(ax)
 
     # plot depth corrected NIR data
@@ -116,6 +117,7 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     try:
         ax = plot_nir_depth_correct(ax, profile)
     except:
+        log.error(traceback.format_exc())
         report_profile_error(ax)
 
     #### plot the acceleration as a sub-panel with events ####
