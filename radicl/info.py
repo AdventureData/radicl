@@ -199,7 +199,10 @@ class Firmware:
     Small firmware class for comparing firmwares
     """
     def __init__(self, firmware_str):
-        self._info = firmware_str.split('.')
+        if firmware_str is not None:
+            self._info = firmware_str.split('.')
+        else:
+            self._info = (-1,-1,-1,-1)
         self.sub_versions = ['major_version', 'minor_version', 'patch_version', 'build_number']
         # Default to 0
         self.major_version = 0

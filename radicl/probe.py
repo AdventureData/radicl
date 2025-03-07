@@ -97,7 +97,8 @@ class RAD_Probe:
     def disconnect(self):
         self.log.info("Disconnecting probe.")
         self.api.port.closePort()
-
+        self.api = None 
+        
     @property
     def state(self):
         return  self._state
