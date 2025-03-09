@@ -486,6 +486,8 @@ class FW_Update:
                 success = True
         else:
             self.log.warning(f"Probe not in the write state to set CRC, ({self.state})")
+            success = False
+
         return success
 
     def verify(self):
