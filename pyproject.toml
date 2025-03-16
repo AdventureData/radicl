@@ -38,7 +38,8 @@ dev = [
     "pytest",
     "pytest-cov",
     "jupyterlab",
-    "twine"
+    "twine",
+    "build"
 ]
 
 docs = [ "nbsphinx>=0.8.12",
