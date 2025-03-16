@@ -21,8 +21,10 @@ class ProbeState(Enum):
                 final = e
                 break
         return final
+
     @classmethod
     def ready(cls, state):
+        """Function to determine if the probe is in an idle state"""
         return state in [cls.IDLE, cls.RESET]
 
     def __ge__(self, other):
@@ -199,7 +201,10 @@ class Firmware:
     Small firmware class for comparing firmwares
     """
     def __init__(self, firmware_str):
-        self._info = firmware_str.split('.')
+        if firmware_str is not None:
+            self._info = firmware_str.split('.')
+        else:
+            self._info = (-1,-1,-1,-1)
         self.sub_versions = ['major_version', 'minor_version', 'patch_version', 'build_number']
         # Default to 0
         self.major_version = 0
@@ -244,6 +249,7 @@ class Firmware:
 
     def __repr__(self):
         return f"v{self.major_version}.{self.minor_version}.{self.patch_version}.{self.build_number}"
+
 
 class PCA_Name(Enum):
     UNKNOWN = None

@@ -3,9 +3,34 @@
 import binascii
 import hashlib
 import time
-
+from enum import Enum
 from .ui_tools import get_logger
-import progressbar
+from .info import Firmware
+from .api import RAD_API
+
+
+class FWState(Enum):
+    """Mirror class of the FW update states"""
+    IDLE = 0
+    PREPARE = 1
+    READY_TO_UPDATE = 2
+    DOWNLOAD = 3
+    DOWNLOAD_COMPLETE = 4
+    VERIFICATION = 5
+    DONE = 6
+    ERROR = 7
+    # If we cant id the state use this
+    UNKNOWN = None
+
+    @classmethod
+    def from_int(cls, state_int):
+        result = cls.UNKNOWN
+
+        for e in cls:
+            if e.value == state_int:
+                result = e
+                break
+        return result
 
 
 class FW_Update:
@@ -14,12 +39,24 @@ class FW_Update:
     # * PRIVATE FUNCTIONS *
     # *********************
 
-    def __init__(self, api, packet_size):
+    def __init__(self, api:RAD_API):
         self.f = None
         self.api = api
         self.file_crc = 0
-        self.packet_size = packet_size
+        self._packet_size = None
         self.log = get_logger(__name__, debug=True)
+        self.state = FWState.UNKNOWN
+
+    @property
+    def packet_size(self):
+        """ Get the packet size based on the fw"""
+
+        if self._packet_size is None:
+            if self.api.fw_rev >= Firmware('1.45'):
+                self._packet_size = 64
+            else:
+                self._packet_size = 16
+        return self._packet_size
 
     def __getFileSize(self):
         """
@@ -211,44 +248,53 @@ class FW_Update:
         Returns the state if successful, None otherwise
         """
         ret = self.api.UpdateGetState()
+        state = FWState.UNKNOWN
+
         if ret['status'] == 1:
             byte_arr = ret['data']
-            return int.from_bytes(byte_arr, byteorder='little')
+            state_int = int.from_bytes(byte_arr, byteorder='little')
+            state = FWState.from_int(state_int)
+            self.log.info(f"State = {state}({state_int})")
+        else:
+            if ret['errorCode'] is not None:
+                self.log.error(
+                    "FW_Update.getState returned error %d" %
+                    ret['errorCode'])
+            state = FWState.ERROR
 
-        if ret['errorCode'] is not None:
-            self.log.error(
-                "FW_Update.getState returned error %d" %
-                ret['errorCode'])
+        self.state = state
 
-        return None
+        return self.state
 
     def waitForStateChange(self, timeout):
         """
         Waits for an update FSM state change message
-        Returns the new state if successfull, None if timeout or incorrect
+        Returns the new state if successful, None if timeout or incorrect
         response
         """
-
+        state = FWState.UNKNOWN
         ret = self.api.UpdateWaitForStateChange(timeout)
 
         if ret['status'] == 1:
             byte_arr = ret['data']
-            return int.from_bytes(byte_arr, byteorder='little')
+            state_int = int.from_bytes(byte_arr, byteorder='little')
+            state = FWState.from_int(state_int)
 
         # Retry in case of timeout
         else:
             self.log.debug("Timeout - Retrying!")
-            return self.getState()
+            state = self.getState()
 
         if ret['errorCode'] is not None:
             self.log.error("FW_Update.waitForStateChange returned error %d" %
                            ret['errorCode'])
-        return None
+            state = FWState.ERROR
+        return state
 
     def closeFSM(self):
         """
         Closes the update FSM (i.e. reset)
-        Returns 1 if successfull, 0 otherwise
+        Returns 1 if successful, 0 otherwise
         """
 
         ret = self.api.UpdateClose()
@@ -265,7 +311,7 @@ class FW_Update:
     def enterFSM(self):
         """
         Enter the FW update FSM (starts the process)
-        Returns 1 if successfull, 0 otherwise
+        Returns 1 if successful, 0 otherwise
         """
         ret = self.api.UpdateEnter()
 
@@ -279,12 +325,12 @@ class FW_Update:
                 return 0
 
             else:
-                if state == 2:
+                if state == FWState.READY_TO_UPDATE:
                     self.log.info(
                         "Probe is in bootloader mode. Flash memory is ready!")
                     return 1
 
-                self.log.error("Error: Incorrect state (%d)" % state)
+                self.log.error(f"Incorrect state ({state}")
                 return 0
 
         if ret['errorCode'] is not None:
@@ -297,11 +343,11 @@ class FW_Update:
     def sendNumPackets(self):
         """
         Sends the number of data packets and ensures we advance to the next step
-        Returns 1 if successfull, 0 otherwise
+        Returns 1 if successful, 0 otherwise
         """
         state = self.getState()
 
-        if state == 2:
+        if state == FWState.READY_TO_UPDATE:
             self.__calculateNumDataPackets()
             self.log.debug("Total number of packets = %d" % self.num_packets)
             ret = self.api.UpdateSetSize(int(self.num_packets),
@@ -319,84 +365,84 @@ class FW_Update:
             if state is None:
                 self.log.error("Timeout - No response")
                 return 0
-            elif state != 3:
-                self.log.error("Unexpected state (%d)" % state)
+            elif state != FWState.DOWNLOAD:
+                self.log.error(f"Unexpected state ({state})")
                 return 0
             else:
-                self.log.info("Numer of packages set and accepted")
+                self.log.info("Number of packages set and accepted")
                 return 1
         else:
             if state is None:
                 self.log.error("Incorrect or no response from device...")
             else:
-                self.log.error("Incorrect state (%d)" % state)
+                self.log.error(f"Incorrect state ({state})")
             return 0
+
+    def download_packet(self, packet_id):
+        """Attempts to download a single packet to the device for fw update"""
+        data = self.f.read(self.packet_size)
+        packet_id_arr = packet_id.to_bytes(4, byteorder='little')
+        retry = True
+        retry_count = 0
+        error = True
+
+        while retry:
+            crc8 = self.__CalculateChecksum(data)
+            if self.packet_size == 256:
+                ret = self.api.UpdateDownload_Long(data,
+                                                   crc8,
+                                                   packet_id_arr[0])
+            else:
+                ret = self.api.UpdateDownload_Short(data,
+                                                    crc8,
+                                                    packet_id_arr[0])
+
+            if ret['status'] != 1:
+                # Packet was not accepted. Check if it was checksum
+                # mismatch
+                if ret['errorCode'] == 5121:
+                    if retry_count > 3:
+                        self.log.error(
+                            "Max retries exceeded. Stopping.")
+                        retry = False
+                        error = True
+                    else:
+                        # Retry, by simply allowing to loop again
+                        retry = True
+                        retry_count = retry_count + 1
+                        self.log.error(f"Checksum mismatch error. Retrying packet"
+                                       f" {packet_id} (retry={retry_count})")
+
+                # Error other than checksum mismatch.
+                else:
+                    self.log.error(f"Download error (Packet={packet_id})")
+                    retry = False
+                    error = True
+
+
+            # Packet was accepted by device. Skip retry/ update
+            # progress
+            else:
+                retry = False
+                error = False
+
+        return error
 
     def downloadFile(self):
         """
-        Downloads the file in chuncks
-        Returns 1 if successfull, 0 otherwise
+        Downloads the file in chunks
+        Returns 1 if successful, 0 otherwise
         """
         state = self.getState()
-        if state == 3:
+        if state == FWState.DOWNLOAD:
             # Set the file pointer to the very beginning
             self.f.seek(0)
-            packet_counter = 0
-            retry_count = 0
             packet_id = 0
-            last_pct = 0
-            bar = progressbar.ProgressBar(max_value=100)
 
-            for ii in range(0, int(self.num_packets)):
-                data = self.f.read(self.packet_size)
-                packet_id_arr = packet_id.to_bytes(4, byteorder='little')
-                retry = 1
-                retry_count = 0
-
-                while retry == 1:
-                    crc8 = self.__CalculateChecksum(data)
-                    if self.packet_size == 256:
-                        ret = self.api.UpdateDownload_Long(data,
-                                                           crc8,
-                                                           packet_id_arr[0])
-                    else:
-                        ret = self.api.UpdateDownload_Short(data,
-                                                            crc8,
-                                                            packet_id_arr[0])
-
-                    if ret['status'] != 1:
-                        # Packet was not accepted. Check if it was checksum
-                        # mismatch
-                        if ret['errorCode'] == 5121:
-                            if retry_count > 3:
-                                self.log.error(
-                                    "Max retries exceeded. Stopping.")
-                                return 0
-                            # Retry, by simply allowing to loop again
-                            retry = 1
-                            retry_count = retry_count + 1
-                            self.log.error("Checksum mismatch error. Retrying packet"
-                                           " %d (%d)" % (packet_id, retry_count))
-
-                        # Error other than checksum mismatch.
-                        else:
-                            self.log.error("Download error (%d, Packet=%d)" %
-                                           (ii, packet_id))
-                            return 0
-
-                    # Packet was accepted by device. Skip retry/ update
-                    # progress
-                    else:
-                        retry = 0
-                        pct = (100 * ii) / self.num_packets
-                        if pct >= (last_pct + 1):
-                            last_pct = pct
-                            # self.log.info("\rProgress = %d%%    " % pct, end=" ")
-                            # self.log.info("Progress = %d%%" % pct)
-                            bar.update(int(pct))
-
-                        packet_id = packet_id + 1
-                        retry_count = 0
+            while packet_id < self.num_packets:
+                error = self.download_packet(packet_id)
+                if not error:
+                    packet_id = packet_id + 1
 
             # If we get here then the entire download succeeded
             self.log.info("Download done - Waiting for state change")
@@ -405,8 +451,8 @@ class FW_Update:
             if state is None:
                 self.log.error("Timeout: No response")
                 return 0
-            elif state != 4:
-                self.log.error("Unexpected state (%d)" % state)
+            elif state != FWState.DOWNLOAD_COMPLETE:
+                self.log.error(f"Unexpected state ({state}")
                 return 0
             # If we get here then the probe is in state 4 and we can move on
             return 1
@@ -414,19 +460,19 @@ class FW_Update:
             if state is None:
                 self.log.error("Incorrect or no response from device...")
             else:
-                self.log.error("Incorrect state (%d)" % state)
+                self.log.error(f"Incorrect state ({state})")
             return 0
 
     def sendImageCRC32(self):
         """
         Sends the CRC32 of the entire FW image
-        Returns 1 if successfull, 0 otherwise
+        Returns 1 if successful, 0 otherwise
         """
-
+        success = False
         # Check that we are in the right state
         state = self.getState()
 
-        if state == 4:
+        if state == FWState.DOWNLOAD_COMPLETE:
             ret = self.api.UpdateSetCRC(self.file_crc)
 
             if ret['status'] != 1:
@@ -435,49 +481,35 @@ class FW_Update:
                 if ret['errorCode'] is not None:
                     self.log.error("FW_Update.sendImageCRC32 returned error %d" %
                                    ret['errorCode'])
-                return 0
-            time.sleep(1)
-            state = self.waitForStateChange(5)
-
-            if state is None:
-                self.log.error("Timeout: No response")
-                return 0
-
-            if state == 5:
-                self.log.debug(
-                    "CRC32 set - Waiting for verification to complete")
-                state = self.waitForStateChange(20)
-
-                if state is None:
-                    self.log.error("Timeout: No response")
-                    return 0
-
-                if state == 6:
-                    self.log.info(
-                        "Verification complete. FW image integrity check passed!")
-                    return 1
-
-                else:
-                    self.log.error(
-                        "Verification failed. New state = %d" %
-                        state)
-                    return 0
-
-            elif state == 6:
-                self.log.info("Verification complete!")
-                return 1
-
+                success = False
             else:
-                self.log.error("Setting CRC32 failed. New state = %d" % state)
-                return 0
+                success = True
+        else:
+            self.log.warning(f"Probe not in the write state to set CRC, ({self.state})")
+            success = False
+
+        return success
+
+    def verify(self):
+        """Wait for the probe to respond after verification of the update image"""
+        # Grab the state
+        state = self.getState()
+
+        # probe is still verifying
+        if state == FWState.VERIFICATION:
+            self.log.debug(
+                "CRC32 set - Waiting for verification to complete")
+
+        elif state == FWState.DONE:
+            self.log.info(
+                "Verification complete. FW image integrity check passed!")
+            success = True
 
         else:
+            self.log.error(f"Verification failed. New state = {state}")
+            success = False
 
-            if state is None:
-                self.log.error("Incorrect or no response from device...")
-            else:
-                self.log.error("Incorrect state (%d)" % state)
-            return 0
+        return success
 
     def upgrade(self):
         """
@@ -488,11 +520,11 @@ class FW_Update:
         # First, check if we need to reset the FSM
         state = self.getState()
 
-        if state is None:
-            self.log.error("Error. No response")
+        if state is FWState.UNKNOWN:
+            self.log.error("No response from probe")
             return 0
 
-        elif state != 0:
+        elif state != FWState.IDLE:
             self.log.warning(
                 "Probe not ready for FW updates. Resetting the state machine...")
             if self.closeFSM() != 1:
@@ -518,6 +550,12 @@ class FW_Update:
         if self.sendImageCRC32() != 1:
             self.log.error("Sending and verifying CRC32 failed")
             return 0
+
+        self.log.info("Waiting for update completion.")
+        while self.state not in [FWState.DONE, FWState.ERROR]:
+            # TODO: This will advance even when there is an error...
+            time.sleep(1)
+            self.getState()
 
         self.log.info("*** Step 5: Apply (close state machine) ***")
         if self.closeFSM() != 1:
