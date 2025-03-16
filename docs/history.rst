@@ -110,3 +110,10 @@ Overhaul (2017-10-17)
 * Added tests around timeseries merging
 * Modernized package for pytoml, python versions, RTD
 
+
+0.12.0 (2025-03-16)
+-------------------
+* Updated the FW upgrade system for event drive programming
+* Added in fw state enums for clarity
+* Added in tests for enums 
+* Upgrade dependencies
