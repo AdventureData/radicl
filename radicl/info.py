@@ -21,8 +21,10 @@ class ProbeState(Enum):
                 final = e
                 break
         return final
+
     @classmethod
     def ready(cls, state):
+        """Function to determine if the probe is in an idle state"""
         return state in [cls.IDLE, cls.RESET]
 
     def __ge__(self, other):
@@ -247,6 +249,7 @@ class Firmware:
 
     def __repr__(self):
         return f"v{self.major_version}.{self.minor_version}.{self.patch_version}.{self.build_number}"
+
 
 class PCA_Name(Enum):
     UNKNOWN = None
