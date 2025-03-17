@@ -6,12 +6,13 @@ import struct
 import time
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from . import __version__
 from .com import RAD_Serial, find_kw_port
 from .api import RAD_API
 from .ui_tools import get_logger, parse_func_list
-from .info import ProbeErrors, ProbeState, AccelerometerRange, SensorReadInfo
+from .info import ProbeState, AccelerometerRange, SensorReadInfo
 
 
 class RAD_Probe:
@@ -97,8 +98,8 @@ class RAD_Probe:
     def disconnect(self):
         self.log.info("Disconnecting probe.")
         self.api.port.closePort()
-        self.api = None 
-        
+        self.api = None
+
     @property
     def state(self):
         return  self._state

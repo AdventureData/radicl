@@ -1,16 +1,16 @@
 # coding: utf-8
 
-import datetime
 import inspect
 import sys
 import time
-from os.path import join, abspath, dirname, expanduser, isdir
+from os.path import abspath, dirname, expanduser, isdir
 
 import pandas as pd
 from matplotlib import pyplot as plt
 from termcolor import colored
 from study_lyte.io import write_csv
 
+from .io import get_default_filename
 from .probe import RAD_Probe
 from .calibrate import get_avg_sensor
 from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
@@ -45,77 +45,6 @@ def dataframe_this(data, name=None):
         df = data
 
     return df
-
-
-def is_numbered(filename):
-    """
-    Checks if the filename has been numbered. Denoted by any file ending in
-    somefname_<#>.csv Returns true or false.
-    Args:
-        filename: Path with potential some appended number scheme denoted by _
-    Returns:
-        bool: True if a separator and all numbers are found towards the end
-    """
-    info = filename.split('.')[0]
-    sep = False
-    numbered = False
-
-    if '_' in info:
-        numbers = info.split('_')[-1]
-        sep = True
-        numbered = all([c.isnumeric() for c in numbers])
-    return sep and numbered
-
-
-def add_ext(filename):
-    """
-    Check to see if the user provided the .csv ext in the filename
-    and add it
-    """
-    if filename[-4:] != '.csv':
-        f = filename.split('.')
-        # Did the user try to add an ext
-        if len(f) == 2:
-            filename = f[0] + '.csv'
-        else:
-            filename += '.csv'
-
-    return filename
-
-
-def get_default_filename(output_dir='./'):
-    """
-    Creates a datetime path for writing to
-
-    Returns:
-        fname: csv path named by the datetime
-    """
-
-    t = datetime.datetime.now()
-    fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}.csv"
-    fname = fstr.format(t.year, t.month, t.day, t.hour, t.minute, t.second)
-    return join(output_dir, fname)
-
-
-def increment_fnumber(filename):
-    """
-    Check for a file numbering. Increment if there is one. Otherwise add one
-    """
-    no_ext = filename.split('.')[0]
-
-    if is_numbered(filename):
-        info = no_ext.split('_')
-        base_file = '_'.join(info[0:-1])
-        count = int(info[-1])
-        fcount = count + 1
-
-    else:
-        base_file = no_ext
-        fcount = 1
-
-    filename = f"{base_file}_{fcount}.csv"
-
-    return filename
 
 
 class RADICL(object):
