@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from termcolor import colored
 from study_lyte.io import write_csv
 
-from .io import get_default_filename
+from .utilities import get_default_filename
 from .probe import RAD_Probe
 from .calibrate import get_avg_sensor
 from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
