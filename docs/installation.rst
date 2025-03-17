@@ -91,6 +91,8 @@ you through the process.
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
 .. _Install radicl:
+
+
 Install radicl
 --------------
 
@@ -106,7 +108,7 @@ Install radicl for Users Only
 
 .. code-block:: console
 
-    pip install radicl
+    pip install radicl[cli]
 
 2. Test the installation by, plugging in your probe to the computer, open a
    terminal or conda shell and run:
@@ -127,6 +129,7 @@ Install radicl for Users Only
 tools are available to you!**
 
 .. _Install radicl for Developers:
+
 Install radicl for Developers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -148,7 +151,7 @@ Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    $ python setup.py install
+    $ pip install .[dev]
 
 
 .. _Github repo: https://github.com/AdventureData/radicl
