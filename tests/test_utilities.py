@@ -1,5 +1,5 @@
 import pytest
-from radicl.io import is_numbered, add_ext, increment_fnumber
+from radicl.utilities import is_numbered, add_ext, increment_fnumber
 
 
 @pytest.mark.parametrize('filename, expected', [

@@ -1,5 +1,6 @@
-from pathlib import Path
 from datetime import datetime
+from os.path import join
+
 
 def get_default_filename(output_dir='./'):
     """
@@ -11,7 +12,7 @@ def get_default_filename(output_dir='./'):
     t = datetime.now()
     fstr = "{0}-{1:02d}-{2:02d}--{3:02d}{4:02d}{5:02d}.csv"
     fname = fstr.format(t.year, t.month, t.day, t.hour, t.minute, t.second)
-    return Path(output_dir).joinpath(fname)
+    return join(output_dir, fname)
 
 
 def is_numbered(filename):
