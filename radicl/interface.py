@@ -6,7 +6,6 @@ import time
 from os.path import abspath, dirname, expanduser, isdir
 
 import pandas as pd
-from matplotlib import pyplot as plt
 from termcolor import colored
 from study_lyte.io import write_csv
 
