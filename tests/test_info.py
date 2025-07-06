@@ -58,7 +58,10 @@ class TestFirmware:
         ('0.2', '0.2', False),
         ('0.0.0.2', '0.0.0.1', True),
         ('0.0.0.1', '0.0.0.2', False),
-
+        ('1.45.2.1', '1.46.5', False),
+        ('1.46.2.1', '1.46.1.1', True),
+        ('1.46.2.1', '1.46.2.2', False),
+        ('1.46.2.1', '2', False),
     ])
     def test_firmware_gt(self, fw1, fw2, expected):
         comparison = (fw1 > fw2)

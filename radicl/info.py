@@ -244,7 +244,9 @@ class Firmware:
             if v > ov:
                 result = True
                 break
-
+            elif v < ov:
+                result = False
+                break
         return result
 
     def __repr__(self):
