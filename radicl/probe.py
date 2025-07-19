@@ -44,13 +44,13 @@ class RAD_Probe:
 
         self.debug = debug
         self.api:RAD_API = ext_api
-        self.available_devices = []
+        self.available_devices = None
 
         self.log = get_logger(__name__, debug=self.debug)
 
     def update_devices(self):
         self.log.info("Scanning for COM ports...")
-        self._available_devices = find_kw_port(['STMicroelectronics', 'STM32'])
+        self.available_devices = find_kw_port(['STMicroelectronics', 'STM32'])
 
     @property
     def serial_number(self):
@@ -60,11 +60,18 @@ class RAD_Probe:
 
     @property
     def multiple_devices_available(self):
-        return len(self.available_devices) > 1
+        result = False
+        if self.available_devices is not None:
+            result = len(self.available_devices) > 1
+        return result
 
     @property
     def no_devices_available(self):
-        return len(self.available_devices) == 0
+        """ Returns True if no devices are available, False otherwise"""
+        result = True
+        if self.available_devices is not None:
+            result = len(self.available_devices) == 0
+        return result
 
     def connect(self, device=None):
         """ Attempt to establish a connection with the probe"""
