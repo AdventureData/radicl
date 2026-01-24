@@ -8,6 +8,7 @@ from os.path import abspath, dirname, expanduser, isdir
 import pandas as pd
 from termcolor import colored
 from study_lyte.io import write_csv
+import matplotlib.pyplot as plt
 
 from .utilities import get_default_filename
 from .probe import RAD_Probe
@@ -371,7 +372,7 @@ class RADICL(object):
 
     def task_settings(self):
         """
-        Routine for handling users requests for modifying probe settings settings
+        Routine for handling users requests for modifying probe settings
         """
 
         # Setting Selection
