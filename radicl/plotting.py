@@ -126,13 +126,23 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
     # Plot acceleration if it exists
     if profile.acceleration is not Sensor.UNAVAILABLE:
         plot_events(ax, profile.events, plot_type='normal')
+        axangle = ax.twinx()
+        axangle.plot(profile.angle.index, profile.angle.rolling(window=5000).mean(), alpha=0.5, color='steelblue', label='Angle')
+        axangle.set_ylabel('Angle')
         for c in profile.acceleration_names:
             alpha = 1.0
+            style = SensorStyle.from_column(c)
             if c != profile.motion_detect_name:
                 alpha = 0.3
-            style = SensorStyle.from_column(c)
-            ax.plot(profile.time, profile.raw[c], color=style.color,
-                    label=style.label, alpha=alpha)
+                ax.plot(profile.time, profile.raw[c], color=style.color,
+                        label=style.label, alpha=alpha)
+            else:
+
+                ax.annotate(f"Angle: {profile.start_angle:0.0f}°-> {profile.end_angle:0.0f}°", (0.5, 0.9), xycoords='axes fraction', ha='center',
+                            fontsize='small')
+
+                ax.plot(profile.time, profile.acceleration, color=style.color,
+                        label=style.label, alpha=alpha)
 
         ax.set_ylabel("Acceleration [g's]")
         ax.set_xlabel('Time [s]')
@@ -156,7 +166,6 @@ def plot_hi_res(fname=None, timed_plot=None, calibration_dict={}):
         ax.plot(profile.barometer.raw.index, profile.barometer.raw.values, color=raw.color, label=raw.label, alpha=0.5)
         ax.plot(profile.barometer.depth.index, profile.barometer.depth.values, color=baro_style.color, label=baro_style.label, alpha=0.5)
         ax.plot(profile.accelerometer.depth, color=acc_style.color, label=acc_style.label, alpha=0.5)
-
     ax.plot(profile.time, profile.depth, color=style.color, label=style.label)
 
     ax.legend(loc='upper right', fontsize='xx-small')
