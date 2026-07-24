@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import struct
 import time
 
 from .ui_tools import get_logger
@@ -714,7 +715,7 @@ class RAD_API:
 
     def MeasGetCalibData(self, num_sensor):
         """
-        Reads a sensor's calibration value
+        Reads a sensor's calibration coefficients
         """
         code = SettingsCMD.CALIBDATA.cmd
         message = [0x9F, code, 0x00, 0x00, 0x01]
@@ -722,24 +723,25 @@ class RAD_API:
 
         response = self.__send_receive(message)
 
-        # Expect 4 bytes back two for the low value and 2 for the high value
-        return self.__EvaluateAndReturn(response, code, 4)
+        # Expect 16 bytes back, 4 bytes for each of the 4 coefficients
+        return self.__EvaluateAndReturn(response, code, 16)
 
-    def MeasSetCalibData(self, num_sensor, calibration_value_low,
-                         calibration_value_high):
+    def MeasSetCalibData(self, num_sensor, c1, c2, c3, c4):
         """
-        Sets the probes calibration values. A high and low are set where the
-        low. This is applied linearly and thus the low value should be the
-        y intercept. This will remap the raw's low value-high value to 0-4095
+        Sets the probes calibration coefficients. The probe applies these as a
+        cubic polynomial to the raw sensor value:
 
-        The probe expects this number joined in bytes so we have to create a
-        2, 2 byte integers and add them together to create a 4 byte message.
+            calibrated = c1 * X^3 + c2 * X^2 + c3 * X + c4
+
+        The coefficients are ordered highest order first which matches the
+        output of np.polyfit. Each is sent as a single precision float.
 
         Args:
                 num_sensor: Integer indicating sensors 1,2,3, or 4.
-                calibration_value_low: 12-bit integer indicating the y intercept of a linear
-                                   calibration
-                calibration_value_high: 12-bit integer for the
+                c1: Coefficient on the cubic term
+                c2: Coefficient on the quadratic term
+                c3: Coefficient on the linear term
+                c4: Constant offset
 
         Returns:
                 status: 1 if successful, 0 otherwise
@@ -747,12 +749,11 @@ class RAD_API:
         helpme - Sets the calibration data for the specified sensor
         """
         code = SettingsCMD.CALIBDATA.cmd
-        message = [0x9F, code, 0x01, 0x00, 0x05]
+        # Payload is the sensor id (1 byte) plus 4 floats (16 bytes)
+        message = [0x9F, code, 0x01, 0x00, 0x11]
 
-        # Convert values each into a 1 and 2 bytes
         message.extend(num_sensor.to_bytes(1, byteorder='little'))
-        message.extend(calibration_value_low.to_bytes(2, byteorder='little'))
-        message.extend(calibration_value_high.to_bytes(2, byteorder='little'))
+        message.extend(struct.pack('<4f', c1, c2, c3, c4))
         response = self.__send_receive(message)
         return self.__EvaluateAndReturn(response, code, 0)
 
