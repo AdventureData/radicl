@@ -220,9 +220,12 @@ class RAD_Probe:
                 elif dtype == 'hex':
                     value = data.hex()
 
+                elif dtype == float:
+                    value = struct.unpack('<f', data)[0]
+
                 else:
                     raise ValueError(
-                        "No types other than str, hex, and int are implemented")
+                        "No types other than str, hex, float, and int are implemented")
 
                 result.append(value)
 
@@ -778,25 +781,30 @@ class RAD_Probe:
             sensor: Sensor ID for calibration data
 
         Returns:
-            int: from the function getting the probe setting, or list of 2 for calibration data
+            int: from the function getting the probe setting, or list of 4 floats for calibration data
         """
         if setting_name == 'calibdata':
             ret = self.getters[setting_name](sensor)
-            num_values = 2
-        else:
-            ret = self.getters[setting_name]()
-            num_values = 1
+            return self.manage_data_return(ret, num_values=4, dtype=float)
 
-        return self.manage_data_return(ret, num_values=num_values, dtype=int)
+        ret = self.getters[setting_name]()
+        return self.manage_data_return(ret, num_values=1, dtype=int)
 
-    def setSetting(self, setting_name=None, sensor=None, value=None, low_value=None,
-                   hi_value=None):
+    def setSetting(self, setting_name=None, sensor=None, value=None, coefficients=None):
         """
         sets the probe's setting
+
+        Args:
+            setting_name: name of the function minus Meas and set
+            sensor: Sensor ID for calibration data
+            value: Value to assign to the setting
+            coefficients: 4 polynomial coefficients (highest order first) for calibration data
         """
 
         if setting_name == 'calibdata':
-            ret = self.settings[setting_name](sensor, low_value, hi_value)
+            if coefficients is None or len(coefficients) != 4:
+                raise ValueError('Setting calibdata requires 4 coefficients, highest order first.')
+            ret = self.settings[setting_name](sensor, *coefficients)
 
         else:
             ret = self.settings[setting_name](value)

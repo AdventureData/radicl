@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 
 from .utilities import get_default_filename
 from .probe import RAD_Probe
-from .calibrate import get_avg_sensor
 from .ui_tools import (Messages, get_logger, parse_func_list, parse_help,
                        print_helpme)
 from .info import ProbeState, CLIState
@@ -160,48 +159,42 @@ class RADICL(object):
 
     def calibrate(self):
         """
-        Walks the user through calibrating
+        Walks the user through assigning the calibration coefficients of each
+        sensor. The probe applies these as a cubic polynomial to the raw value:
+
+            calibrated = c1 * X^3 + c2 * X^2 + c3 * X + c4
         """
-        answer = self.ask_user(
-            'Do you want to manually input or measure calibration values?',
-            answer_lst=[
-                'manual',
-                'measure'])
+        for i in range(1, 5):
+            current = self.probe.getSetting(setting_name='calibdata', sensor=i)
+            out.msg("Sensor {} is currently using = {}".format(
+                i, ", ".join(['{:0.6g}'.format(v) for v in current])))
 
-        for i in range(1, 3):
+            answer = self.ask_user(
+                "Do you want to change the calibration for Sensor {}?".format(i),
+                answer_lst=['no', 'yes'])
 
-            out.msg("For Sensor {}:".format(i))
-            if answer == 'manual':
-                hi = int(input('\tEnter high ADC value:\n\t'))
-                lo = int(input('\n\tEnter low ADC value:\n\t'))
+            if answer == 'no':
+                continue
 
-            elif answer == 'measure':
-                input("\tApply the high value to the sensor and press enter:")
-                hi = get_avg_sensor(self.probe, sensor='Sensor{}'.format(i))
+            coefficients = None
+            while coefficients is None:
+                response = input("\tEnter 4 coefficients highest order first, "
+                                 "comma separated:\n\t")
+                try:
+                    coefficients = [float(c) for c in response.split(',')]
+                    if len(coefficients) != 4:
+                        raise ValueError('Expected 4 coefficients')
 
-                input("\n\tApply the low value to the sensor and press enter:")
-                lo = get_avg_sensor(self.probe, sensor='Sensor{}'.format(i))
+                except ValueError:
+                    out.warn("Enter exactly 4 numbers separated by commas.")
+                    coefficients = None
 
-            else:
-                raise ValueError("Invalid request for calibration.")
-
-            self.log.info(
-                "Setting calibration data to : low = {} hi = {}".format(
-                    lo, hi))
-
-            if i == 1:
-                self.log.debug("Inverting for hardness...")
-                low = hi
-                hi = lo
-                lo = low
-            self.log.debug(
-                "Setting calibration data to : low = {} hi = {}".format(
-                    lo, hi))
-            self.probe.api.MeasSetCalibData(i, lo, hi)
+            self.probe.setSetting(setting_name='calibdata', sensor=i,
+                                  coefficients=coefficients)
 
             values = self.probe.getSetting(setting_name='calibdata', sensor=i)
-            self.log.debug("Calibdata now set to = {}".format(
-                ", ".join([str(v) for v in values])))
+            out.respond("Sensor {} calibration now set to = {}".format(
+                i, ", ".join(['{:0.6g}'.format(v) for v in values])))
 
     def take_a_reading(self):
         """
@@ -399,17 +392,14 @@ class RADICL(object):
 
             # Retrieve calibration values
             elif self.setting_request == 'calibdata':
-                # TODO for calibration update this needs changing
-                for i in range(1, 3):
-                    self.current_setting_value = []
-                    self.current_setting_value.append(
-                        self.probe.getSetting(setting_name=self.setting_request,
-                                              sensor=i))
-                    values = ", ".join([str(v)
-                                        for v in self.current_setting_value])
-                    msg = ("Currently {0}[{2}] = {1}\nEnter value to change probe {0}\n"
-                           "".format(self.setting_request,
-                                     values, i))
+                self.current_setting_value = []
+                for i in range(1, 5):
+                    coefficients = self.probe.getSetting(
+                        setting_name=self.setting_request, sensor=i)
+                    self.current_setting_value.append(coefficients)
+                    values = ", ".join(['{:0.6g}'.format(v) for v in coefficients])
+                    msg = ("Currently Sensor{0} {1} = {2}"
+                           "".format(i, self.setting_request, values))
                     self.log.info(msg)
 
                 if self.state != CLIState.HOME:
