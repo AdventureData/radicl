@@ -1,17 +1,50 @@
 
 import argparse
 import os
+import re
 import time
 
 from radicl.update import FW_Update
 from radicl.ui_tools import get_logger
 from radicl.probe import  RAD_Probe
 
+# Probe hardware revision: filename token -> hw_rev integer reported by the probe
+FW_REV_MAP = {'REVB': 1, 'REVC': 2, 'REVD': 3}
+
+
+def rev_from_filename(path):
+    """Return the hw_rev int encoded in a firmware filename, or None if absent."""
+    m = re.search(r'REV([BCD])', os.path.basename(path).upper())
+    return FW_REV_MAP.get('REV' + m.group(1)) if m else None
+
+
+def rev_name(rev):
+    """Reverse-map an hw_rev int back to its REVB/C/D token for readable messages."""
+    for name, idx in FW_REV_MAP.items():
+        if idx == rev:
+            return name
+    return 'REV?({})'.format(rev)
+
+
 def Upgrade(fw_image):
     log = get_logger(__name__)
 
     probe = RAD_Probe()
     probe.connect()
+
+    # Verify the firmware file's hardware revision matches the attached probe
+    file_rev = rev_from_filename(fw_image)
+    probe_rev = probe.api.hw_rev
+    if file_rev is None:
+        log.error("Firmware filename '%s' has no REVB/C/D token; cannot verify it "
+                  "matches the probe. Aborting." % os.path.basename(fw_image))
+        probe.disconnect()
+        return
+    if file_rev != probe_rev:
+        log.error("Firmware revision mismatch. File is for %s but the attached probe "
+                  "is %s. Aborting." % (rev_name(file_rev), rev_name(probe_rev)))
+        probe.disconnect()
+        return
 
     # RE: Transfer size - Prior to FW revision 1.45, only 16 byte packages were possible. With FW revision 1.45 and above,
     # the package size can be increased up to 64 byes. Although it is technically possible to send up to 256
