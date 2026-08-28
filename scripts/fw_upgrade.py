@@ -26,7 +26,7 @@ def rev_name(rev):
     return 'REV?({})'.format(rev)
 
 
-def Upgrade(fw_image):
+def Upgrade(fw_image, force=False):
     log = get_logger(__name__)
 
     probe = RAD_Probe()
@@ -36,15 +36,21 @@ def Upgrade(fw_image):
     file_rev = rev_from_filename(fw_image)
     probe_rev = probe.api.hw_rev
     if file_rev is None:
-        log.error("Firmware filename '%s' has no REVB/C/D token; cannot verify it "
-                  "matches the probe. Aborting." % os.path.basename(fw_image))
-        probe.disconnect()
-        return
-    if file_rev != probe_rev:
-        log.error("Firmware revision mismatch. File is for %s but the attached probe "
-                  "is %s. Aborting." % (rev_name(file_rev), rev_name(probe_rev)))
-        probe.disconnect()
-        return
+        msg = ("Firmware filename '%s' has no REVB/C/D token; cannot verify it "
+               "matches the probe." % os.path.basename(fw_image))
+        if not force:
+            log.error(msg + " Aborting.")
+            probe.disconnect()
+            return
+        log.warning(msg + " Proceeding anyway (--force).")
+    elif file_rev != probe_rev:
+        msg = ("Firmware revision mismatch. File is for %s but the attached probe "
+               "is %s." % (rev_name(file_rev), rev_name(probe_rev)))
+        if not force:
+            log.error(msg + " Aborting.")
+            probe.disconnect()
+            return
+        log.warning(msg + " Proceeding anyway (--force). This can brick the probe.")
 
     # RE: Transfer size - Prior to FW revision 1.45, only 16 byte packages were possible. With FW revision 1.45 and above,
     # the package size can be increased up to 64 byes. Although it is technically possible to send up to 256
@@ -120,6 +126,10 @@ def Upgrade(fw_image):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RAD Probe FW Upgrade Tool')
     parser.add_argument('file', help='path to .bin file', nargs='+')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='skip the REVB/C/D check between the filename and the '
+                             'attached probe. Flashing the wrong revision can brick '
+                             'the probe.')
 
     args = parser.parse_args()
 
@@ -127,7 +137,7 @@ if __name__ == '__main__':
         fw_image_file = args.file[0]
         if os.path.isfile(fw_image_file) and fw_image_file.split(
                 '.')[-1] == 'bin':
-            Upgrade(fw_image_file)
+            Upgrade(fw_image_file, force=args.force)
         else:
             print(f"Invalid file {fw_image_file}")
 

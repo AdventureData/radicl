@@ -7,7 +7,7 @@ from os.path import abspath, dirname, expanduser, isdir
 
 import pandas as pd
 from termcolor import colored
-from study_lyte.io import write_csv
+from study_lyte.io import MEASUREMENT_ID_KEY, new_measurement_id, write_csv
 import matplotlib.pyplot as plt
 
 from .utilities import get_default_filename
@@ -495,8 +495,18 @@ class RADICL(object):
         out.msg("Saving Data to :\n{0}".format(filename))
 
         if not df.empty:
-            # Write the header so we know things about this
-            meta = self.probe.getProbeHeader()
+            # Write the header so we know things about this. The id goes in
+            # first so it reads at the top of the file, but extra_meta is
+            # applied over the top: a caller rewriting an existing measurement
+            # passes the original id through and keeps it, while anything else
+            # is a new measurement and gets a new one.
+            #
+            # This is what finally names a measurement. The old pairing of
+            # (Serial Num., RECORDED) collides when two are taken inside the
+            # same second, and it is what an upload keys on, so a retry on a
+            # bad connection has to resolve to the same file.
+            meta = {MEASUREMENT_ID_KEY: new_measurement_id()}
+            meta.update(self.probe.getProbeHeader())
             meta.update(extra_meta)
             write_csv(df, meta, filename)
         return filename
